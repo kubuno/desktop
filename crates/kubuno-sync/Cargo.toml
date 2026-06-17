@@ -1,0 +1,46 @@
+[package]
+name         = "kubuno-sync"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+description  = "Kubuno desktop file sync daemon (offline-first, Nextcloud-style delta sync)"
+
+[[bin]]
+name = "kubuno-sync"
+path = "src/main.rs"
+
+[dependencies]
+# rustls (not native-tls) → uniform, OpenSSL-free builds on Linux/Windows/macOS.
+reqwest    = { version = "0.12", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }
+# bundled = vendored SQLite, compiled per target → no system libsqlite dependency.
+rusqlite   = { version = "0.32", features = ["bundled"] }
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow     = "1"
+clap       = { version = "4", features = ["derive"] }
+dirs       = "5"
+sha2       = "0.10"
+hex        = "0.4"
+uuid       = { version = "1", features = ["v4"] }
+notify     = "6"
+tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+
+# ── Packaging Linux (.deb via cargo-deb) ───────────────────────────────────────
+[package.metadata.deb]
+maintainer = "Kubuno <kubuno@toiledev.com>"
+copyright  = "2026, Kubuno — AGPL-3.0-or-later"
+section    = "utils"
+priority   = "optional"
+extended-description = "Daemon de synchronisation de fichiers Kubuno (offline-first, façon Nextcloud)."
+assets = [
+    ["target/release/kubuno-sync", "usr/bin/", "755"],
+    ["../../README.md", "usr/share/doc/kubuno-sync/README.md", "644"],
+]
+
+# ── Packaging Linux (.rpm via cargo-generate-rpm) ──────────────────────────────
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/kubuno-sync", dest = "/usr/bin/kubuno-sync", mode = "755" },
+    { source = "../../README.md", dest = "/usr/share/doc/kubuno-sync/README.md", mode = "644" },
+]

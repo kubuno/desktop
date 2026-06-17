@@ -1,0 +1,7 @@
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Tauri generated files
+/app/src-tauri/gen/
+/app/src-tauri/target/
