@@ -1,0 +1,78 @@
+name: release
+
+# Cross-platform desktop artifacts for the kubuno-sync daemon.
+# Each OS is built on its native runner (you cannot produce a .dmg/.msi from
+# Linux). On a v* tag the artifacts are attached to a GitHub Release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu, kind: linux }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,   kind: windows }
+          - { os: macos-latest,   target: aarch64-apple-darwin,     kind: macos }
+          - { os: macos-13,       target: x86_64-apple-darwin,      kind: macos }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }} -p kubuno-sync
+
+      # ── Linux: .deb + .rpm ──────────────────────────────────────────────────
+      - name: Package Linux (deb + rpm)
+        if: matrix.kind == 'linux'
+        run: |
+          cargo install cargo-deb cargo-generate-rpm --locked
+          cargo deb -p kubuno-sync --target ${{ matrix.target }} --no-build
+          cargo generate-rpm -p crates/kubuno-sync --target ${{ matrix.target }}
+          mkdir -p dist
+          cp target/${{ matrix.target }}/debian/*.deb dist/
+          cp target/${{ matrix.target }}/generate-rpm/*.rpm dist/
+
+      # ── Windows: zip the .exe (MSI installer comes with the Tauri shell) ─────
+      - name: Package Windows (zip)
+        if: matrix.kind == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path target/${{ matrix.target }}/release/kubuno-sync.exe `
+            -DestinationPath dist/kubuno-sync-${{ matrix.target }}.zip
+
+      # ── macOS: zip the binary (.dmg comes with the Tauri shell) ─────────────
+      - name: Package macOS (zip)
+        if: matrix.kind == 'macos'
+        run: |
+          mkdir -p dist
+          zip -j dist/kubuno-sync-${{ matrix.target }}.zip target/${{ matrix.target }}/release/kubuno-sync
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kubuno-sync-${{ matrix.target }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*

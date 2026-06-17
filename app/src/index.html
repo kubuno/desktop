@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kubuno</title>
+    <style>
+      :root { --accent: #1a73e8; }
+      * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+      body { margin: 0; padding: 24px; color: #202124; background: #f8f9fa; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .muted { color: #5f6368; font-size: 13px; margin: 0 0 20px; }
+      label { display: block; font-size: 12px; color: #5f6368; margin: 12px 0 4px; }
+      input { width: 100%; padding: 9px 11px; border: 1px solid #dadce0; border-radius: 8px; font-size: 14px; }
+      button { width: 100%; margin-top: 18px; padding: 10px; border: 0; border-radius: 8px;
+               background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #fff; color: var(--accent); border: 1px solid #dadce0; }
+      .card { background: #fff; border: 1px solid #dadce0; border-radius: 12px; padding: 18px; }
+      .row { font-size: 13px; margin: 6px 0; }
+      .row b { color: #5f6368; font-weight: 500; }
+      #msg { font-size: 13px; margin-top: 14px; white-space: pre-wrap; color: #1e8e3e; }
+      #err { color: #d93025; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>Kubuno Desktop</h1>
+    <p class="muted">Synchronisation de fichiers</p>
+
+    <!-- Écran de connexion -->
+    <div id="login" class="card hidden">
+      <label>Serveur</label>
+      <input id="server" placeholder="https://cloud.exemple.fr" value="http://localhost:8080" />
+      <label>Identifiant</label>
+      <input id="usr" placeholder="email ou nom d'utilisateur" />
+      <label>Mot de passe</label>
+      <input id="pwd" type="password" />
+      <label>Dossier local à synchroniser</label>
+      <input id="folder" placeholder="/home/vous/Kubuno" />
+      <button id="loginBtn">Se connecter</button>
+      <div id="err" class="hidden"></div>
+    </div>
+
+    <!-- Écran de statut -->
+    <div id="status" class="card hidden">
+      <div class="row"><b>Serveur :</b> <span id="sServer"></span></div>
+      <div class="row"><b>Dossier :</b> <span id="sFolder"></span></div>
+      <button id="syncBtn">Synchroniser maintenant</button>
+      <button id="openBtn" class="secondary">Ouvrir le dossier</button>
+      <div id="msg"></div>
+    </div>
+
+    <script>
+      const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+      const $ = (id) => document.getElementById(id);
+      const show = (id) => $(id).classList.remove("hidden");
+      const hide = (id) => $(id).classList.add("hidden");
+
+      async function refresh() {
+        if (await invoke("is_logged_in")) {
+          const st = await invoke("get_status");
+          $("sServer").textContent = st.server;
+          $("sFolder").textContent = st.folder;
+          hide("login"); show("status");
+        } else {
+          show("login"); hide("status");
+        }
+      }
+
+      $("loginBtn").onclick = async () => {
+        hide("err");
+        try {
+          await invoke("do_login", {
+            server: $("server").value.trim(),
+            login: $("usr").value.trim(),
+            password: $("pwd").value,
+            folder: $("folder").value.trim(),
+          });
+          await refresh();
+        } catch (e) {
+          $("err").textContent = String(e);
+          show("err");
+        }
+      };
+
+      $("syncBtn").onclick = async () => {
+        $("msg").textContent = "Synchronisation…";
+        try {
+          $("msg").textContent = await invoke("sync_now");
+        } catch (e) {
+          $("msg").textContent = "Erreur : " + e;
+        }
+      };
+
+      $("openBtn").onclick = () => invoke("sync_now"); // placeholder; tray opens the folder
+
+      refresh();
+    </script>
+  </body>
+</html>
