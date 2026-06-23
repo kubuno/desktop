@@ -4,15 +4,33 @@
 //! the refresh token in the JSON body, and rotates it on every refresh. Read
 //! requests auto-refresh once on a 401.
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Creds;
+
+/// Per-instance lock serializing token refreshes. Several `Api` values can exist
+/// for the same instance (the background sync thread plus on-demand calls like
+/// the account popup); without this they would refresh concurrently, each
+/// rotating the refresh token and invalidating the other — eventually bricking
+/// the session. The lock funnels refreshes so only one hits the network.
+fn refresh_lock(id: &str) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<String, Arc<Mutex<()>>>>> = OnceLock::new();
+    let map = LOCKS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut m = map.lock().unwrap_or_else(|p| p.into_inner());
+    m.entry(id.to_string()).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+}
 
 pub struct Api {
     http:  reqwest::blocking::Client,
     base:  String,
     creds: Creds,
+    /// Instance id — used to persist the rotated refresh token to the right
+    /// per-instance `creds.json`.
+    id:    String,
 }
 
 #[derive(Deserialize)]
@@ -29,13 +47,33 @@ pub struct Delta {
     pub has_more: bool,
 }
 
+/// The authenticated user's public profile, as returned by `GET /api/v1/me`
+/// (wrapped in a `{ "user": { … } }` envelope). Only the fields the desktop UI
+/// needs to identify the account are kept.
+#[derive(Deserialize, Serialize, Clone)]
+pub struct User {
+    #[serde(default)]
+    pub display_name: Option<String>,
+    pub email:        String,
+    #[serde(default)]
+    pub username:     Option<String>,
+    /// Server-relative avatar path (e.g. `/api/v1/users/<id>/avatar`).
+    #[serde(default)]
+    pub avatar_url:   Option<String>,
+}
+
+#[derive(Deserialize)]
+struct MeEnvelope {
+    user: User,
+}
+
 impl Api {
-    pub fn new(base: String, creds: Creds) -> Self {
+    pub fn new(id: String, base: String, creds: Creds) -> Self {
         let http = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .build()
             .unwrap_or_default();
-        Self { http, base, creds }
+        Self { http, base, creds, id }
     }
 
     /// Authenticate and return the native token pair (refresh token in body).
@@ -64,6 +102,20 @@ impl Api {
     }
 
     fn refresh(&mut self) -> Result<()> {
+        // Serialize refreshes for this instance (see `refresh_lock`).
+        let lock = refresh_lock(&self.id);
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+
+        // While we waited for the lock, another Api may have already refreshed
+        // and saved a fresh token. Adopt it instead of rotating again (which
+        // would invalidate the one just saved).
+        if let Ok(disk) = Creds::load(&self.id) {
+            if !disk.refresh_token.is_empty() && disk.refresh_token != self.creds.refresh_token {
+                self.creds = disk;
+                return Ok(());
+            }
+        }
+
         let resp = self
             .http
             .post(format!("{}/api/v1/auth/refresh", self.base))
@@ -75,7 +127,7 @@ impl Api {
         let t: NativeTokens = resp.json()?;
         self.creds.access_token = t.access_token;
         self.creds.refresh_token = t.refresh_token; // rotation
-        self.creds.save()?;
+        self.creds.save(&self.id)?;
         Ok(())
     }
 
@@ -96,6 +148,16 @@ impl Api {
             bail!("récupération du delta : HTTP {}", resp.status());
         }
         Ok(resp.json()?)
+    }
+
+    /// Fetch the authenticated user's profile (`GET /api/v1/me`).
+    pub fn me(&mut self) -> Result<User> {
+        let resp = self.get("/api/v1/me")?;
+        if !resp.status().is_success() {
+            bail!("récupération du profil : HTTP {}", resp.status());
+        }
+        let env: MeEnvelope = resp.json()?;
+        Ok(env.user)
     }
 
     pub fn download(&mut self, file_id: &str) -> Result<Vec<u8>> {

@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use kubuno_sync::{daemon, sync_once, Config};
+use kubuno_sync::{daemon, list_instances, sync_once};
 
 #[derive(Parser)]
 #[command(name = "kubuno-sync", about = "Daemon de synchronisation de fichiers Kubuno (offline-first)")]
@@ -37,31 +37,53 @@ enum Cmd {
 }
 
 fn main() -> Result<()> {
+    // Bring any legacy single-instance layout under instances/<id>/.
+    kubuno_sync::migrate_legacy()?;
+
     match Cli::parse().cmd {
         Cmd::Login { server, login, password, folder } => {
-            kubuno_sync::login(&server, &login, &password, &folder)?;
-            println!("Connecté. Dossier synchronisé : {folder}");
+            let id = kubuno_sync::login(&server, &login, &password, &folder)?;
+            println!("Connecté (instance « {id} »). Dossier synchronisé : {folder}");
         }
         Cmd::Sync => {
-            let s = sync_once()?;
-            println!(
-                "Envoi : {} créé(s), {} modifié(s), {} supprimé(s), {} conflit(s), {} en attente.",
-                s.uploaded, s.modified, s.deleted_up, s.conflicts, s.pending
-            );
-            println!(
-                "Réception : {} téléchargé(s), {} dossier(s), {} à jour, {} supprimé(s). Curseur : {}",
-                s.downloaded, s.folders, s.up_to_date, s.deleted_down, s.cursor
-            );
+            let instances = list_instances();
+            if instances.is_empty() {
+                println!("Aucune instance configurée. Lance `kubuno-sync login` d'abord.");
+            }
+            for cfg in instances {
+                println!("── {} ({}) ──", cfg.id, cfg.server_url);
+                match sync_once(&cfg.id) {
+                    Ok(s) => {
+                        println!(
+                            "Envoi : {} créé(s), {} modifié(s), {} supprimé(s), {} conflit(s), {} en attente.",
+                            s.uploaded, s.modified, s.deleted_up, s.conflicts, s.pending
+                        );
+                        println!(
+                            "Réception : {} téléchargé(s), {} dossier(s), {} à jour, {} supprimé(s). Curseur : {}",
+                            s.downloaded, s.folders, s.up_to_date, s.deleted_down, s.cursor
+                        );
+                    }
+                    Err(e) => eprintln!("Échec de la synchro : {e}"),
+                }
+            }
         }
         Cmd::Watch { interval } => {
-            daemon::watch(interval)?;
+            daemon::watch_all(interval, |_id, _ev| {})?;
         }
         Cmd::Status => {
-            let cfg = Config::load()?;
-            let store = kubuno_sync::store::Store::open(&kubuno_sync::db_path()?)?;
-            println!("Serveur : {}", cfg.server_url);
-            println!("Dossier : {}", cfg.sync_root.display());
-            println!("Curseur : {}", store.cursor()?);
+            let instances = list_instances();
+            if instances.is_empty() {
+                println!("Aucune instance configurée.");
+            }
+            for cfg in instances {
+                let cursor = kubuno_sync::store::Store::open(&kubuno_sync::db_path(&cfg.id)?)
+                    .and_then(|s| s.cursor())
+                    .unwrap_or(0);
+                println!("Instance : {}", cfg.id);
+                println!("  Serveur : {}", cfg.server_url);
+                println!("  Dossier : {}", cfg.sync_root.display());
+                println!("  Curseur : {cursor}");
+            }
         }
     }
     Ok(())

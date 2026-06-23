@@ -12,9 +12,14 @@
       {
         "label": "main",
         "title": "Kubuno",
-        "width": 460,
-        "height": 640,
-        "resizable": true
+        "width": 720,
+        "height": 580,
+        "minWidth": 520,
+        "minHeight": 420,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true
       }
     ],
     "security": {

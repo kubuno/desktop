@@ -209,4 +209,22 @@ impl Store {
         self.conn.execute("DELETE FROM files WHERE id=?1", params![id])?;
         Ok(())
     }
+
+    /// After the sync folder is moved, rewrite every stored absolute path so its
+    /// `old_root` prefix becomes `new_root` (in both the file index and the
+    /// outbox). `old_root`/`new_root` must be given without a trailing separator.
+    pub fn rebase_paths(&self, old_root: &str, new_root: &str) -> Result<()> {
+        let like = format!("{old_root}%");
+        // SQLite substr is 1-indexed: keep everything after the old prefix.
+        let keep_from = (old_root.len() + 1) as i64;
+        self.conn.execute(
+            "UPDATE files SET local_path = ?2 || substr(local_path, ?3) WHERE local_path LIKE ?1",
+            params![like, new_root, keep_from],
+        )?;
+        self.conn.execute(
+            "UPDATE outbox SET local_path = ?2 || substr(local_path, ?3) WHERE local_path LIKE ?1",
+            params![like, new_root, keep_from],
+        )?;
+        Ok(())
+    }
 }
