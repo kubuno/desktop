@@ -81,6 +81,16 @@ pub fn list_instances() -> Vec<Config> {
     Config::list().unwrap_or_default()
 }
 
+/// The configured outbound proxy URL, if any.
+pub fn get_proxy() -> Option<String> {
+    config::proxy_url()
+}
+
+/// Set (or clear, with `None`/empty) the outbound proxy URL.
+pub fn set_proxy(url: Option<String>) -> Result<()> {
+    config::set_proxy(url.as_deref())
+}
+
 /// The config of a single instance, if it exists.
 pub fn current_config(id: &str) -> Option<Config> {
     Config::load(id).ok()

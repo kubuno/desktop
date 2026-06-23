@@ -24,6 +24,19 @@ fn refresh_lock(id: &str) -> Arc<Mutex<()>> {
     m.entry(id.to_string()).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
 }
 
+/// Build the HTTP client, applying the configured outbound proxy (if any) so
+/// instances reachable only through a proxy still work.
+fn build_http_client() -> reqwest::blocking::Client {
+    let mut builder =
+        reqwest::blocking::Client::builder().timeout(std::time::Duration::from_secs(60));
+    if let Some(url) = crate::config::proxy_url() {
+        if let Ok(proxy) = reqwest::Proxy::all(&url) {
+            builder = builder.proxy(proxy);
+        }
+    }
+    builder.build().unwrap_or_default()
+}
+
 pub struct Api {
     http:  reqwest::blocking::Client,
     base:  String,
@@ -69,16 +82,12 @@ struct MeEnvelope {
 
 impl Api {
     pub fn new(id: String, base: String, creds: Creds) -> Self {
-        let http = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .unwrap_or_default();
-        Self { http, base, creds, id }
+        Self { http: build_http_client(), base, creds, id }
     }
 
     /// Authenticate and return the native token pair (refresh token in body).
     pub fn login(base: &str, login: &str, password: &str) -> Result<Creds> {
-        let http = reqwest::blocking::Client::new();
+        let http = build_http_client();
         let resp = http
             .post(format!("{base}/api/v1/auth/login"))
             .json(&serde_json::json!({

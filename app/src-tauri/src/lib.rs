@@ -11,6 +11,8 @@
 use serde::{Deserialize, Serialize};
 #[cfg(windows)]
 mod explorer;
+#[cfg(windows)]
+mod cloudfiles;
 #[cfg(desktop)]
 use tauri::Manager;
 
@@ -107,9 +109,24 @@ fn list_instances() -> Vec<InstanceInfo> {
         .collect()
 }
 
+/// The configured outbound proxy URL (empty string if none).
+#[tauri::command]
+fn get_proxy() -> String {
+    kubuno_sync::get_proxy().unwrap_or_default()
+}
+
+/// Set or clear the outbound proxy used to reach instances.
+#[tauri::command]
+fn set_proxy(url: String) -> Result<(), String> {
+    let url = if url.trim().is_empty() { None } else { Some(url) };
+    kubuno_sync::set_proxy(url).map_err(|e| e.to_string())
+}
+
 /// Disconnect an instance (drops creds + local sync state; keeps the files).
 #[tauri::command]
 fn remove_instance(id: String) -> Result<(), String> {
+    #[cfg(windows)]
+    cloudfiles::unregister(&id);
     kubuno_sync::remove_instance(&id).map_err(|e| e.to_string())?;
     refresh_explorer_nav();
     Ok(())
@@ -399,7 +416,22 @@ fn sync_all_instances() {
 fn refresh_explorer_nav() {
     #[cfg(windows)]
     {
-        let items: Vec<(String, String, std::path::PathBuf)> = kubuno_sync::list_instances()
+        let instances = kubuno_sync::list_instances();
+        // Surface sync-status in Explorer (a "Status" column + ✓ green check on
+        // synced files), like OneDrive. Done off-thread: registering + walking
+        // the tree to mark files in-sync can be slow, and it only works on local
+        // NTFS folders (network drives are silently skipped — register fails).
+        let cloud: Vec<(String, std::path::PathBuf)> =
+            instances.iter().map(|c| (c.id.clone(), c.sync_root.clone())).collect();
+        std::thread::spawn(move || {
+            for (id, folder) in cloud {
+                if cloudfiles::register(&id, &folder) {
+                    cloudfiles::connect(&folder);
+                    cloudfiles::mark_tree_in_sync(&folder);
+                }
+            }
+        });
+        let items: Vec<(String, String, std::path::PathBuf)> = instances
             .into_iter()
             .map(|c| {
                 let host = c
@@ -429,6 +461,8 @@ pub fn run() {
             do_login,
             list_instances,
             remove_instance,
+            get_proxy,
+            set_proxy,
             get_status,
             get_user,
             sync_now,
@@ -465,8 +499,12 @@ pub fn run() {
 
             // Bring any legacy single-instance layout under instances/<id>/.
             let _ = kubuno_sync::migrate_legacy();
-            // Surface every sync folder in the Explorer navigation pane.
+            // Surface every sync folder in the Explorer navigation pane + the
+            // sync-status overlays (Status column / green check).
             refresh_explorer_nav();
+            // Clean up the old diagnostic probe registration if present.
+            #[cfg(windows)]
+            cloudfiles::unregister("cf-probe");
             // Start syncing every configured instance right away.
             start_background_sync();
             Ok(())

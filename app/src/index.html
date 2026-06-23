@@ -548,6 +548,14 @@
       cursor: pointer; outline: none;
     }
     .settings-select:focus { border-color: var(--accent); }
+    .settings-input {
+      flex: 1; width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+      border-radius: var(--r); font-size: 13px; font-family: inherit;
+      background: #fff; color: var(--text); outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .settings-input::placeholder { color: var(--text-tertiary); }
+    .settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,115,232,.35); }
 
     /* Modules badge */
     .modules-badge {
@@ -991,6 +999,22 @@
           </div>
         </div>
 
+        <!-- Réseau (proxy) -->
+        <div class="settings-section">
+          <div class="settings-section-label">Réseau</div>
+          <div class="settings-rows">
+            <div class="settings-row">
+              <div style="flex:1">
+                <div class="settings-row-label">Proxy</div>
+                <div class="settings-row-sub">Pour accéder aux instances derrière un proxy. Ex. http://hôte:8080 — vide = connexion directe.</div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <input type="text" class="settings-input" id="inp-proxy" placeholder="http://user:pass@hôte:port" spellcheck="false" />
+            </div>
+          </div>
+        </div>
+
         <!-- Notifications (Kubuno-specific) -->
         <div class="settings-section">
           <div class="settings-section-label">Notifications</div>
@@ -1386,6 +1410,11 @@
     try { await invoke('set_autostart', { enabled: chkAutostart.checked }); } catch (_) {}
   });
 
+  // Proxy (applies to all instances; takes effect on the next request/sync).
+  document.getElementById('inp-proxy').addEventListener('change', async (e) => {
+    try { await invoke('set_proxy', { url: e.target.value.trim() }); } catch (_) {}
+  });
+
   // ── GitHub links in settings ────────────────────────────────────────────────
   document.getElementById('cfg-gh-link').addEventListener('click', () => {
     try { invoke('open_in_browser', { url: 'https://github.com/kubuno/desktop' }); } catch (_) {}
@@ -1712,6 +1741,9 @@
     } catch (_) {}
     try {
       chkAutostart.checked = await invoke('get_autostart');
+    } catch (_) {}
+    try {
+      document.getElementById('inp-proxy').value = await invoke('get_proxy') || '';
     } catch (_) {}
 
     showView('home');
