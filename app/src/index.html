@@ -1,100 +1,1724 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kubuno</title>
-    <style>
-      :root { --accent: #1a73e8; }
-      * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-      body { margin: 0; padding: 24px; color: #202124; background: #f8f9fa; }
-      h1 { font-size: 20px; margin: 0 0 4px; }
-      .muted { color: #5f6368; font-size: 13px; margin: 0 0 20px; }
-      label { display: block; font-size: 12px; color: #5f6368; margin: 12px 0 4px; }
-      input { width: 100%; padding: 9px 11px; border: 1px solid #dadce0; border-radius: 8px; font-size: 14px; }
-      button { width: 100%; margin-top: 18px; padding: 10px; border: 0; border-radius: 8px;
-               background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
-      button.secondary { background: #fff; color: var(--accent); border: 1px solid #dadce0; }
-      .card { background: #fff; border: 1px solid #dadce0; border-radius: 12px; padding: 18px; }
-      .row { font-size: 13px; margin: 6px 0; }
-      .row b { color: #5f6368; font-weight: 500; }
-      #msg { font-size: 13px; margin-top: 14px; white-space: pre-wrap; color: #1e8e3e; }
-      #err { color: #d93025; }
-      .hidden { display: none; }
-    </style>
-  </head>
-  <body>
-    <h1>Kubuno Desktop</h1>
-    <p class="muted">Synchronisation de fichiers</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubuno</title>
+  <!-- DM Sans — same typeface as the core web shell. Progressive enhancement:
+       falls back to the system stack when offline. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" />
+  <style>
+    :root {
+      /* Tokens alignés sur le core (frontend/src/theme.css) — palette « Google
+         Drive 2024 » : même bleu primaire, surfaces, texte, bordures et rayons. */
+      --accent:        #1a73e8;   /* --color-primary */
+      --accent-h:      #1557b0;   /* --color-primary-hover */
+      --accent-light:  #d3e3fd;   /* --color-primary-light (fond nav actif M3) */
+      --nav-active-fg: #041e49;   /* --color-text-nav-active */
+      --bg:            #f1f4f8;   /* --body-bg */
+      --surface:       #ffffff;   /* --color-surface-0 */
+      --surface-1:     #f8f9fa;   /* --color-surface-1 */
+      --surface-2:     #f1f3f4;   /* --color-surface-2 */
+      --surface-3:     #e8eaed;   /* --color-surface-3 */
+      --border:        #e0e0e0;   /* --color-border */
+      --border-strong: #bdc1c6;   /* --color-border-strong */
+      --text:          #202124;   /* --color-text-primary */
+      --muted:         #5f6368;   /* --color-text-secondary */
+      --text-tertiary: #80868b;   /* --color-text-tertiary */
+      --search-bg:     #eaf1fb;   /* --color-search-bg */
+      --danger:        #d93025;   /* --color-danger */
+      --ok-bg:         #e6f4ea;   /* --color-success-light */
+      --ok-fg:         #1e8e3e;   /* --color-success */
+      --err-bg:        #fce8e6;   /* --color-danger-light */
+      --err-fg:        #d93025;   /* --color-danger */
+      --sync-bg:       #e8f0fe;
+      --scrollbar-thumb: #dadce0;
+      --sidebar-w:    190px;
+      --header-h:     50px;
+      /* Échelle de rayons du core : sm 4 · md 8 · lg 12 · xl 16. */
+      --r-sm:         4px;
+      --r:            8px;
+      --r-lg:         12px;
+      --r-xl:         16px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 14px; line-height: 1.4;
+      background: var(--bg); color: var(--text);
+      height: 100vh; overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    button { cursor: pointer; font-family: inherit; font-size: inherit; }
+    .hidden { display: none !important; }
+    ::-webkit-scrollbar { width: 5px; }
 
-    <!-- Écran de connexion -->
-    <div id="login" class="card hidden">
+    /* ═══════════════════════════════════════════════════════════
+       CUSTOM TITLE BAR — window controls (always on top)
+    ═══════════════════════════════════════════════════════════ */
+    #win-bar {
+      position: fixed; top: 0; right: 0; z-index: 9999;
+      display: flex; align-items: stretch;
+      height: var(--header-h);
+      pointer-events: auto;
+    }
+    .win-ctrl {
+      width: 46px; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; padding: 0;
+      color: var(--muted); transition: background .12s, color .12s;
+      cursor: default; -webkit-app-region: no-drag;
+    }
+    .win-ctrl:hover { background: rgba(0,0,0,.07); color: var(--text); }
+    .win-ctrl.win-close:hover { background: #e81123; color: #fff; }
+    /* Drag regions */
+    [data-tauri-drag-region] { -webkit-app-region: drag; }
+    /* Login drag strip — top band above the card */
+    .login-drag-strip {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: var(--header-h); z-index: 1;
+      -webkit-app-region: drag;
+    }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+    /* ═══════════════════════════════════════════════════════════
+       LOGIN
+    ═══════════════════════════════════════════════════════════ */
+    #login-screen {
+      position: fixed; inset: 0; z-index: 300;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+    .login-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px; width: 360px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.09);
+      position: relative;
+    }
+    .login-back {
+      position: absolute; top: 14px; left: 14px;
+      background: none; border: none; color: var(--muted);
+      font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: var(--r-sm);
+      -webkit-app-region: no-drag;
+    }
+    .login-back:hover { background: var(--surface-2); color: var(--text); }
+    .login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+    .login-logo {
+      width: 40px; height: 40px; background: var(--accent); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; padding: 7px; flex-shrink: 0;
+    }
+    .login-brand-name { font-size: 18px; font-weight: 700; }
+    .login-brand-sub  { font-size: 12px; color: var(--muted); }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    /* Input — aligné sur @kubuno/ui Input : bordure neutre, fond blanc, focus
+       avec ring bleu (box-shadow) + bordure primaire. */
+    .field input {
+      width: 100%; padding: 9px 12px; height: 38px;
+      border: 1px solid var(--border); border-radius: var(--r);
+      font-size: 14px; font-family: inherit;
+      background: #fff; color: var(--text);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input::placeholder { color: var(--text-tertiary); }
+    .field input:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(26,115,232,.35);
+    }
+    /* Button primary — aligné sur @kubuno/ui Button (variant primary) :
+       fond primaire, texte blanc, rayon md, font-weight 500. */
+    .btn-primary {
+      width: 100%; padding: 11px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--r); font-size: 14px; font-weight: 500; margin-top: 6px;
+      transition: background .15s;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-h); }
+    .btn-primary:disabled { opacity: .6; cursor: default; }
+    .login-error {
+      margin-top: 12px; padding: 9px 12px;
+      background: var(--err-bg); border-radius: 6px;
+      font-size: 12px; color: var(--err-fg);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ABOUT OVERLAY
+    ═══════════════════════════════════════════════════════════ */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 250;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.35);
+    }
+    .about-card {
+      background: var(--surface); border-radius: 14px;
+      padding: 36px 32px; width: 300px; text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18); position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 12px; right: 14px;
+      background: none; border: none; font-size: 16px; color: var(--muted);
+      line-height: 1; width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .1s;
+    }
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+    .about-logo-big {
+      width: 52px; height: 52px; background: var(--accent); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; padding: 9px; margin: 0 auto 14px;
+    }
+    .about-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .about-ver  { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .about-desc { font-size: 12px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+    .about-link {
+      font-size: 12px; color: var(--accent);
+      background: none; border: none; text-decoration: none;
+    }
+    .about-link:hover { text-decoration: underline; }
+
+    /* ═══════════════════════════════════════════════════════════
+       ACCOUNT POPUP  (opens on avatar click)
+    ═══════════════════════════════════════════════════════════ */
+    #account-popup {
+      position: fixed; top: calc(var(--header-h) + 6px); right: 10px;
+      width: 290px; background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 6px 28px rgba(0,0,0,.15);
+      z-index: 200; overflow: hidden;
+    }
+    .ap-header {
+      background: var(--accent); padding: 24px 20px 20px;
+      text-align: center; position: relative;
+    }
+    .ap-close {
+      position: absolute; top: 8px; right: 10px;
+      background: rgba(255,255,255,.2); border: none; border-radius: 50%;
+      width: 24px; height: 24px; color: #fff; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .1s;
+    }
+    .ap-close:hover { background: rgba(255,255,255,.35); }
+    .ap-avatar-big {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(255,255,255,.25);
+      background-size: cover; background-position: center;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 24px; font-weight: 700;
+      margin: 0 auto 10px;
+      border: 2px solid rgba(255,255,255,.5);
+    }
+    .ap-greeting { color: #fff; font-size: 16px; font-weight: 700; }
+    .ap-email    { color: rgba(255,255,255,.92); font-size: 12px; margin-top: 2px; word-break: break-all; }
+    .ap-server   { color: rgba(255,255,255,.7); font-size: 11px; margin-top: 4px; word-break: break-all; }
+    /* Account switcher — one row per connected instance. */
+    .ap-instances { padding: 8px 8px 0; display: flex; flex-direction: column; gap: 4px; max-height: 188px; overflow-y: auto; }
+    .ap-inst {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: var(--r); cursor: pointer;
+      border: 1px solid transparent; transition: background .1s, border-color .1s;
+    }
+    .ap-inst:hover { background: var(--surface-2); }
+    .ap-inst.active { background: var(--accent-light); border-color: var(--accent); }
+    .ap-inst-avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: var(--accent-light); background-size: cover; background-position: center;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 13px; font-weight: 700;
+    }
+    .ap-inst-text { flex: 1; min-width: 0; }
+    .ap-inst-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ap-inst-sub  { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ap-inst-check { color: var(--accent); flex-shrink: 0; }
+    .ap-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .ap-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 24px; font-size: 13px; font-weight: 500; color: var(--text);
+      transition: background .1s;
+    }
+    .ap-btn:hover { background: #e4e9f2; }
+    .ap-btn.danger { color: var(--danger); }
+    .ap-footer {
+      padding: 10px 12px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: center;
+    }
+    .ap-footer-link {
+      font-size: 11px; color: var(--muted); background: none; border: none;
+    }
+    .ap-footer-link:hover { color: var(--accent); text-decoration: underline; }
+
+    /* ═══════════════════════════════════════════════════════════
+       APP SHELL
+    ═══════════════════════════════════════════════════════════ */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ── Header ── */
+    .app-header {
+      height: var(--header-h); min-height: var(--header-h);
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 150px 0 14px; flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+    /* Interactive header children must opt out of drag */
+    .app-header button, .app-header input, .app-header [role="button"],
+    .app-header .header-avatar, .app-header .dd-wrapper {
+      -webkit-app-region: no-drag;
+    }
+    .header-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .header-logo {
+      width: 26px; height: 26px; background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; padding: 4px;
+    }
+    .header-brand-name { font-size: 14px; font-weight: 700; }
+    .header-search {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 24px; padding: 0 14px; height: 34px;
+      max-width: 340px; margin: 0 auto; color: var(--muted);
+    }
+    .header-search input {
+      flex: 1; border: none; background: transparent;
+      font-size: 13px; font-family: inherit; color: var(--text); outline: none;
+    }
+    .header-search input::placeholder { color: var(--muted); }
+    .header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .header-btn {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; border-radius: 50%; color: var(--muted);
+      transition: background .1s, color .1s;
+    }
+    .header-btn:hover { background: var(--bg); color: var(--text); }
+    .notif-btn { position: relative; }
+    .notif-badge {
+      position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px;
+      padding: 0 4px; border-radius: 8px; background: var(--danger); color: #fff;
+      font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+      box-shadow: 0 0 0 2px var(--surface);
+    }
+    /* Notifications panel (bell) */
+    #notif-popup {
+      position: fixed; top: calc(var(--header-h) + 6px); right: 56px;
+      width: 320px; max-height: 420px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 6px 28px rgba(0,0,0,.15); z-index: 200; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .notif-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }
+    .notif-head-title { font-size: 14px; font-weight: 700; }
+    .notif-head-action { font-size: 11px; color: var(--accent); background: none; border: none; }
+    .notif-head-action:hover { text-decoration: underline; }
+    .notif-list { overflow-y: auto; }
+    .notif-empty { padding: 28px 14px; text-align: center; font-size: 12px; color: var(--muted); }
+    .notif-item {
+      display: flex; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border);
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: var(--sync-bg); }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: var(--accent); }
+    .notif-dot.error { background: var(--danger); }
+    .notif-dot.conflict { background: var(--warning, #f9ab00); }
+    .notif-text { flex: 1; min-width: 0; }
+    .notif-title { font-size: 13px; font-weight: 600; }
+    .notif-body  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .notif-time  { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; }
+    .header-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 13px; font-weight: 700;
+      cursor: pointer; flex-shrink: 0; margin-left: 2px;
+      border: 2px solid transparent; transition: border-color .15s;
+    }
+    .header-avatar:hover { border-color: var(--accent); }
+    /* Settings gear dropdown */
+    .dd-wrapper { position: relative; }
+    /* Menu déroulant — aligné sur @kubuno/ui MenuDropdown (palette light) :
+       rayon 4, ombre Material M3, item 6px/16px, hover rgba(0,0,0,.06). */
+    .dd-menu {
+      position: absolute; right: 0; top: calc(100% + 6px);
+      background: #fff; border-radius: var(--r-sm);
+      box-shadow: 0 2px 6px 2px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
+      min-width: 220px; z-index: 150; padding: 4px 0;
+    }
+    .dd-item {
+      display: block; width: 100%; text-align: left;
+      padding: 6px 24px 6px 16px; background: none; border: none;
+      font-size: 13px; line-height: 20px; color: var(--text); transition: background .1s;
+    }
+    .dd-item:hover { background: rgba(0,0,0,.06); }
+    .dd-item.danger { color: var(--danger); }
+    .dd-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ── App body ── */
+    .app-body { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 14px 10px 12px; overflow: hidden;
+    }
+    .btn-open-folder {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 24px;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 12px;
+      transition: box-shadow .15s, background .15s;
+      text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .btn-open-folder:hover { box-shadow: 0 2px 10px rgba(0,0,0,.11); background: var(--bg); }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-radius: 24px;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      border: none; background: transparent;
+      width: 100%; text-align: left; transition: background .1s, color .1s;
+    }
+    .nav-item:hover { background: var(--surface-2); }
+    .nav-item.active { background: var(--accent-light); color: var(--nav-active-fg); font-weight: 600; }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-version {
+      font-size: 10px; color: var(--muted);
+      padding: 8px 14px 0; border-top: 1px solid var(--border);
+    }
+
+    /* ── Content ── */
+    .content { flex: 1; overflow-y: auto; padding: 20px; }
+    .view { display: flex; flex-direction: column; gap: 14px; }
+    .page-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; }
+    .card-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+
+    /* Sync status */
+    .sync-indicator { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .sync-dot {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .3s;
+    }
+    .sync-dot.ok      { background: var(--ok-bg); }
+    .sync-dot.syncing { background: var(--sync-bg); animation: pulse 1s ease-in-out infinite alternate; }
+    .sync-dot.error   { background: var(--err-bg); }
+    @keyframes pulse { from { opacity: 1; } to { opacity: .45; } }
+    .sync-text-label { font-size: 14px; font-weight: 600; }
+    .sync-text-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .sync-result {
+      font-size: 12px; color: var(--muted);
+      padding: 8px 12px; background: var(--bg); border-radius: 6px; margin-bottom: 14px;
+    }
+    .btn-sync {
+      padding: 9px 20px; background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      transition: background .15s;
+    }
+    .btn-sync:hover:not(:disabled) { background: var(--accent-h); }
+    .btn-sync:disabled { opacity: .6; cursor: default; }
+
+    /* Quick links */
+    .quick-links { display: flex; flex-direction: column; gap: 8px; }
+    .quick-link-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 24px; font-size: 13px; font-weight: 500;
+      color: var(--text); text-align: left; transition: background .1s;
+    }
+    .quick-link-btn:hover { background: #e4e9f2; }
+    .quick-link-btn svg { flex-shrink: 0; color: var(--muted); }
+
+    /* Activity */
+    .activity-list { display: flex; flex-direction: column; gap: 6px; }
+    .activity-empty {
+      text-align: center; padding: 48px 20px;
+      color: var(--muted); font-size: 13px; line-height: 1.8;
+    }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    }
+    .activity-time { color: var(--muted); white-space: nowrap; font-size: 11px; padding-top: 1px; flex-shrink: 0; }
+    .activity-dot  { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .activity-dot.ok    { background: var(--ok-fg); }
+    .activity-dot.error { background: var(--danger); }
+    .activity-detail { flex: 1; color: var(--text); }
+    .activity-detail.is-err { color: var(--err-fg); }
+
+    /* ── Settings view ── */
+    .settings-section { margin-bottom: 24px; }
+    .settings-section-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
+    }
+
+    /* Account card */
+    .account-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+    }
+    .account-card-top {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px;
+    }
+    .account-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent-light); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; flex-shrink: 0;
+    }
+    .account-info { flex: 1; min-width: 0; }
+    .account-server { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .account-folder { font-size: 11px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .account-card-actions {
+      display: flex; border-top: 1px solid var(--border);
+    }
+    .account-action-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 11px 8px; background: none; border: none;
+      font-size: 12px; font-weight: 500; color: var(--muted);
+      transition: background .1s; text-align: center;
+    }
+    .account-action-btn:first-child { border-right: 1px solid var(--border); }
+    .account-action-btn:hover { background: var(--bg); }
+    .account-action-btn.danger { color: var(--danger); }
+    .account-action-btn svg { flex-shrink: 0; }
+
+    /* Settings rows */
+    .settings-rows { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); }
+    .settings-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 14px; font-size: 13px;
+    }
+    .settings-row + .settings-row { border-top: 1px solid var(--border); }
+    .settings-row-label { flex: 1; font-weight: 500; }
+    .settings-row-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .settings-row-val { font-size: 12px; color: var(--muted); word-break: break-all; max-width: 200px; text-align: right; }
+
+    /* Checkbox row */
+    .check-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px 14px;
+    }
+    .check-row + .check-row { border-top: 1px solid var(--border); }
+    .check-row input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--accent);
+      margin-top: 1px; flex-shrink: 0; cursor: pointer;
+    }
+    .check-row-text { flex: 1; }
+    .check-row-title { font-size: 13px; font-weight: 500; }
+    .check-row-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Config dir row */
+    .config-dir-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; font-size: 12px; color: var(--muted);
+    }
+    .config-dir-row svg { flex-shrink: 0; }
+    .config-dir-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .config-dir-btn {
+      font-size: 12px; color: var(--accent); background: none; border: none;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .config-dir-btn:hover { text-decoration: underline; }
+
+    /* Settings select */
+    .settings-select {
+      padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 12px; font-family: inherit; background: var(--bg); color: var(--text);
+      cursor: pointer; outline: none;
+    }
+    .settings-select:focus { border-color: var(--accent); }
+
+    /* Modules badge */
+    .modules-badge {
+      display: inline-block; margin-left: 6px;
+      background: var(--accent-light); color: var(--accent);
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+    }
+    .modules-badge:empty { display: none; }
+
+    /* Loading state */
+    .modules-loading {
+      font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; flex-shrink: 0; }
+
+    /* Module group header */
+    .module-group-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      padding: 10px 14px 4px; background: var(--bg);
+      text-transform: uppercase; letter-spacing: .4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .module-group-label::before {
+      content: ''; display: inline-block;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    }
+
+    /* About in settings */
+    .about-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px;
+    }
+    .about-row-logo {
+      width: 36px; height: 36px; background: var(--accent); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; padding: 6px; flex-shrink: 0;
+    }
+    .about-row-info { flex: 1; }
+    .about-row-name { font-size: 13px; font-weight: 700; }
+    .about-row-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .about-gh-btn {
+      font-size: 12px; color: var(--accent); background: none; border: none;
+    }
+    .about-gh-btn:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- Fixed window controls (min / max / close) — always above all layers -->
+<div id="win-bar">
+  <button class="win-ctrl" id="btn-win-min" title="Réduire">
+    <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1"/></svg>
+  </button>
+  <button class="win-ctrl" id="btn-win-max" title="Agrandir/Restaurer">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="8.8" height="8.8"/></svg>
+  </button>
+  <button class="win-ctrl win-close" id="btn-win-close" title="Fermer">
+    <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><line x1="0" y1="0" x2="10" y2="10"/><line x1="10" y1="0" x2="0" y2="10"/></svg>
+  </button>
+</div>
+
+<!-- Kubuno shield-K logo reused via <use href="#logo-kubuno"> -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="logo-kubuno" viewBox="0 0 321 346">
+    <g transform="translate(0,346) scale(0.1,-0.1)" fill="currentColor" stroke="none">
+      <path d="M264 3307 c-3 -8 -3 -434 -1 -948 3 -913 3 -936 24 -1009 70 -249 198 -454 419 -672 125 -123 303 -268 328 -268 3 0 5 654 4 1452 l-3 1453 -383 3 c-313 2 -383 0 -388 -11z"/>
+      <path d="M1187 3313 c-4 -3 -7 -680 -7 -1504 l0 -1498 27 -19 c38 -27 279 -165 354 -202 l61 -31 61 32 c34 17 87 47 118 65 31 19 60 34 64 34 3 0 26 14 51 30 l44 31 0 729 c0 608 2 731 14 742 7 7 112 110 233 228 120 118 343 336 496 484 l277 269 -2 306 -3 306 -204 3 -203 2 -87 -83 c-47 -47 -151 -147 -231 -225 l-145 -140 -5 -299 -5 -299 -60 -62 c-32 -34 -63 -62 -67 -62 -4 0 -9 262 -10 583 l-3 582 -381 3 c-209 1 -383 -1 -387 -5z"/>
+      <path d="M2217 1782 l-118 -117 1 -265 2 -265 225 -225 224 -225 61 64 c133 140 264 349 319 508 l20 58 -143 138 c-294 284 -459 442 -466 444 -4 1 -60 -51 -125 -115z"/>
+    </g>
+  </symbol>
+</svg>
+
+<!-- ═══ LOGIN SCREEN ═══════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-drag-strip"></div>
+  <div class="login-card">
+    <button class="login-back hidden" id="login-back">‹ Retour</button>
+    <div class="login-brand">
+      <div class="login-logo"><svg viewBox="0 0 321 346" fill="currentColor" aria-hidden="true" width="100%" height="100%"><use href="#logo-kubuno"/></svg></div>
+      <div>
+        <div class="login-brand-name">Kubuno Desktop</div>
+        <div class="login-brand-sub">Synchronisation de fichiers</div>
+      </div>
+    </div>
+    <div class="field">
       <label>Serveur</label>
-      <input id="server" placeholder="https://cloud.exemple.fr" value="http://localhost:8080" />
+      <input id="f-server" type="url" placeholder="https://cloud.exemple.fr" value="http://localhost:8080" />
+    </div>
+    <div class="field">
       <label>Identifiant</label>
-      <input id="usr" placeholder="email ou nom d'utilisateur" />
+      <input id="f-login" type="text" placeholder="email ou nom d'utilisateur" autocomplete="username" />
+    </div>
+    <div class="field">
       <label>Mot de passe</label>
-      <input id="pwd" type="password" />
-      <label>Dossier local à synchroniser</label>
-      <input id="folder" placeholder="/home/vous/Kubuno" />
-      <button id="loginBtn">Se connecter</button>
-      <div id="err" class="hidden"></div>
+      <input id="f-password" type="password" autocomplete="current-password" />
+    </div>
+    <div class="field">
+      <label>Dossier local</label>
+      <input id="f-folder" type="text" placeholder="C:\Users\vous\Kubuno" />
+    </div>
+    <button class="btn-primary" id="btn-login">Se connecter</button>
+    <div id="login-error" class="login-error hidden"></div>
+  </div>
+</div>
+
+<!-- ═══ ABOUT OVERLAY ════════════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="about-overlay">
+  <div class="about-card">
+    <button class="modal-close" id="btn-close-about">✕</button>
+    <div class="about-logo-big"><svg viewBox="0 0 321 346" fill="currentColor" aria-hidden="true" width="100%" height="100%"><use href="#logo-kubuno"/></svg></div>
+    <h2>Kubuno Desktop</h2>
+    <p class="about-ver">Version 0.1.0-alpha</p>
+    <p class="about-desc">Client de synchronisation de fichiers.<br>Open-source · Licence AGPLv3</p>
+    <button class="about-link" id="about-gh-link">github.com/kubuno/desktop</button>
+  </div>
+</div>
+
+<!-- ═══ ACCOUNT POPUP ═════════════════════════════════════════════════════ -->
+<div id="account-popup" class="hidden">
+  <div class="ap-header">
+    <button class="ap-close" id="btn-close-ap">✕</button>
+    <div class="ap-avatar-big" id="ap-avatar-big">K</div>
+    <div class="ap-greeting" id="ap-name">Connecté à Kubuno</div>
+    <div class="ap-email" id="ap-email"></div>
+    <div class="ap-server" id="ap-server">—</div>
+  </div>
+  <!-- Connected instances (account switcher) -->
+  <div class="ap-instances" id="ap-instances"></div>
+  <div class="ap-body">
+    <button class="ap-btn" id="ap-add-instance">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Ajouter une instance
+    </button>
+    <button class="ap-btn" id="ap-open-folder">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      Ouvrir le dossier synchronisé
+    </button>
+    <button class="ap-btn danger" id="ap-disconnect">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Déconnecter le compte
+    </button>
+  </div>
+  <div class="ap-footer">
+    <button class="ap-footer-link" id="ap-about">À propos</button>
+    <span style="color:var(--border)">•</span>
+    <button class="ap-footer-link" id="ap-gh">GitHub</button>
+  </div>
+</div>
+
+<!-- ═══ NOTIFICATIONS PANEL ═══════════════════════════════════════════════ -->
+<div id="notif-popup" class="hidden">
+  <div class="notif-head">
+    <span class="notif-head-title">Notifications</span>
+    <button class="notif-head-action" id="notif-clear">Tout effacer</button>
+  </div>
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">Aucune notification.</div>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- Header (also acts as drag region for the custom title bar) -->
+  <header class="app-header" data-tauri-drag-region>
+    <div class="header-brand">
+      <div class="header-logo"><svg viewBox="0 0 321 346" fill="currentColor" aria-hidden="true" width="100%" height="100%"><use href="#logo-kubuno"/></svg></div>
+      <span class="header-brand-name">Kubuno</span>
     </div>
 
-    <!-- Écran de statut -->
-    <div id="status" class="card hidden">
-      <div class="row"><b>Serveur :</b> <span id="sServer"></span></div>
-      <div class="row"><b>Dossier :</b> <span id="sFolder"></span></div>
-      <button id="syncBtn">Synchroniser maintenant</button>
-      <button id="openBtn" class="secondary">Ouvrir le dossier</button>
-      <div id="msg"></div>
+    <div class="header-search">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="search" placeholder="Rechercher dans Kubuno" id="header-search-input" />
     </div>
 
-    <script>
-      const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
-      const $ = (id) => document.getElementById(id);
-      const show = (id) => $(id).classList.remove("hidden");
-      const hide = (id) => $(id).classList.add("hidden");
+    <div class="header-actions">
+      <!-- Notifications -->
+      <button class="header-btn notif-btn" id="btn-notifs" title="Notifications">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="notif-badge hidden" id="notif-badge">0</span>
+      </button>
 
-      async function refresh() {
-        if (await invoke("is_logged_in")) {
-          const st = await invoke("get_status");
-          $("sServer").textContent = st.server;
-          $("sFolder").textContent = st.folder;
-          hide("login"); show("status");
-        } else {
-          show("login"); hide("status");
-        }
+      <!-- Settings gear with dropdown -->
+      <div class="dd-wrapper">
+        <button class="header-btn" id="btn-dd-settings" title="Paramètres et aide">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        <div class="dd-menu hidden" id="dd-settings">
+          <button class="dd-item" id="dm-preferences">Préférences</button>
+          <button class="dd-item" id="dm-errors">Liste d'erreurs</button>
+          <div class="dd-sep"></div>
+          <button class="dd-item" id="dm-about">À propos de Kubuno Desktop</button>
+          <div class="dd-sep"></div>
+          <button class="dd-item danger" id="dm-quit">Quitter</button>
+        </div>
+      </div>
+
+      <!-- Help -->
+      <button class="header-btn" id="btn-help" title="Aide">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </button>
+
+      <!-- Apps launcher (opens the web app) -->
+      <button class="header-btn" id="btn-apps" title="Applications">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+
+      <!-- User avatar (opens account popup) -->
+      <div class="header-avatar" id="btn-avatar" title="Compte" role="button">K</div>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <button class="btn-open-folder" id="btn-open-folder">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        Ouvrir le dossier
+      </button>
+
+      <button class="nav-item active" id="nav-home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Accueil
+      </button>
+      <button class="nav-item" id="nav-activity">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Activité
+      </button>
+      <button class="nav-item" id="nav-settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Paramètres
+      </button>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-version">v0.1.0-alpha</div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- ── HOME VIEW ──────────────────────────────────────── -->
+      <div class="view" id="view-home">
+        <p class="page-title">Accueil</p>
+
+        <div class="card">
+          <div class="card-title">État de synchronisation</div>
+          <div class="sync-indicator">
+            <div class="sync-dot ok" id="sync-dot"></div>
+            <div>
+              <div class="sync-text-label" id="sync-label">Vos fichiers sont à jour</div>
+              <div class="sync-text-sub"  id="sync-sub">Les activités s'afficheront ici</div>
+            </div>
+          </div>
+          <div id="sync-result" class="sync-result hidden"></div>
+          <button class="btn-sync" id="btn-sync-now">Synchroniser maintenant</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Liens rapides</div>
+          <div class="quick-links">
+            <button class="quick-link-btn" id="ql-sync">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              Synchroniser maintenant
+            </button>
+            <button class="quick-link-btn" id="ql-folder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              Ouvrir le dossier Kubuno
+            </button>
+            <button class="quick-link-btn" id="ql-web">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              Ouvrir le site Kubuno
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACTIVITY VIEW ──────────────────────────────────── -->
+      <div class="view hidden" id="view-activity">
+        <p class="page-title">Activité de synchronisation</p>
+        <div id="activity-list" class="activity-list">
+          <div class="activity-empty">
+            Aucune activité enregistrée.<br>Lance une synchronisation pour commencer.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS VIEW (scrollable) ────────────────────── -->
+      <div class="view hidden" id="view-settings">
+        <p class="page-title">Paramètres</p>
+
+        <!-- Compte -->
+        <div class="settings-section">
+          <div class="settings-section-label">Compte</div>
+          <div class="account-card">
+            <div class="account-card-top">
+              <div class="account-avatar" id="cfg-avatar">K</div>
+              <div class="account-info">
+                <div class="account-server" id="cfg-server">—</div>
+                <div class="account-folder" id="cfg-folder-short">—</div>
+              </div>
+            </div>
+            <div class="account-card-actions">
+              <button class="account-action-btn" id="cfg-open-folder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                Ouvrir dans l'Explorateur
+              </button>
+              <button class="account-action-btn" id="cfg-move-folder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/>
+                  <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
+                </svg>
+                Changer l'emplacement
+              </button>
+              <button class="account-action-btn danger" id="btn-logout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Déconnecter le compte
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Apparence (Kubuno-specific) -->
+        <div class="settings-section">
+          <div class="settings-section-label">Apparence</div>
+          <div class="settings-rows">
+            <div class="settings-row">
+              <div class="settings-row-label">Thème</div>
+              <select class="settings-select" id="sel-theme">
+                <option value="system">Système</option>
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-label">Langue</div>
+              <select class="settings-select" id="sel-lang">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Démarrage -->
+        <div class="settings-section">
+          <div class="settings-section-label">Démarrage</div>
+          <div class="settings-rows">
+            <div class="check-row">
+              <input type="checkbox" id="chk-autostart" />
+              <div class="check-row-text">
+                <div class="check-row-title">Lancer Kubuno Desktop au démarrage de Windows</div>
+                <div class="check-row-desc">L'application démarre automatiquement à l'ouverture de session.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Synchronisation (Kubuno-specific) -->
+        <div class="settings-section">
+          <div class="settings-section-label">Synchronisation</div>
+          <div class="settings-rows">
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Mode</div>
+                <div class="settings-row-sub">Copie locale — tous les fichiers disponibles hors connexion</div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-label">Intervalle</div>
+              <select class="settings-select" id="sel-interval">
+                <option value="15">15 secondes</option>
+                <option value="30" selected>30 secondes</option>
+                <option value="60">1 minute</option>
+                <option value="300">5 minutes</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-label">Conflits</div>
+              <select class="settings-select" id="sel-conflicts">
+                <option value="keep-both" selected>Conserver les deux versions</option>
+                <option value="server-wins">Priorité au serveur</option>
+                <option value="local-wins">Priorité locale</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-label">Dossier</div>
+              <div class="settings-row-val" id="cfg-folder-full">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications (Kubuno-specific) -->
+        <div class="settings-section">
+          <div class="settings-section-label">Notifications</div>
+          <div class="settings-rows">
+            <div class="check-row">
+              <input type="checkbox" id="chk-notif-windows" checked />
+              <div class="check-row-text">
+                <div class="check-row-title">Afficher les notifications sur Windows</div>
+                <div class="check-row-desc">Désactive les bulles système (toasts). La cloche reste alimentée.</div>
+              </div>
+            </div>
+            <div class="check-row">
+              <input type="checkbox" id="chk-notif-sync" checked />
+              <div class="check-row-text">
+                <div class="check-row-title">Synchronisation terminée</div>
+              </div>
+            </div>
+            <div class="check-row">
+              <input type="checkbox" id="chk-notif-errors" checked />
+              <div class="check-row-text">
+                <div class="check-row-title">Erreurs de synchronisation</div>
+              </div>
+            </div>
+            <div class="check-row">
+              <input type="checkbox" id="chk-notif-activity" />
+              <div class="check-row-text">
+                <div class="check-row-title">Nouvelles activités sur l'instance</div>
+                <div class="check-row-desc">Partages, commentaires, invitations… (selon les modules installés)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modules de l'instance (server-pushed, dynamic) -->
+        <div class="settings-section" id="section-modules">
+          <div class="settings-section-label">
+            Modules de l'instance
+            <span class="modules-badge" id="modules-badge"></span>
+          </div>
+          <div class="settings-rows" id="modules-container">
+            <div class="settings-row modules-loading">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin">
+                <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+                <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+              </svg>
+              Chargement des paramètres de l'instance…
+            </div>
+          </div>
+        </div>
+
+        <!-- Stockage local -->
+        <div class="settings-section">
+          <div class="settings-section-label">Stockage local</div>
+          <div class="settings-rows">
+            <div class="config-dir-row">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span class="config-dir-path" id="cfg-config-dir">—</span>
+              <button class="config-dir-btn" id="btn-open-config-dir">Ouvrir</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- À propos -->
+        <div class="settings-section">
+          <div class="settings-section-label">À propos</div>
+          <div class="settings-rows">
+            <div class="about-row">
+              <div class="about-row-logo"><svg viewBox="0 0 321 346" fill="currentColor" aria-hidden="true" width="100%" height="100%"><use href="#logo-kubuno"/></svg></div>
+              <div class="about-row-info">
+                <div class="about-row-name">Kubuno Desktop</div>
+                <div class="about-row-meta">v0.1.0-alpha · AGPLv3</div>
+              </div>
+              <button class="about-gh-btn" id="cfg-gh-link">GitHub ↗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+
+  // ── Custom title bar — window controls ────────────────────────────────────
+  (function () {
+    const appWin = window.__TAURI__?.window?.getCurrentWindow?.();
+    if (!appWin) return;
+
+    const RESTORE_ICON = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2.5" y=".5" width="7" height="7"/><rect x=".5" y="2.5" width="7" height="7" fill="var(--surface)"/><rect x=".5" y="2.5" width="7" height="7"/></svg>`;
+    const MAXIMIZE_ICON = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="8.8" height="8.8"/></svg>`;
+    const btnMax = document.getElementById('btn-win-max');
+
+    async function syncMaxIcon() {
+      const isMax = await appWin.isMaximized();
+      btnMax.innerHTML = isMax ? RESTORE_ICON : MAXIMIZE_ICON;
+      btnMax.title = isMax ? 'Restaurer' : 'Agrandir';
+    }
+
+    document.getElementById('btn-win-min').addEventListener('click', () => appWin.minimize());
+    btnMax.addEventListener('click', () => appWin.toggleMaximize().then(syncMaxIcon));
+    document.getElementById('btn-win-close').addEventListener('click', () => appWin.close());
+
+    appWin.onResized(syncMaxIcon);
+    syncMaxIcon();
+  })();
+
+  // ── SVG icons ──────────────────────────────────────────────────────────────
+  const ICON_OK   = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a7a4a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const ICON_SYNC = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2058c3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+  const ICON_ERR  = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b83232" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+  // ── Nav routing ────────────────────────────────────────────────────────────
+  const VIEWS = ['home', 'activity', 'settings'];
+  function showView(name) {
+    VIEWS.forEach(v => {
+      document.getElementById('view-' + v).classList.toggle('hidden', v !== name);
+      document.getElementById('nav-' + v).classList.toggle('active', v === name);
+    });
+    closeAll();
+  }
+  VIEWS.forEach(v => document.getElementById('nav-' + v).addEventListener('click', () => showView(v)));
+
+  // ── Close all popups / dropdowns ───────────────────────────────────────────
+  function closeAll() {
+    document.getElementById('dd-settings').classList.add('hidden');
+    document.getElementById('account-popup').classList.add('hidden');
+    document.getElementById('notif-popup').classList.add('hidden');
+  }
+  document.addEventListener('click', closeAll);
+
+  // ── Settings gear dropdown ─────────────────────────────────────────────────
+  document.getElementById('btn-dd-settings').addEventListener('click', e => {
+    e.stopPropagation();
+    const dd = document.getElementById('dd-settings');
+    const wasOpen = !dd.classList.contains('hidden');
+    closeAll();
+    if (!wasOpen) dd.classList.remove('hidden');
+  });
+  document.getElementById('dm-preferences').addEventListener('click', () => showView('settings'));
+  document.getElementById('dm-errors').addEventListener('click', () => showView('activity'));
+  document.getElementById('dm-about').addEventListener('click', () => {
+    closeAll();
+    document.getElementById('about-overlay').classList.remove('hidden');
+  });
+  document.getElementById('dm-quit').addEventListener('click', async () => {
+    try { await invoke('quit_app'); } catch (_) {}
+  });
+
+  // ── Notifications (bell panel + counter, fed by sync events) ─────────────────
+  let notifications = [];
+  let unreadCount = 0;
+
+  function updateNotifBadge() {
+    const badge = document.getElementById('notif-badge');
+    badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+    badge.classList.toggle('hidden', unreadCount === 0);
+  }
+
+  function renderNotifList() {
+    const list = document.getElementById('notif-list');
+    if (!notifications.length) {
+      list.innerHTML = '<div class="notif-empty">Aucune notification.</div>';
+      return;
+    }
+    list.innerHTML = notifications.map(n => {
+      const dot = n.kind === 'error' ? 'error' : n.kind === 'conflict' ? 'conflict' : '';
+      const time = n.ts.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      return `<div class="notif-item${n.read ? '' : ' unread'}">
+        <span class="notif-dot ${dot}"></span>
+        <div class="notif-text">
+          <div class="notif-title">${escapeHtml(n.title)}</div>
+          <div class="notif-body">${escapeHtml(n.body)}</div>
+          <div class="notif-time">${time}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
+  // True if the user enabled (or left enabled) a given notification toggle.
+  const prefOn = (id) => {
+    const v = localStorage.getItem('kubuno-' + id);
+    // Default: windows/sync/errors ON, activity OFF (matches the checkboxes).
+    if (v === null) return id !== 'chk-notif-activity';
+    return v === 'true';
+  };
+
+  function addNotification(kind, title, body) {
+    const n = { id: Date.now() + '-' + Math.random(), kind, title, body, ts: new Date(), read: false };
+    notifications.unshift(n);
+    if (notifications.length > 50) notifications.length = 50;
+    unreadCount++;
+    updateNotifBadge();
+    renderNotifList();
+
+    // Native Windows toast — gated by the master + per-type toggles.
+    const typeOn = kind === 'error' ? prefOn('chk-notif-errors')
+                 : kind === 'conflict' ? prefOn('chk-notif-errors')
+                 : prefOn('chk-notif-sync');
+    if (prefOn('chk-notif-windows') && typeOn) {
+      try { invoke('show_toast', { title, body }); } catch (_) {}
+    }
+  }
+
+  document.getElementById('btn-notifs').addEventListener('click', e => {
+    e.stopPropagation();
+    const popup = document.getElementById('notif-popup');
+    const wasOpen = !popup.classList.contains('hidden');
+    closeAll();
+    if (!wasOpen) {
+      popup.classList.remove('hidden');
+      // Opening the panel marks everything as read.
+      notifications.forEach(n => n.read = true);
+      unreadCount = 0;
+      updateNotifBadge();
+      renderNotifList();
+    }
+  });
+  document.getElementById('notif-popup').addEventListener('click', e => e.stopPropagation());
+  document.getElementById('notif-clear').addEventListener('click', () => {
+    notifications = []; unreadCount = 0;
+    updateNotifBadge(); renderNotifList();
+  });
+
+  // Bridge: backend sync outcomes → notification list (+ activity feed).
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen('sync-event', (e) => {
+      const p = e.payload || {};
+      addNotification(p.kind || 'synced', p.title || 'Synchronisation', p.body || '');
+      addActivity((p.title || '') + (p.body ? ' — ' + p.body : ''), p.kind === 'error');
+    });
+  }
+
+  // ── Header icons (web-shell parity) ──────────────────────────────────────────
+  document.getElementById('btn-help').addEventListener('click', () => {
+    closeAll();
+    document.getElementById('about-overlay').classList.remove('hidden');
+  });
+  document.getElementById('btn-apps').addEventListener('click', () => {
+    if (currentStatus) try { invoke('open_in_browser', { url: currentStatus.server }); } catch (_) {}
+  });
+
+  // ── Account popup ──────────────────────────────────────────────────────────
+  document.getElementById('btn-avatar').addEventListener('click', e => {
+    e.stopPropagation();
+    const popup = document.getElementById('account-popup');
+    const wasOpen = !popup.classList.contains('hidden');
+    closeAll();
+    if (!wasOpen) {
+      popup.classList.remove('hidden');
+      refreshActiveUser();   // re-fetch in case the startup load missed it
+    }
+  });
+  document.getElementById('account-popup').addEventListener('click', e => e.stopPropagation());
+  document.getElementById('btn-close-ap').addEventListener('click', () => {
+    document.getElementById('account-popup').classList.add('hidden');
+  });
+  document.getElementById('ap-open-folder').addEventListener('click', openFolder);
+  document.getElementById('ap-disconnect').addEventListener('click', doLogout);
+  document.getElementById('ap-about').addEventListener('click', () => {
+    closeAll();
+    document.getElementById('about-overlay').classList.remove('hidden');
+  });
+  document.getElementById('ap-gh').addEventListener('click', () => {
+    try { invoke('open_in_browser', { url: 'https://github.com/kubuno/desktop' }); } catch (_) {}
+  });
+
+  // ── About overlay ──────────────────────────────────────────────────────────
+  document.getElementById('btn-close-about').addEventListener('click', () => {
+    document.getElementById('about-overlay').classList.add('hidden');
+  });
+  document.getElementById('about-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('about-gh-link').addEventListener('click', () => {
+    try { invoke('open_in_browser', { url: 'https://github.com/kubuno/desktop' }); } catch (_) {}
+  });
+
+  // ── Sync state ─────────────────────────────────────────────────────────────
+  const syncDot    = document.getElementById('sync-dot');
+  const syncLabel  = document.getElementById('sync-label');
+  const syncSub    = document.getElementById('sync-sub');
+  const syncResult = document.getElementById('sync-result');
+  const btnSync    = document.getElementById('btn-sync-now');
+
+  function setSyncState(state, label, sub, result) {
+    syncDot.className = 'sync-dot ' + state;
+    syncDot.innerHTML = state === 'ok' ? ICON_OK : state === 'syncing' ? ICON_SYNC : ICON_ERR;
+    syncLabel.textContent = label;
+    syncSub.textContent   = sub || '';
+    if (result) { syncResult.textContent = result; syncResult.classList.remove('hidden'); }
+    else          syncResult.classList.add('hidden');
+  }
+  syncDot.innerHTML = ICON_OK;
+
+  // ── Activity log ───────────────────────────────────────────────────────────
+  const activityLog = [];
+  function addActivity(text, isError) {
+    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    activityLog.unshift({ time, text, isError });
+    renderActivity();
+  }
+  function renderActivity() {
+    const list = document.getElementById('activity-list');
+    if (!activityLog.length) {
+      list.innerHTML = '<div class="activity-empty">Aucune activité enregistrée.<br>Lance une synchronisation pour commencer.</div>';
+      return;
+    }
+    list.innerHTML = activityLog.slice(0, 100).map(e => `
+      <div class="activity-item">
+        <span class="activity-time">${e.time}</span>
+        <span class="activity-dot ${e.isError ? 'error' : 'ok'}"></span>
+        <span class="activity-detail${e.isError ? ' is-err' : ''}">${e.text}</span>
+      </div>`).join('');
+  }
+
+  // ── Sync ───────────────────────────────────────────────────────────────────
+  async function doSync() {
+    btnSync.disabled = true;
+    setSyncState('syncing', 'Synchronisation en cours…', 'Veuillez patienter…');
+    try {
+      const result = await invoke('sync_now', { id: activeId });
+      const ts = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      setSyncState('ok', 'Vos fichiers sont à jour', 'Dernière sync : ' + ts, result);
+      addActivity(result, false);
+    } catch (e) {
+      const msg = String(e);
+      setSyncState('error', 'Erreur de synchronisation', msg);
+      addActivity(msg, true);
+    } finally {
+      btnSync.disabled = false;
+    }
+  }
+  btnSync.addEventListener('click', doSync);
+  document.getElementById('ql-sync').addEventListener('click', doSync);
+
+  // ── Open folder ────────────────────────────────────────────────────────────
+  async function openFolder() {
+    try { await invoke('open_folder', { id: activeId }); } catch (_) {}
+  }
+  document.getElementById('btn-open-folder').addEventListener('click', openFolder);
+  document.getElementById('ql-folder').addEventListener('click', openFolder);
+  document.getElementById('cfg-open-folder').addEventListener('click', openFolder);
+
+  // ── Move the local sync folder ───────────────────────────────────────────────
+  document.getElementById('cfg-move-folder').addEventListener('click', async () => {
+    if (!activeId) return;
+    let dest;
+    try { dest = await invoke('pick_folder'); } catch (_) { return; }
+    if (!dest) return; // cancelled
+    const btn = document.getElementById('cfg-move-folder');
+    const prev = btn.innerHTML;
+    btn.disabled = true; btn.textContent = 'Déplacement…';
+    try {
+      await invoke('move_sync_folder', { id: activeId, newPath: dest });
+      await loadInstanceView();          // refresh the displayed folder path
+      addActivity('Dossier de synchronisation déplacé vers ' + dest, false);
+    } catch (e) {
+      addActivity('Échec du déplacement du dossier : ' + String(e), true);
+    } finally {
+      btn.disabled = false; btn.innerHTML = prev;
+    }
+  });
+
+  // ── Multi-instance state ─────────────────────────────────────────────────────
+  let currentStatus = null;   // status of the active instance
+  let activeId      = null;   // id of the instance currently shown
+  let instances     = [];     // all connected instances
+  let addMode       = false;  // login screen shown to ADD an instance (not first login)
+
+  // ── Open web ───────────────────────────────────────────────────────────────
+  document.getElementById('ql-web').addEventListener('click', () => {
+    if (currentStatus) try { invoke('open_in_browser', { url: currentStatus.server }); } catch (_) {}
+  });
+
+  // ── Open config dir ────────────────────────────────────────────────────────
+  document.getElementById('btn-open-config-dir').addEventListener('click', async () => {
+    try { await invoke('open_config_dir'); } catch (_) {}
+  });
+
+  // ── Autostart ──────────────────────────────────────────────────────────────
+  const chkAutostart = document.getElementById('chk-autostart');
+  chkAutostart.addEventListener('change', async () => {
+    try { await invoke('set_autostart', { enabled: chkAutostart.checked }); } catch (_) {}
+  });
+
+  // ── GitHub links in settings ────────────────────────────────────────────────
+  document.getElementById('cfg-gh-link').addEventListener('click', () => {
+    try { invoke('open_in_browser', { url: 'https://github.com/kubuno/desktop' }); } catch (_) {}
+  });
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  const selTheme = document.getElementById('sel-theme');
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : t;
+  }
+  selTheme.value = localStorage.getItem('kubuno-theme') || 'system';
+  applyTheme(selTheme.value);
+  selTheme.addEventListener('change', () => {
+    localStorage.setItem('kubuno-theme', selTheme.value);
+    applyTheme(selTheme.value);
+  });
+
+  // ── Local preferences (sync interval, conflicts, notifications) ────────────
+  ['sel-interval', 'sel-conflicts', 'sel-lang'].forEach(id => {
+    const el = document.getElementById(id);
+    const key = 'kubuno-' + id;
+    el.value = localStorage.getItem(key) || el.value;
+    el.addEventListener('change', () => localStorage.setItem(key, el.value));
+  });
+  ['chk-notif-windows', 'chk-notif-sync', 'chk-notif-errors', 'chk-notif-activity'].forEach(id => {
+    const el = document.getElementById(id);
+    const key = 'kubuno-' + id;
+    const stored = localStorage.getItem(key);
+    if (stored !== null) el.checked = stored === 'true';
+    el.addEventListener('change', () => localStorage.setItem(key, el.checked));
+  });
+
+  // ── Instance modules (server-pushed) ──────────────────────────────────────
+  async function loadInstanceModules() {
+    const container = document.getElementById('modules-container');
+    const badge     = document.getElementById('modules-badge');
+    try {
+      const modules = await invoke('get_instance_modules', { id: activeId });
+      if (!modules || modules.length === 0) {
+        container.innerHTML = `<div class="settings-row" style="font-size:12px;color:var(--muted);padding:13px 14px;">
+          Aucun module détecté sur cette instance.<br>
+          <span style="font-size:11px">Les modules installés sur le serveur peuvent enrichir ces paramètres.</span>
+        </div>`;
+        return;
       }
+      badge.textContent = modules.length;
+      container.innerHTML = modules.map(mod => `
+        <div class="module-group-label">${mod.name}</div>
+        ${mod.settings.map(s => renderModuleSetting(mod.id, s)).join('')}
+      `).join('');
+      // Wire up change events for module settings
+      modules.forEach(mod => mod.settings.forEach(s => wireModuleSetting(mod.id, s)));
+    } catch (_) {
+      container.innerHTML = `<div class="settings-row" style="font-size:12px;color:var(--muted);padding:13px 14px;">Impossible de contacter l'instance.</div>`;
+    }
+  }
 
-      $("loginBtn").onclick = async () => {
-        hide("err");
-        try {
-          await invoke("do_login", {
-            server: $("server").value.trim(),
-            login: $("usr").value.trim(),
-            password: $("pwd").value,
-            folder: $("folder").value.trim(),
-          });
-          await refresh();
-        } catch (e) {
-          $("err").textContent = String(e);
-          show("err");
-        }
+  function renderModuleSetting(moduleId, s) {
+    const key = `kubuno-module-${moduleId}-${s.key}`;
+    const stored = localStorage.getItem(key);
+    if (s.kind === 'checkbox') {
+      const checked = stored !== null ? stored === 'true' : s.value === true;
+      return `<div class="check-row">
+        <input type="checkbox" id="ms-${moduleId}-${s.key}" ${checked ? 'checked' : ''} />
+        <div class="check-row-text">
+          <div class="check-row-title">${s.label}</div>
+          ${s.description ? `<div class="check-row-desc">${s.description}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    if (s.kind === 'select' && s.options) {
+      const val = stored || s.value;
+      return `<div class="settings-row">
+        <div class="settings-row-label">${s.label}</div>
+        <select class="settings-select" id="ms-${moduleId}-${s.key}">
+          ${s.options.map(o => `<option value="${o}" ${o === val ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+    // text / fallback
+    return `<div class="settings-row">
+      <div class="settings-row-label">${s.label}</div>
+      <div class="settings-row-val">${stored || s.value}</div>
+    </div>`;
+  }
+
+  function wireModuleSetting(moduleId, s) {
+    const el = document.getElementById(`ms-${moduleId}-${s.key}`);
+    if (!el) return;
+    const key = `kubuno-module-${moduleId}-${s.key}`;
+    if (s.kind === 'checkbox') {
+      el.addEventListener('change', () => localStorage.setItem(key, el.checked));
+    } else if (s.kind === 'select') {
+      el.addEventListener('change', () => localStorage.setItem(key, el.value));
+    }
+  }
+
+  // ── Disconnect the active instance ───────────────────────────────────────────
+  async function doLogout() {
+    closeAll();
+    if (!activeId) return;
+    try { await invoke('remove_instance', { id: activeId }); } catch (_) {}
+    instances = await invoke('list_instances');
+    if (instances.length === 0) {
+      activeId = null; currentStatus = null;
+      enterAddMode(true);            // back to a clean first-login screen
+    } else {
+      activeId = instances[0].id;
+      await loadInstanceView();
+      renderInstanceList();
+    }
+  }
+  document.getElementById('btn-logout').addEventListener('click', doLogout);
+
+  // ── Account switcher (instance list + add/select) ────────────────────────────
+  function instanceHost(server) {
+    try { return new URL(server).hostname; } catch (_) { return server; }
+  }
+
+  function renderInstanceList() {
+    const box = document.getElementById('ap-instances');
+    if (!box) return;
+    const check = '<svg class="ap-inst-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    box.innerHTML = instances.map(inst => {
+      const host = instanceHost(inst.server);
+      const initial = (host[0] || 'K').toUpperCase();
+      const active = inst.id === activeId;
+      return `<div class="ap-inst${active ? ' active' : ''}" data-id="${inst.id}">
+        <div class="ap-inst-avatar" data-avatar="${inst.id}">${initial}</div>
+        <div class="ap-inst-text">
+          <div class="ap-inst-name" data-name="${inst.id}">${host}</div>
+          <div class="ap-inst-sub">${inst.server}</div>
+        </div>
+        ${active ? check : ''}
+      </div>`;
+    }).join('');
+    instances.forEach(enrichInstanceRow);
+  }
+
+  // Best-effort: replace each row's host/initial with the real user name + photo.
+  async function enrichInstanceRow(inst) {
+    try {
+      const user = await invoke('get_user', { id: inst.id });
+      if (!user) return;
+      const nameEl = document.querySelector(`[data-name="${inst.id}"]`);
+      if (nameEl) nameEl.textContent = user.display_name || user.username || user.email;
+      if (user.avatar_url) {
+        const probe = new Image();
+        probe.onload = () => {
+          const av = document.querySelector(`[data-avatar="${inst.id}"]`);
+          if (av) { av.style.backgroundImage = `url("${user.avatar_url}")`; av.textContent = ''; }
+        };
+        probe.src = user.avatar_url;
+      }
+    } catch (_) {}
+  }
+
+  async function selectInstance(id) {
+    if (id === activeId) return;
+    activeId = id;
+    await loadInstanceView();
+    renderInstanceList();
+  }
+
+  document.getElementById('ap-instances').addEventListener('click', e => {
+    const row = e.target.closest('.ap-inst');
+    if (row) selectInstance(row.getAttribute('data-id'));
+  });
+
+  // ── Add-instance mode (reuse the login screen with a back button) ────────────
+  function enterAddMode(firstLogin) {
+    addMode = !firstLogin;
+    closeAll();
+    document.getElementById('f-login').value = '';
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-folder').value = '';
+    document.getElementById('login-error').classList.add('hidden');
+    document.getElementById('login-back').classList.toggle('hidden', !addMode);
+    showApp(false);
+  }
+  function exitAddMode() {
+    addMode = false;
+    document.getElementById('login-back').classList.add('hidden');
+  }
+  document.getElementById('ap-add-instance').addEventListener('click', () => enterAddMode(false));
+  document.getElementById('login-back').addEventListener('click', () => {
+    exitAddMode();
+    if (instances.length) showApp(true);
+  });
+
+  // ── Login ──────────────────────────────────────────────────────────────────
+  const btnLogin = document.getElementById('btn-login');
+  const loginErr = document.getElementById('login-error');
+
+  async function doLogin() {
+    const server   = document.getElementById('f-server').value.trim();
+    const login    = document.getElementById('f-login').value.trim();
+    const password = document.getElementById('f-password').value;
+    const folder   = document.getElementById('f-folder').value.trim();
+    loginErr.classList.add('hidden');
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Connexion…';
+    try {
+      const id = await invoke('do_login', { server, login, password, folder });
+      activeId = id;
+      exitAddMode();
+      document.getElementById('f-password').value = '';
+      instances = await invoke('list_instances');
+      showApp(true);
+      await loadInstanceView();
+      renderInstanceList();
+      showView('home');
+      setSyncState('ok', 'Vos fichiers sont à jour', 'Les activités s\'afficheront ici');
+    } catch (e) {
+      loginErr.textContent = String(e);
+      loginErr.classList.remove('hidden');
+    } finally {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Se connecter';
+    }
+  }
+  btnLogin.addEventListener('click', doLogin);
+  ['f-server', 'f-login', 'f-password', 'f-folder'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+
+  // ── App bootstrap ──────────────────────────────────────────────────────────
+  function showApp(loggedIn) {
+    document.getElementById('login-screen').classList.toggle('hidden', loggedIn);
+    document.getElementById('app').classList.toggle('hidden', !loggedIn);
+  }
+
+  // Populate the header avatar + account popup with the real connected user
+  // (name, email, avatar photo). The avatar endpoint is public, so we can load
+  // the photo straight into an <img>/background; we only switch once it actually
+  // loads, otherwise the name initial stays as a clean fallback.
+  function applyUser(user) {
+    const name = (user.display_name || user.username || user.email || '').trim();
+    const nameEl = document.getElementById('ap-name');
+    const emailEl = document.getElementById('ap-email');
+    if (nameEl) nameEl.textContent = name || 'Connecté';
+    if (emailEl) emailEl.textContent = user.email || '';
+
+    const avatarIds = ['btn-avatar', 'ap-avatar-big', 'cfg-avatar'];
+    const initial = (name || user.email || 'K').trim()[0].toUpperCase();
+    avatarIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = initial;
+    });
+
+    if (user.avatar_url) {
+      const probe = new Image();
+      probe.onload = () => {
+        avatarIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.style.backgroundImage = `url("${user.avatar_url}")`;
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+          el.textContent = '';
+        });
       };
+      probe.src = user.avatar_url;
+    }
+  }
 
-      $("syncBtn").onclick = async () => {
-        $("msg").textContent = "Synchronisation…";
-        try {
-          $("msg").textContent = await invoke("sync_now");
-        } catch (e) {
-          $("msg").textContent = "Erreur : " + e;
-        }
-      };
+  // Reset the header/settings avatars to the server-hostname initial (clears any
+  // previous instance's photo before the real one loads).
+  function resetAvatars(status) {
+    let initial = 'K';
+    try { initial = new URL(status.server).hostname[0].toUpperCase(); } catch (_) {}
+    ['btn-avatar', 'ap-avatar-big', 'cfg-avatar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = initial; el.style.backgroundImage = ''; }
+    });
+  }
 
-      $("openBtn").onclick = () => invoke("sync_now"); // placeholder; tray opens the folder
+  // Load and render everything tied to the active instance (status, identity,
+  // settings, modules). Called on startup and on every instance switch.
+  async function loadInstanceView() {
+    if (!activeId) return;
+    currentStatus = await invoke('get_status', { id: activeId });
+    if (currentStatus) {
+      resetAvatars(currentStatus);
+      document.getElementById('ap-server').textContent = currentStatus.server;
+      document.getElementById('cfg-server').textContent = currentStatus.server;
+      document.getElementById('cfg-folder-full').textContent = currentStatus.folder;
+      const parts = currentStatus.folder.replace(/\\/g, '/').split('/');
+      document.getElementById('cfg-folder-short').textContent = parts.slice(-2).join('/') || currentStatus.folder;
+    }
+    await refreshActiveUser();
+    loadInstanceModules();
+  }
 
-      refresh();
-    </script>
-  </body>
+  // Fetch and display the active instance's user identity. Best-effort; the
+  // backend retries internally so a transient hiccup doesn't blank the account.
+  async function refreshActiveUser() {
+    if (!activeId) return;
+    try {
+      const user = await invoke('get_user', { id: activeId });
+      if (user) applyUser(user);
+    } catch (_) {}
+  }
+
+  async function loadApp() {
+    const loggedIn = await invoke('is_logged_in');
+    if (!loggedIn) { showApp(false); return; }
+
+    instances = await invoke('list_instances');
+    activeId = instances.length ? instances[0].id : null;
+    showApp(true);
+    await loadInstanceView();
+    renderInstanceList();
+
+    // Pre-fill the login server field from the active instance.
+    if (currentStatus) document.getElementById('f-server').value = currentStatus.server;
+
+    // Instance-independent settings.
+    try {
+      const dir = await invoke('get_config_dir');
+      if (dir) document.getElementById('cfg-config-dir').textContent = dir;
+    } catch (_) {}
+    try {
+      chkAutostart.checked = await invoke('get_autostart');
+    } catch (_) {}
+
+    showView('home');
+    setSyncState('ok', 'Vos fichiers sont à jour', 'Les activités s\'afficheront ici');
+  }
+
+  loadApp();
+</script>
+</body>
 </html>

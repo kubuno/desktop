@@ -15,18 +15,19 @@ use std::time::Duration;
 
 use crate::config::Creds;
 
-/// Spawns the listener thread. `tx` is the daemon's wake channel.
-pub fn spawn_listener(server_url: String, tx: Sender<()>) {
+/// Spawns the listener thread. `id` selects the instance whose token to use;
+/// `tx` is the daemon's wake channel.
+pub fn spawn_listener(id: String, server_url: String, tx: Sender<()>) {
     std::thread::spawn(move || loop {
-        if let Err(e) = run(&server_url, &tx) {
+        if let Err(e) = run(&id, &server_url, &tx) {
             eprintln!("  websocket : {e} (reconnexion dans 5 s)");
         }
         std::thread::sleep(Duration::from_secs(5));
     });
 }
 
-fn run(server_url: &str, tx: &Sender<()>) -> anyhow::Result<()> {
-    let creds = Creds::load()?;
+fn run(id: &str, server_url: &str, tx: &Sender<()>) -> anyhow::Result<()> {
+    let creds = Creds::load(id)?;
     let url = ws_url(server_url, &creds.access_token);
     let (mut socket, _resp) = tungstenite::connect(&url)?;
 

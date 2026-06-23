@@ -3,14 +3,29 @@ name        = "kubuno-desktop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description  = "Kubuno desktop app — Tauri shell (window + tray) over the sync engine"
+description  = "Kubuno desktop & mobile app — Tauri shell over the sync engine"
+
+# The Tauri logic lives in a library so it can be shared by the desktop binary
+# (main.rs) and the Android/iOS entry points (cdylib/staticlib).
+[lib]
+name       = "kubuno_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri               = { version = "2", features = ["tray-icon"] }
+tauri               = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
 serde               = { version = "1", features = ["derive"] }
 serde_json          = "1"
 kubuno-sync         = { path = "../../crates/kubuno-sync" }
+ureq                = { version = "2", features = ["json"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+uuid   = { version = "1", features = ["v5"] }
+# Emit toasts with our own AUMID so they show "Kubuno" + icon, not PowerShell.
+tauri-winrt-notification = "0.7"

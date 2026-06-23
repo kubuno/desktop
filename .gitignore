@@ -5,3 +5,9 @@ Cargo.lock
 # Tauri generated files
 /app/src-tauri/gen/
 /app/src-tauri/target/
+
+# Build artifacts (binaries)
+/dist/
+/app/src-tauri/msix/*.exe
+/app/src-tauri/msix/layout/
+/app/src-tauri/msix/*.msix

@@ -23,14 +23,55 @@ use crate::{
     store::Store,
 };
 
-pub fn watch(interval_secs: u64) -> Result<()> {
-    let cfg = Config::load()?;
-    let mut api = Api::new(cfg.server_url.clone(), Creds::load()?);
-    let store = Store::open(&db_path()?)?;
+/// A notable sync outcome, surfaced to the UI as a notification.
+#[derive(Clone, serde::Serialize)]
+pub struct SyncEvent {
+    /// "synced" | "conflict" | "error".
+    pub kind:  String,
+    pub title: String,
+    pub body:  String,
+}
+
+/// Watch every configured instance at once: one background thread per instance,
+/// each running its own filesystem watcher + server poll. `on_event` is invoked
+/// (with the instance id) for each notable sync outcome. Blocks until interrupted.
+pub fn watch_all<F>(interval_secs: u64, on_event: F) -> Result<()>
+where
+    F: Fn(&str, SyncEvent) + Send + Sync + Clone + 'static,
+{
+    let instances = Config::list()?;
+    if instances.is_empty() {
+        println!("Aucune instance configurée. Lance `kubuno-sync login` d'abord.");
+        return Ok(());
+    }
+    let mut handles = Vec::new();
+    for cfg in instances {
+        let id = cfg.id.clone();
+        let cb = on_event.clone();
+        handles.push(std::thread::spawn(move || {
+            if let Err(e) = watch(&id, interval_secs, cb) {
+                eprintln!("[{id}] surveillance arrêtée : {e}");
+            }
+        }));
+    }
+    for h in handles {
+        let _ = h.join();
+    }
+    Ok(())
+}
+
+/// Continuously sync a single instance (FS watcher + WebSocket + poll fallback).
+pub fn watch<F>(id: &str, interval_secs: u64, on_event: F) -> Result<()>
+where
+    F: Fn(&str, SyncEvent) + Send + Sync + 'static,
+{
+    let cfg = Config::load(id)?;
+    let mut api = Api::new(id.to_string(), cfg.server_url.clone(), Creds::load(id)?);
+    let store = Store::open(&db_path(id)?)?;
     std::fs::create_dir_all(&cfg.sync_root)?;
 
     // Catch up once before watching.
-    run_once(&mut api, &store, &cfg);
+    run_once(&mut api, &store, id, &on_event);
 
     let (tx, rx) = channel();
 
@@ -44,7 +85,7 @@ pub fn watch(interval_secs: u64) -> Result<()> {
     watcher.watch(&cfg.sync_root, RecursiveMode::Recursive)?;
 
     // Real-time remote changes via the core WebSocket (poll below is the fallback).
-    crate::ws::spawn_listener(cfg.server_url.clone(), tx.clone());
+    crate::ws::spawn_listener(id.to_string(), cfg.server_url.clone(), tx.clone());
 
     println!(
         "Surveillance de {} — temps réel (WebSocket) + poll serveur toutes les {interval_secs}s. Ctrl-C pour arrêter.",
@@ -58,10 +99,10 @@ pub fn watch(interval_secs: u64) -> Result<()> {
             // Local change(s): wait for the write burst to settle, then sync.
             Ok(()) => {
                 while rx.recv_timeout(debounce).is_ok() {}
-                run_once(&mut api, &store, &cfg);
+                run_once(&mut api, &store, id, &on_event);
             }
             // Periodic remote poll.
-            Err(RecvTimeoutError::Timeout) => run_once(&mut api, &store, &cfg),
+            Err(RecvTimeoutError::Timeout) => run_once(&mut api, &store, id, &on_event),
             Err(RecvTimeoutError::Disconnected) => break,
         }
         // Discard events caused by our own writes during the sync above.
@@ -70,23 +111,73 @@ pub fn watch(interval_secs: u64) -> Result<()> {
     Ok(())
 }
 
-/// One push+pull cycle. Errors (e.g. offline) are logged, never fatal — the
-/// daemon keeps running and retries on the next trigger.
-fn run_once(api: &mut Api, store: &Store, cfg: &Config) {
+/// One push+pull cycle. The config is reloaded each cycle so a sync-folder move
+/// (which updates `sync_root`) is picked up without restarting the daemon — and
+/// we never re-download into a stale folder. Errors are logged, never fatal.
+fn run_once<F>(api: &mut Api, store: &Store, id: &str, on_event: &F)
+where
+    F: Fn(&str, SyncEvent),
+{
+    let cfg = match Config::load(id) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("  config : {e}");
+            return;
+        }
+    };
+    let cfg = &cfg;
     match push::push(api, store, cfg) {
-        Ok(p) if p.uploaded + p.modified + p.deleted + p.conflicts > 0 => println!(
-            "  ↑ {} créé(s), {} modifié(s), {} supprimé(s), {} conflit(s)",
-            p.uploaded, p.modified, p.deleted, p.conflicts
-        ),
+        Ok(p) if p.uploaded + p.modified + p.deleted + p.conflicts > 0 => {
+            println!(
+                "  ↑ {} créé(s), {} modifié(s), {} supprimé(s), {} conflit(s)",
+                p.uploaded, p.modified, p.deleted, p.conflicts
+            );
+            if p.conflicts > 0 {
+                on_event(id, SyncEvent {
+                    kind:  "conflict".into(),
+                    title: "Conflit de synchronisation".into(),
+                    body:  format!("{} fichier(s) en conflit — une copie a été conservée.", p.conflicts),
+                });
+            }
+            let sent = p.uploaded + p.modified + p.deleted;
+            if sent > 0 {
+                on_event(id, SyncEvent {
+                    kind:  "synced".into(),
+                    title: "Modifications envoyées".into(),
+                    body:  format!("{} créé(s), {} modifié(s), {} supprimé(s).", p.uploaded, p.modified, p.deleted),
+                });
+            }
+        }
         Ok(_) => {}
-        Err(e) => eprintln!("  push : {e}"),
+        Err(e) => {
+            eprintln!("  push : {e}");
+            on_event(id, SyncEvent {
+                kind:  "error".into(),
+                title: "Erreur de synchronisation".into(),
+                body:  e.to_string(),
+            });
+        }
     }
     match engine::sync(api, store, cfg) {
-        Ok(s) if s.downloaded + s.folders + s.deleted > 0 => println!(
-            "  ↓ {} téléchargé(s), {} dossier(s), {} supprimé(s)",
-            s.downloaded, s.folders, s.deleted
-        ),
+        Ok(s) if s.downloaded + s.folders + s.deleted > 0 => {
+            println!(
+                "  ↓ {} téléchargé(s), {} dossier(s), {} supprimé(s)",
+                s.downloaded, s.folders, s.deleted
+            );
+            on_event(id, SyncEvent {
+                kind:  "synced".into(),
+                title: "Fichiers reçus".into(),
+                body:  format!("{} téléchargé(s), {} dossier(s), {} supprimé(s).", s.downloaded, s.folders, s.deleted),
+            });
+        }
         Ok(_) => {}
-        Err(e) => eprintln!("  pull : {e}"),
+        Err(e) => {
+            eprintln!("  pull : {e}");
+            on_event(id, SyncEvent {
+                kind:  "error".into(),
+                title: "Erreur de synchronisation".into(),
+                body:  e.to_string(),
+            });
+        }
     }
 }
