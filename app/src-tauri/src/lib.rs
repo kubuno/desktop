@@ -25,6 +25,7 @@ static APP: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 /// the bell counter and, if enabled, a native toast).
 #[cfg(desktop)]
 fn emit_sync_event(id: &str, ev: kubuno_sync::daemon::SyncEvent) {
+    let kind = ev.kind.clone();
     if let Some(app) = APP.get() {
         use tauri::Emitter;
         let _ = app.emit(
@@ -37,6 +38,16 @@ fn emit_sync_event(id: &str, ev: kubuno_sync::daemon::SyncEvent) {
             }),
         );
     }
+    // Refresh the Explorer sync-status overlays so files just pulled get the
+    // green check without waiting for the next app start.
+    #[cfg(windows)]
+    if kind == "synced" {
+        if let Some(cfg) = kubuno_sync::current_config(id) {
+            std::thread::spawn(move || cloudfiles::mark_tree_in_sync(&cfg.sync_root));
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = kind;
 }
 #[cfg(desktop)]
 use tauri::{

@@ -84,8 +84,14 @@ where
     })?;
     watcher.watch(&cfg.sync_root, RecursiveMode::Recursive)?;
 
-    // Real-time remote changes via the core WebSocket (poll below is the fallback).
-    crate::ws::spawn_listener(id.to_string(), cfg.server_url.clone(), tx.clone());
+    // Real-time remote changes via the core WebSocket (poll below is the
+    // fallback). Skipped when a proxy is set — tungstenite can't tunnel through
+    // a proxy, and the periodic poll already goes through it.
+    if crate::config::proxy_url().is_none() {
+        crate::ws::spawn_listener(id.to_string(), cfg.server_url.clone(), tx.clone());
+    } else {
+        println!("  (proxy configuré → WebSocket désactivé, poll uniquement)");
+    }
 
     println!(
         "Surveillance de {} — temps réel (WebSocket) + poll serveur toutes les {interval_secs}s. Ctrl-C pour arrêter.",
