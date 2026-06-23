@@ -29,3 +29,20 @@ winreg = "0.52"
 uuid   = { version = "1", features = ["v5"] }
 # Emit toasts with our own AUMID so they show "Kubuno" + icon, not PowerShell.
 tauri-winrt-notification = "0.7"
+# Cloud Files API — native sync-status overlays (✓/⟳) on files in Explorer.
+windows = { version = "0.61", features = [
+  "Win32_Storage_CloudFilters",
+  "Win32_Storage_FileSystem",
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_Com",
+  "Win32_System_IO",
+  "Win32_System_CorrelationVector",
+  # WinRT — shell integration that actually renders the overlays.
+  "Storage",
+  "Storage_Provider",
+  "Storage_Search",
+  "Storage_Streams",
+  "Security_Cryptography",
+  "Foundation",
+] }

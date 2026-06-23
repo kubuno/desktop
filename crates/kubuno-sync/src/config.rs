@@ -29,6 +29,37 @@ pub fn config_dir() -> Result<PathBuf> {
     Ok(dir)
 }
 
+/// App-wide settings (not tied to a single instance).
+#[derive(Serialize, Deserialize, Default)]
+struct AppSettings {
+    /// Outbound HTTP(S) proxy (e.g. `http://user:pass@host:8080`), applied to
+    /// every instance's requests. `None`/empty = direct connection.
+    #[serde(default)]
+    proxy: Option<String>,
+}
+
+fn settings_path() -> Result<PathBuf> {
+    Ok(config_dir()?.join("settings.json"))
+}
+
+/// The configured outbound proxy URL, if any (used to access instances behind a
+/// proxy). Empty string is treated as unset.
+pub fn proxy_url() -> Option<String> {
+    let s = std::fs::read_to_string(settings_path().ok()?).ok()?;
+    serde_json::from_str::<AppSettings>(&s)
+        .ok()?
+        .proxy
+        .filter(|p| !p.trim().is_empty())
+}
+
+/// Persist the outbound proxy URL (pass `None`/empty to clear it).
+pub fn set_proxy(url: Option<&str>) -> Result<()> {
+    let proxy = url.map(str::to_string).filter(|u| !u.trim().is_empty());
+    let s = AppSettings { proxy };
+    std::fs::write(settings_path()?, serde_json::to_string_pretty(&s)?)?;
+    Ok(())
+}
+
 /// Directory holding one sub-directory per connected instance.
 pub fn instances_dir() -> Result<PathBuf> {
     let dir = config_dir()?.join("instances");
