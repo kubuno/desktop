@@ -91,8 +91,14 @@ fn is_logged_in() -> bool {
 /// Connect a new instance and return its generated id. Starts that instance's
 /// background sync immediately.
 #[tauri::command]
-fn do_login(server: String, login: String, password: String, folder: String) -> Result<String, String> {
-    let id = kubuno_sync::login(&server, &login, &password, &folder).map_err(|e| e.to_string())?;
+async fn do_login(server: String, login: String, password: String, folder: String) -> Result<String, String> {
+    // Run the blocking network login off the UI thread so the app stays responsive.
+    let id = tauri::async_runtime::spawn_blocking(move || {
+        kubuno_sync::login(&server, &login, &password, &folder)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
     watch_instance(id.clone());
     refresh_explorer_nav();
     Ok(id)
@@ -163,27 +169,38 @@ struct UserInfo {
 }
 
 #[tauri::command]
-fn get_user(id: String) -> Option<UserInfo> {
-    let cfg = kubuno_sync::current_config(&id)?;
-    let u = kubuno_sync::current_user(&id).ok()?;
-    let avatar_url = u.avatar_url.as_deref().map(|p| {
-        if p.starts_with("http") {
-            p.to_string()
-        } else {
-            format!("{}{}", cfg.server_url.trim_end_matches('/'), p)
-        }
-    });
-    Some(UserInfo {
-        display_name: u.display_name.unwrap_or_default(),
-        email:        u.email,
-        username:     u.username.unwrap_or_default(),
-        avatar_url,
+async fn get_user(id: String) -> Option<UserInfo> {
+    // /me is a network call — keep it off the UI thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let cfg = kubuno_sync::current_config(&id)?;
+        let u = kubuno_sync::current_user(&id).ok()?;
+        let avatar_url = u.avatar_url.as_deref().map(|p| {
+            if p.starts_with("http") {
+                p.to_string()
+            } else {
+                format!("{}{}", cfg.server_url.trim_end_matches('/'), p)
+            }
+        });
+        Some(UserInfo {
+            display_name: u.display_name.unwrap_or_default(),
+            email:        u.email,
+            username:     u.username.unwrap_or_default(),
+            avatar_url,
+        })
     })
+    .await
+    .ok()
+    .flatten()
 }
 
 #[tauri::command]
-fn sync_now(id: String) -> Result<String, String> {
-    let s = kubuno_sync::sync_once(&id).map_err(|e| e.to_string())?;
+async fn sync_now(id: String) -> Result<String, String> {
+    // A full push+pull can take a while (network + downloads): run it off the UI
+    // thread so the window stays responsive during the sync.
+    let s = tauri::async_runtime::spawn_blocking(move || kubuno_sync::sync_once(&id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
     Ok(format!(
         "↑ {} créé(s), {} modifié(s), {} supprimé(s), {} conflit(s) — ↓ {} reçu(s), {} supprimé(s)",
         s.uploaded, s.modified, s.deleted_up, s.conflicts, s.downloaded, s.deleted_down
@@ -214,8 +231,13 @@ async fn pick_folder(app: tauri::AppHandle) -> Option<String> {
 /// Relocate an instance's local sync folder to `new_path` (moves the files,
 /// rebases the local state, updates the config).
 #[tauri::command]
-fn move_sync_folder(id: String, new_path: String) -> Result<String, String> {
-    kubuno_sync::move_instance_folder(&id, &new_path).map_err(|e| e.to_string())?;
+async fn move_sync_folder(id: String, new_path: String) -> Result<String, String> {
+    // Moving the files can be slow (cross-volume copy): keep it off the UI thread.
+    let np = new_path.clone();
+    tauri::async_runtime::spawn_blocking(move || kubuno_sync::move_instance_folder(&id, &np))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
     refresh_explorer_nav(); // the nav entry's TargetFolderPath must follow the move
     Ok(new_path)
 }
@@ -310,24 +332,27 @@ fn register_app_identity() {
 /// Core and every module can contribute entries to this endpoint so that the
 /// desktop client renders their settings dynamically without a rebuild.
 #[tauri::command]
-fn get_instance_modules(id: String) -> Vec<ModuleInfo> {
-    let Ok(cfg) = kubuno_sync::config::Config::load(&id) else {
-        return Vec::new();
-    };
-    let Ok(creds) = kubuno_sync::config::Creds::load(&id) else {
-        return Vec::new();
-    };
-    let url = format!("{}/api/v1/desktop/modules", cfg.server_url.trim_end_matches('/'));
-    // Best-effort GET with a short timeout — errors are silently ignored.
-    let resp = ureq::get(&url)
-        .set("Authorization", &format!("Bearer {}", creds.access_token))
-        .call();
-    match resp {
-        Ok(r) if r.status() == 200 => r
-            .into_json::<Vec<ModuleInfo>>()
-            .unwrap_or_default(),
-        _ => Vec::new(),
-    }
+async fn get_instance_modules(id: String) -> Vec<ModuleInfo> {
+    // Network call — keep it off the UI thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let Ok(cfg) = kubuno_sync::config::Config::load(&id) else {
+            return Vec::new();
+        };
+        let Ok(creds) = kubuno_sync::config::Creds::load(&id) else {
+            return Vec::new();
+        };
+        let url = format!("{}/api/v1/desktop/modules", cfg.server_url.trim_end_matches('/'));
+        // Best-effort GET with a short timeout — errors are silently ignored.
+        let resp = ureq::get(&url)
+            .set("Authorization", &format!("Bearer {}", creds.access_token))
+            .call();
+        match resp {
+            Ok(r) if r.status() == 200 => r.into_json::<Vec<ModuleInfo>>().unwrap_or_default(),
+            _ => Vec::new(),
+        }
+    })
+    .await
+    .unwrap_or_default()
 }
 
 #[tauri::command]
