@@ -418,9 +418,11 @@
       flex-shrink: 0; transition: background .3s;
     }
     .sync-dot.ok      { background: var(--ok-bg); }
-    .sync-dot.syncing { background: var(--sync-bg); animation: pulse 1s ease-in-out infinite alternate; }
+    .sync-dot.syncing { background: var(--sync-bg); }
     .sync-dot.error   { background: var(--err-bg); }
-    @keyframes pulse { from { opacity: 1; } to { opacity: .45; } }
+    /* Spin the ⟳ icon while syncing to signal activity. */
+    .sync-dot.syncing svg { animation: spin .9s linear infinite; transform-origin: 50% 50%; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .sync-text-label { font-size: 14px; font-weight: 600; }
     .sync-text-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .sync-result {
