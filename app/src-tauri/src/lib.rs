@@ -389,9 +389,42 @@ setInterval(tick,400);
 if(document.readyState!=='loading'){tick();}else{document.addEventListener('DOMContentLoaded',tick);}
 })();"#;
 
+/// Whether a native local-first window makes sense for `route`: only when the
+/// WASM backend that would serve it offline is installed. Office routes need
+/// documents-core, Drive routes need drive-core; everything else has no local
+/// backend. When false, the route is opened in the user's web browser instead.
+#[cfg(desktop)]
+fn has_local_backend(route: &str) -> bool {
+    let r = route.trim_start_matches('/');
+    if r.starts_with("office") {
+        wasmoffice::enabled()
+    } else if r.starts_with("drive") {
+        wasmoffice::enabled_for(wasmoffice::DRIVE)
+    } else {
+        false
+    }
+}
+
+/// Open a route of the web app in the user's default browser (the online web
+/// experience), used when no local-first backend is installed for it.
+#[cfg(desktop)]
+fn launch_in_browser(app: &tauri::AppHandle, instance_id: &str, route: &str) -> Result<(), String> {
+    let server = kubuno_sync::server_url(instance_id).ok_or("instance inconnue")?;
+    let path = if route.starts_with('/') {
+        route.to_string()
+    } else {
+        format!("/{route}")
+    };
+    let url = format!("{}{}", server.trim_end_matches('/'), path);
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 /// Open a document in its own native window, served by the local document proxy
 /// (stable `http://127.0.0.1:<port>` origin) so it stays editable and reloadable
 /// offline. Reuses an existing window for the same document if already open.
+/// Without the office WASM backend installed, opens the web app in the browser.
 #[cfg(desktop)]
 #[tauri::command]
 async fn open_document(
@@ -399,6 +432,9 @@ async fn open_document(
     instance_id: String,
     doc_id: String,
 ) -> Result<(), String> {
+    if !has_local_backend("office") {
+        return launch_in_browser(&app, &instance_id, &format!("/office/documents/{doc_id}"));
+    }
     use tauri::{WebviewUrl, WebviewWindowBuilder};
     let proxy_id = instance_id.clone();
     let port = tokio::task::spawn_blocking(move || docproxy::ensure_started(&proxy_id))
@@ -447,6 +483,9 @@ async fn open_app(
     route: String,
     label: String,
 ) -> Result<(), String> {
+    if !has_local_backend(&route) {
+        return launch_in_browser(&app, &instance_id, &route);
+    }
     use tauri::{WebviewUrl, WebviewWindowBuilder};
     let proxy_id = instance_id.clone();
     let port = tokio::task::spawn_blocking(move || docproxy::ensure_started(&proxy_id))
