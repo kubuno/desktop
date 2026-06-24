@@ -329,6 +329,34 @@ async fn office_sync_now(instance_id: String) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Behaviour of the custom title bar for borderless native app/document windows.
+/// Injected as a Tauri `initialization_script` (runs in the page before its own
+/// scripts, outside the module's CSP which blocks injected inline scripts): adds
+/// drag-by-top-strip, min/max/close buttons top-right, and pads the module header
+/// so the buttons don't cover its own controls. The matching styles come from the
+/// proxy `<style>` injection (`STANDALONE_INJECT`).
+#[cfg(desktop)]
+const TITLEBAR_JS: &str = r#"(function(){
+function w(){try{return window.__TAURI__.window.getCurrentWindow()}catch(e){return null}}
+function bar(){
+ if(document.getElementById('kbn-winctl')||!document.body)return;
+ var b=document.createElement('div');b.id='kbn-winctl';
+ var mk=function(c,s,f){var x=document.createElement('button');x.className=c;x.innerHTML=s;x.addEventListener('click',f);b.appendChild(x);};
+ mk('kbn-min','<svg viewBox="0 0 16 16"><line x1="3" y1="8" x2="13" y2="8"/></svg>',function(){var k=w();if(k)k.minimize();});
+ mk('kbn-max','<svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9"/></svg>',function(){var k=w();if(k)k.toggleMaximize();});
+ mk('kbn-close','<svg viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>',function(){var k=w();if(k)k.close();});
+ document.body.appendChild(b);
+}
+function pad(){
+ var a=document.elementFromPoint(Math.round(window.innerWidth/2),6),h=a;
+ while(h&&h!==document.body){var r=h.getBoundingClientRect();if(r.width>=window.innerWidth-4&&r.top<=4&&r.height>=36&&r.height<=160){if(!h.hasAttribute('data-kbn-pad')){h.setAttribute('data-kbn-pad','1');h.style.paddingRight=((parseFloat(getComputedStyle(h).paddingRight)||0)+150)+'px';}break;}h=h.parentElement;}
+}
+document.addEventListener('mousedown',function(e){if(e.button)return;if(e.clientY>44)return;if(e.clientX>window.innerWidth-150)return;if(e.target.closest('button,a,input,select,textarea,[role=button],[contenteditable],svg'))return;var k=w();if(k)k.startDragging();},true);
+document.addEventListener('dblclick',function(e){if(e.clientY>44)return;if(e.target.closest('button,a,input'))return;var k=w();if(k)k.toggleMaximize();},true);
+var n=0,iv=setInterval(function(){bar();pad();if(++n>40)clearInterval(iv);},350);
+if(document.readyState!=='loading'){bar();pad();}else{document.addEventListener('DOMContentLoaded',function(){bar();pad();});}
+})();"#;
+
 /// Open a document in its own native window, served by the local document proxy
 /// (stable `http://127.0.0.1:<port>` origin) so it stays editable and reloadable
 /// offline. Reuses an existing window for the same document if already open.
@@ -359,6 +387,8 @@ async fn open_document(
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
         .title("Kubuno — Document")
         .inner_size(1100.0, 800.0)
+        .decorations(false)
+        .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -401,6 +431,8 @@ async fn open_app(
     WebviewWindowBuilder::new(&app, &wlabel, WebviewUrl::External(parsed))
         .title(&title)
         .inner_size(1200.0, 820.0)
+        .decorations(false)
+        .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())

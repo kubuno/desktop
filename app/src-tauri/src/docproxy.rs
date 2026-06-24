@@ -510,18 +510,39 @@ fn inject_standalone_css(content_type: &str, body: Vec<u8>) -> Vec<u8> {
         return body;
     }
     const HEAD: &[u8] = b"</head>";
-    const STYLE: &[u8] = b"<style>[data-app-chrome]{display:none !important}</style></head>";
+    let inject = STANDALONE_INJECT.as_bytes();
     match body.windows(HEAD.len()).position(|w| w == HEAD) {
         Some(pos) => {
-            let mut out = Vec::with_capacity(body.len() + STYLE.len());
+            let mut out = Vec::with_capacity(body.len() + inject.len());
             out.extend_from_slice(&body[..pos]);
-            out.extend_from_slice(STYLE);
+            out.extend_from_slice(inject);
             out.extend_from_slice(&body[pos + HEAD.len()..]);
             out
         }
         None => body,
     }
 }
+
+/// Injected into the shell HTML of every native app/document window: hides the
+/// host chrome (`data-app-chrome`) and styles the custom title bar. The
+/// behaviour (window controls + drag) is added by a Tauri `initialization_script`
+/// instead of an inline `<script>` here, because the module shell ships a strict
+/// CSP (`script-src 'self'`) that blocks injected inline scripts (the `<style>`
+/// passes since `style-src` allows `'unsafe-inline'`). Replaces `</head>`.
+const STANDALONE_INJECT: &str = r#"<style>
+[data-app-chrome]{display:none !important}
+/* Standalone native window: hug the window. The host shell wraps the module in a
+   floating-panel frame (outer padding + gap on a grey backdrop, with a rounded
+   white content card) — drop the padding/gap and the card's rounding so the
+   module fills every edge. Targets the core shell layout (same for all modules). */
+.h-screen > .flex.flex-1{padding:0 !important;gap:0 !important}
+.h-screen > .flex.flex-1 > .bg-white{border-radius:0 !important}
+#kbn-winctl{position:fixed;top:0;right:0;height:38px;display:flex;z-index:2147483647}
+#kbn-winctl button{width:46px;height:38px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#kbn-winctl button svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:1.4;stroke-linecap:round}
+#kbn-winctl button:hover{background:rgba(255,255,255,.18)}
+#kbn-winctl button.kbn-close:hover{background:#e81123}
+</style></head>"#;
 
 fn build_response(status: StatusCode, headers: HeaderMap, body: Vec<u8>) -> Response {
     let mut resp = Response::builder().status(status);
