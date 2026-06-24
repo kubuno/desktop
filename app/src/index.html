@@ -931,10 +931,6 @@
 
         <div class="card">
           <div class="card-title">État de synchronisation</div>
-          <div class="conn-state">
-            <span class="conn-led" id="conn-led"></span>
-            <span id="conn-text">Vérification de la connexion…</span>
-          </div>
           <div class="sync-indicator">
             <div class="sync-dot ok" id="sync-dot"></div>
             <div>
@@ -2014,13 +2010,19 @@
 
   // Reflect the active instance's connection state: online / offline / expired.
   async function updateConnState() {
+    // The connection state lives in the "Connexion" card (led2/txt2). Any legacy
+    // duplicate (led/txt) is optional and updated only if still present.
     const led = document.getElementById('conn-led');
     const txt = document.getElementById('conn-text');
     const led2 = document.getElementById('conn-led2');
     const txt2 = document.getElementById('conn-text2');
     const setBoth = (cls, text) => {
-      led.className = cls; if (led2) led2.className = cls;
-      if (text !== null) { txt.textContent = text; if (txt2) txt2.textContent = text; }
+      if (led) led.className = cls;
+      if (led2) led2.className = cls;
+      if (text !== null) {
+        if (txt) txt.textContent = text;
+        if (txt2) txt2.textContent = text;
+      }
     };
     if (!activeId || !currentStatus) { setBoth('conn-led', '—'); return; }
     const host = (() => { try { return new URL(currentStatus.server).hostname; } catch (_) { return currentStatus.server; } })();
@@ -2030,10 +2032,11 @@
       setBoth('conn-led online', 'Connecté à ' + host);
     } else if (state === 'expired') {
       setBoth('conn-led offline', null);
-      if (led2) txt2.textContent = 'Session expirée — ' + host;
-      txt.innerHTML = 'Session expirée — <a href="#" id="conn-relogin" style="color:var(--accent)">reconnectez-vous</a>';
-      const a = document.getElementById('conn-relogin');
-      if (a) a.onclick = (e) => { e.preventDefault(); document.getElementById('f-server').value = currentStatus.server; enterAddMode(false); };
+      if (txt2) {
+        txt2.innerHTML = 'Session expirée — <a href="#" id="conn-relogin" style="color:var(--accent)">reconnectez-vous</a>';
+        const a = document.getElementById('conn-relogin');
+        if (a) a.onclick = (e) => { e.preventDefault(); document.getElementById('f-server').value = currentStatus.server; enterAddMode(false); };
+      }
     } else {
       setBoth('conn-led offline', 'Hors ligne — ' + host);
     }
