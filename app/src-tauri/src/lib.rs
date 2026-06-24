@@ -788,6 +788,12 @@ async fn get_apps(id: String) -> Vec<AppGroup> {
                     if path.is_empty() {
                         continue;
                     }
+                    // The launcher lists launchable apps/sub-modules only, not the
+                    // module's internal views/filters (shared, recent, trash…). The
+                    // core flags those with `launchable: false`; absent = true.
+                    if !it.get("launchable").and_then(|x| x.as_bool()).unwrap_or(true) {
+                        continue;
+                    }
                     items.push(AppItem {
                         label: it.get("label").and_then(|x| x.as_str()).unwrap_or("").to_string(),
                         path:  path.to_string(),
