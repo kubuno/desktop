@@ -238,13 +238,22 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     let cacheable = is_get && (is_cacheable_asset(&path) || is_cacheable_api(&path));
 
     let url = format!("{}{}", st.upstream, pq);
+    let orig_ae = req_headers
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     let mut rb = st.http.request(method.clone(), &url);
     for (k, v) in req_headers.iter() {
-        if is_hop_by_hop(k.as_str()) || k == header::HOST {
+        if is_hop_by_hop(k.as_str()) || k == header::HOST || k == header::ACCEPT_ENCODING {
             continue;
         }
         rb = rb.header(k.clone(), v.clone());
     }
+    // We rewrite the shell HTML (standalone CSS) but this reqwest has no
+    // auto-decompression → ask the upstream for an uncompressed response on
+    // navigations so the bytes are plain HTML. Assets keep their compression.
+    let accept_encoding = if navigation { "identity" } else { orig_ae.as_deref().unwrap_or("identity") };
+    rb = rb.header(header::ACCEPT_ENCODING, accept_encoding);
     // Inject the native identity for API calls that arrive before the frontend
     // has its token (e.g. the un-awaited `fetchModules()` during bootstrap).
     if path.starts_with("/api/") && !req_headers.contains_key(header::AUTHORIZATION) {
@@ -283,7 +292,13 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
                     cache_write(&st.cache_dir, "__shell__", &ct, &bytes);
                 }
             }
-            build_response(status, out, bytes.to_vec())
+            // Don't let WebView2 cache the shell HTML (it would bypass the proxy
+            // and skip the standalone-CSS injection on later loads).
+            if ct.contains("text/html") {
+                out.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+            }
+            // Cache stays pristine; only the served HTML gets the standalone CSS.
+            build_response(status, out, inject_standalone_css(&ct, bytes.to_vec()))
         }
         Err(_) => {
             // Offline: serve from cache so the shell/app/editor can still load.
@@ -423,7 +438,33 @@ fn cached(content_type: String, body: Vec<u8>) -> Response {
     if let Ok(v) = HeaderValue::from_str(&content_type) {
         headers.insert(header::CONTENT_TYPE, v);
     }
+    if content_type.contains("text/html") {
+        headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
+    let body = inject_standalone_css(&content_type, body);
     build_response(StatusCode::OK, headers, body)
+}
+
+/// Native app/document windows should look like standalone apps: the host shell
+/// tags its sidebar / left+right rails / right panel with `data-app-chrome`. We
+/// hide them by injecting a `<style>` into the served shell HTML (the CSS applies
+/// to the elements React creates at runtime). The top header is kept.
+fn inject_standalone_css(content_type: &str, body: Vec<u8>) -> Vec<u8> {
+    if !content_type.contains("text/html") {
+        return body;
+    }
+    const HEAD: &[u8] = b"</head>";
+    const STYLE: &[u8] = b"<style>[data-app-chrome]{display:none !important}</style></head>";
+    match body.windows(HEAD.len()).position(|w| w == HEAD) {
+        Some(pos) => {
+            let mut out = Vec::with_capacity(body.len() + STYLE.len());
+            out.extend_from_slice(&body[..pos]);
+            out.extend_from_slice(STYLE);
+            out.extend_from_slice(&body[pos + HEAD.len()..]);
+            out
+        }
+        None => body,
+    }
 }
 
 fn build_response(status: StatusCode, headers: HeaderMap, body: Vec<u8>) -> Response {
