@@ -128,7 +128,17 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
             .route("/api/v1/auth/refresh", post(auth_refresh))
             .route("/collab/:room/sync", get(collab_ws))
             .fallback(proxy_all)
-            .with_state(state);
+            .with_state(state.clone());
+        // Background cache warming: while online, keep the whole Drive tree
+        // (folders + file listings) and the bootstrap endpoints in the disk cache,
+        // so the app can browse the entire Drive offline without a prior visit.
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            loop {
+                warm_drive_cache(&state).await;
+                tokio::time::sleep(Duration::from_secs(600)).await;
+            }
+        });
         if let Err(e) = axum::serve(listener, app).await {
             eprintln!("[docproxy] serve : {e}");
         }
@@ -487,6 +497,88 @@ fn cache_read(dir: &std::path::Path, path: &str) -> Option<(String, Vec<u8>)> {
     let ct = std::fs::read_to_string(dir.join(format!("{key}.ct")))
         .unwrap_or_else(|_| "application/octet-stream".into());
     Some((ct, body))
+}
+
+// ── Offline cache warming (Drive tree) ──────────────────────────────────────
+
+/// While online, walk the whole Drive folder tree and cache every folder's
+/// subfolder + file listing (plus the bootstrap endpoints), so the app can browse
+/// the entire Drive offline without having opened each folder first. Read-only and
+/// idempotent; uses the stored native token (never rotates it) so it can't race
+/// the sync daemon. Capped to bound very large drives.
+async fn warm_drive_cache(state: &ProxyState) {
+    use std::collections::VecDeque;
+    if kubuno_sync::is_offline() {
+        return;
+    }
+    let Some(token) = kubuno_sync::access_token(&state.id) else {
+        return;
+    };
+    let bearer = format!("Bearer {token}");
+
+    for ep in ["/api/v1/config", "/api/v1/themes", "/api/v1/me", "/api/v1/modules"] {
+        let _ = warm_fetch(state, &bearer, ep).await;
+    }
+
+    let Some(root) = warm_fetch(state, &bearer, "/api/v1/drive/folders").await else {
+        return;
+    };
+    let mut queue: VecDeque<String> = VecDeque::new();
+    collect_folder_ids(&root, &mut queue);
+
+    let mut count = 0usize;
+    while let Some(id) = queue.pop_front() {
+        if count >= 2000 || kubuno_sync::is_offline() {
+            break;
+        }
+        count += 1;
+        if let Some(sub) =
+            warm_fetch(state, &bearer, &format!("/api/v1/drive/folders?parent_id={id}")).await
+        {
+            collect_folder_ids(&sub, &mut queue);
+        }
+        let _ = warm_fetch(state, &bearer, &format!("/api/v1/drive/?folder_id={id}")).await;
+    }
+}
+
+/// GET `pq` from the upstream with the native session, cache the body under its
+/// path+query, and return it. Requests an uncompressed body so the cached bytes
+/// match what the proxy serves.
+async fn warm_fetch(state: &ProxyState, bearer: &str, pq: &str) -> Option<Vec<u8>> {
+    let url = format!("{}{}", state.upstream, pq);
+    let resp = state
+        .http
+        .get(&url)
+        .header(header::AUTHORIZATION, bearer)
+        .header(header::ACCEPT_ENCODING, "identity")
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let ct = resp
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/json")
+        .to_string();
+    let bytes = resp.bytes().await.ok()?;
+    cache_write(&state.cache_dir, pq, &ct, &bytes);
+    Some(bytes.to_vec())
+}
+
+/// Push every folder `id` found in a `{"folders":[…]}` response onto `out`.
+fn collect_folder_ids(body: &[u8], out: &mut std::collections::VecDeque<String>) {
+    if let Ok(v) = serde_json::from_slice::<serde_json::Value>(body) {
+        if let Some(arr) = v.get("folders").and_then(|f| f.as_array()) {
+            for f in arr {
+                if let Some(id) = f.get("id").and_then(|i| i.as_str()) {
+                    out.push_back(id.to_string());
+                }
+            }
+        }
+    }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
