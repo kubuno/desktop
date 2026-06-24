@@ -530,6 +530,21 @@ async fn get_apps(id: String) -> Vec<AppGroup> {
                     icon:  module_id.clone(),
                 });
             }
+            // Stopgap: office's sidebar_items expose the suite root (/office) and
+            // the doc-type views, but not the Documents app itself
+            // (/office/documents). Surface it explicitly until office adds it to
+            // its own sidebar_items (tracked in COORDINATION_WASM.md). Skipped if
+            // the server already provides it, so there's no duplicate later.
+            if module_id == "office" && !items.iter().any(|i| i.path == "/office/documents") {
+                items.insert(
+                    0,
+                    AppItem {
+                        label: "Documents".to_string(),
+                        path:  "/office/documents".to_string(),
+                        icon:  "FileText".to_string(),
+                    },
+                );
+            }
             groups.push(AppGroup {
                 module_id: module_id.clone(),
                 label:     capitalize(&module_id),
