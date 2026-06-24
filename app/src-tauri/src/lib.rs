@@ -359,19 +359,17 @@ function pad(){
 document.addEventListener('mousedown',function(e){if(e.button)return;if(e.clientY>44)return;if(e.clientX>window.innerWidth-150)return;if(e.target.closest('button,a,input,select,textarea,[role=button],[contenteditable],svg'))return;var k=w();if(k)k.startDragging();},true);
 document.addEventListener('dblclick',function(e){if(e.clientY>44)return;if(e.target.closest('button,a,input'))return;var k=w();if(k)k.toggleMaximize();},true);
 /* This window hosts a single office sub-module (captured from the launch URL).
-   The office-wide settings page is scoped to it: tabs of the OTHER office
-   sub-modules are hidden (general tabs — Preferences/Fonts/About — and this
-   sub-module's own tab are always kept), and the "Office" breadcrumb exits back
-   to this sub-module instead of the office home. */
+   The office settings page scopes itself NATIVELY when opened with ?app=<sub>
+   (hides other sub-modules' tabs, breadcrumb back to /office/<sub>) — so we just
+   append ?app= whenever the SPA reaches the global settings route. No DOM hacks. */
 var KBN_SUB=(function(){var s=location.pathname.split('/').filter(Boolean);return (s[0]==='office'&&s[1]&&s[1]!=='settings')?s[1]:'';})();
-var KBN_OFFICE_SUBS=['documents','spreadsheets','presentations','slides','drawings','diagrams','whiteboard','forms'];
 function scopeSettings(){
- if(!KBN_SUB||location.pathname.indexOf('/office/settings')<0)return;
- document.querySelectorAll('button').forEach(function(b){var r=b.getBoundingClientRect();if(r.top>=26&&r.top<=60){var t=(b.textContent||'').trim().toLowerCase();if(t&&t!==KBN_SUB&&KBN_OFFICE_SUBS.indexOf(t)>=0)b.style.display='none';}});
- /* relabel the "Office" breadcrumb to this sub-module (it exits there), keeping its icon */
- var bc=document.querySelector('a[href="/office"]');if(bc){var nm=KBN_SUB.charAt(0).toUpperCase()+KBN_SUB.slice(1);for(var i=0;i<bc.childNodes.length;i++){var nd=bc.childNodes[i];if(nd.nodeType===3&&nd.textContent.trim()&&nd.textContent.trim()!==nm)nd.textContent=nm;}}
+ if(!KBN_SUB)return;
+ if(location.pathname==='/office/settings'&&location.search.indexOf('app=')<0){
+  history.replaceState({},'','/office/settings?app='+KBN_SUB);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+ }
 }
-document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('a[href=\"/office\"]'):null;if(a&&KBN_SUB){e.preventDefault();e.stopPropagation();history.pushState({},'','/office/'+KBN_SUB);window.dispatchEvent(new PopStateEvent('popstate'));}},true);
 /* Permanent tick: the office SPA re-renders its header on every in-app navigation
    (e.g. Documents -> settings -> back), recreating the buttons without our inline
    display:none — so the hiding/padding must be re-applied continuously, not just
