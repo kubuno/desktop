@@ -1,27 +1,28 @@
-//! Local "documents-core" backend, run as a WebAssembly module (SQLite-in-WASI)
-//! embedded in the desktop daemon. It lets the office *documents* API work fully
-//! offline — create/list/open/rename/delete + edit/save + export — with no core
-//! round-trip. The core is only used for the OPTIONAL sync (handled elsewhere).
+//! Generic local backend host, running a WebAssembly module (SQLite-in-WASI)
+//! embedded in the desktop daemon. It lets a module's read/CRUD API work fully
+//! offline with no core round-trip; the core is only used for the optional sync
+//! (handled elsewhere). Two modules are hosted, sharing one ABI:
+//!   • `office`  — `documents-core.wasm` (office documents: CRUD + content + export)
+//!   • `drive`   — `drive-core.wasm`     (Drive tree + file metadata, ingest via sync)
 //!
-//! ABI (manual marshalling, agreed with the office side — no component model):
+//! ABI (manual marshalling, agreed with the core side — no component model):
 //!   • `alloc(len: u32) -> u32`  — allocate `len` bytes in linear memory, return ptr
 //!   • `handle(req_ptr: u32, req_len: u32) -> u64`
 //!       request buffer (one alloc): [method_len u32 LE][method][path_len u32 LE][path][body_len u32 LE][body]
 //!       return = (res_ptr as u64) << 32 | (res_len as u32) ;
 //!       result buffer at res_ptr: [status u16 LE][ctype_len u16 LE][ctype UTF-8][body bytes...]
-//!       (res_len = total length; the module sets ctype per response — JSON for metadata,
-//!        application/octet-stream for .kbdoc content and DOCX/ODT exports)
+//!       (the module sets ctype per response; `status == 0` means "not mine" → the
+//!        caller falls through to the core proxy)
 //!       The guest reuses a static result buffer → the host COPIES it before the next `handle` call
-//!       (guaranteed here: calls are serialized per instance and the result is read fully under the lock).
+//!       (guaranteed here: calls are serialized per (module, instance) and read fully under the lock).
 //!
-//! WASI: the daemon preopens `<instance>/office/` as `/data`; the module does its
-//! own SQLite + .kbdoc I/O there. Identity is passed as the `KUBUNO_USER_ID` env
-//! var so the module scopes data per user.
+//! WASI: the daemon preopens `<instance>/<module>/` as `/data`; the module does
+//! its own SQLite + file I/O there. Identity is passed as `KUBUNO_USER_ID`.
 //!
-//! Lifecycle: the wasmtime `Store` (and its warm SQLite connection) is created
-//! ONCE per instance and kept alive; each request is one `handle` call. The
-//! module artifact is loaded at runtime — if it isn't present yet, the whole
-//! feature is disabled and office requests fall through to the core proxy.
+//! Lifecycle: the wasmtime `Store` (warm SQLite) is created ONCE per (module,
+//! instance) and kept alive; each request is one `handle` call. Each module's
+//! artifact is loaded at runtime — absent → that module is disabled and its
+//! requests fall through to the core proxy.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -34,8 +35,38 @@ use wasmtime_wasi::{DirPerms, FilePerms, WasiCtxBuilder};
 type AllocFn = TypedFunc<u32, u32>;
 type HandleFn = TypedFunc<(u32, u32), u64>;
 
-/// One live instance of the documents-core module (warm SQLite via WASI).
-struct OfficeWasm {
+/// Static description of a hosted module: its name, the env var that overrides its
+/// artifact path, the default artifact filename, and its per-instance data subdir.
+#[derive(Clone, Copy)]
+pub struct Spec {
+    pub name:   &'static str,
+    pub env:    &'static str,
+    pub file:   &'static str,
+    pub subdir: &'static str,
+}
+
+/// Office documents backend (local-first CRUD + content + export).
+pub const OFFICE: Spec = Spec {
+    name:   "office",
+    env:    "KUBUNO_OFFICE_WASM",
+    file:   "documents-core.wasm",
+    subdir: "office",
+};
+
+/// Drive backend (local-first tree + file metadata, fed by the sync delta).
+/// Wired into the proxy routing + a delta sync loop once the `drive-core` v1
+/// artifact lands (the routing and ingest must ship together so an empty store
+/// can't shadow the core — until then this only declares the module spec).
+#[allow(dead_code)]
+pub const DRIVE: Spec = Spec {
+    name:   "drive",
+    env:    "KUBUNO_DRIVE_WASM",
+    file:   "drive-core.wasm",
+    subdir: "drive",
+};
+
+/// One live instance of a hosted module (warm SQLite via WASI).
+struct WasmInst {
     store:  Store<WasiP1Ctx>,
     alloc:  AllocFn,
     handle: HandleFn,
@@ -47,28 +78,36 @@ fn engine() -> &'static Engine {
     E.get_or_init(Engine::default)
 }
 
-/// The compiled module (None if the artifact isn't shipped yet → feature off).
-fn module() -> &'static Option<Module> {
-    static M: OnceLock<Option<Module>> = OnceLock::new();
-    M.get_or_init(|| {
-        let path = wasm_path()?;
-        match Module::from_file(engine(), &path) {
-            Ok(m) => {
-                eprintln!("[wasmoffice] module chargé : {}", path.display());
-                Some(m)
-            }
-            Err(e) => {
-                eprintln!("[wasmoffice] échec de chargement ({}) : {e}", path.display());
-                None
-            }
-        }
-    })
+/// Compiled-module cache, one entry per module name (None = artifact absent).
+fn modules() -> &'static Mutex<HashMap<&'static str, Option<Module>>> {
+    static M: OnceLock<Mutex<HashMap<&'static str, Option<Module>>>> = OnceLock::new();
+    M.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Resolve the `documents-core.wasm` path: explicit env override, then next to
-/// the executable, then the config dir. Returns None if none exists.
-fn wasm_path() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("KUBUNO_OFFICE_WASM") {
+/// Compile (once) and return the module for `spec`, or None if its artifact isn't
+/// shipped yet. `Module` is Arc-backed, so the clone is cheap.
+fn compiled(spec: Spec) -> Option<Module> {
+    let mut m = modules().lock().unwrap_or_else(|p| p.into_inner());
+    if !m.contains_key(spec.name) {
+        let c = wasm_path(spec).and_then(|path| match Module::from_file(engine(), &path) {
+            Ok(md) => {
+                eprintln!("[wasmhost] {} chargé : {}", spec.name, path.display());
+                Some(md)
+            }
+            Err(e) => {
+                eprintln!("[wasmhost] {} échec de chargement ({}) : {e}", spec.name, path.display());
+                None
+            }
+        });
+        m.insert(spec.name, c);
+    }
+    m.get(spec.name).cloned().flatten()
+}
+
+/// Resolve a module's artifact path: explicit env override, then next to the
+/// executable, then the config dir. Returns None if none exists.
+fn wasm_path(spec: Spec) -> Option<PathBuf> {
+    if let Ok(p) = std::env::var(spec.env) {
         let p = PathBuf::from(p);
         if p.is_file() {
             return Some(p);
@@ -76,14 +115,14 @@ fn wasm_path() -> Option<PathBuf> {
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let p = dir.join("documents-core.wasm");
+            let p = dir.join(spec.file);
             if p.is_file() {
                 return Some(p);
             }
         }
     }
     if let Ok(dir) = kubuno_sync::config::config_dir() {
-        let p = dir.join("documents-core.wasm");
+        let p = dir.join(spec.file);
         if p.is_file() {
             return Some(p);
         }
@@ -91,38 +130,44 @@ fn wasm_path() -> Option<PathBuf> {
     None
 }
 
-/// True if the local office backend is available (artifact present + compiled).
-pub fn enabled() -> bool {
-    module().is_some()
+/// True if a given module's backend is available (artifact present + compiled).
+pub fn enabled_for(spec: Spec) -> bool {
+    compiled(spec).is_some()
 }
 
-fn registry() -> &'static Mutex<HashMap<String, Arc<Mutex<OfficeWasm>>>> {
-    static R: OnceLock<Mutex<HashMap<String, Arc<Mutex<OfficeWasm>>>>> = OnceLock::new();
+/// Back-compat: the office backend (used by the office document proxy + sync).
+pub fn enabled() -> bool {
+    enabled_for(OFFICE)
+}
+
+fn registry() -> &'static Mutex<HashMap<String, Arc<Mutex<WasmInst>>>> {
+    static R: OnceLock<Mutex<HashMap<String, Arc<Mutex<WasmInst>>>>> = OnceLock::new();
     R.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Get (or lazily create + cache) the live module for `instance_id`.
-fn instance_for(instance_id: &str) -> Result<Arc<Mutex<OfficeWasm>>, String> {
+/// Get (or lazily create + cache) the live `spec` module for `instance_id`.
+fn instance_for(spec: Spec, instance_id: &str) -> Result<Arc<Mutex<WasmInst>>, String> {
+    let key = format!("{}:{}", spec.name, instance_id);
     {
         let reg = registry().lock().unwrap_or_else(|p| p.into_inner());
-        if let Some(ow) = reg.get(instance_id) {
-            return Ok(ow.clone());
+        if let Some(w) = reg.get(&key) {
+            return Ok(w.clone());
         }
     }
-    let ow = Arc::new(Mutex::new(create(instance_id)?));
+    let w = Arc::new(Mutex::new(create(spec, instance_id)?));
     registry()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .insert(instance_id.to_string(), ow.clone());
-    Ok(ow)
+        .insert(key, w.clone());
+    Ok(w)
 }
 
-/// Instantiate the module for an instance: preopen its `office/` data dir as
-/// `/data`, pass the user id via env, and resolve the ABI exports.
-fn create(instance_id: &str) -> Result<OfficeWasm, String> {
-    let module = module().as_ref().ok_or("module office indisponible")?;
+/// Instantiate a module for an instance: preopen its data dir as `/data`, pass the
+/// user id via env, and resolve the ABI exports.
+fn create(spec: Spec, instance_id: &str) -> Result<WasmInst, String> {
+    let module = compiled(spec).ok_or_else(|| format!("module {} indisponible", spec.name))?;
 
-    let data_dir = office_dir(instance_id)?;
+    let data_dir = data_dir(spec, instance_id)?;
     std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
     let user_id = user_id_for(instance_id, &data_dir);
 
@@ -136,7 +181,7 @@ fn create(instance_id: &str) -> Result<OfficeWasm, String> {
     let mut linker: Linker<WasiP1Ctx> = Linker::new(engine());
     preview1::add_to_linker_sync(&mut linker, |t| t).map_err(|e| e.to_string())?;
     let instance: Instance = linker
-        .instantiate(&mut store, module)
+        .instantiate(&mut store, &module)
         .map_err(|e| e.to_string())?;
 
     // WASI reactor modules (no `main`) export `_initialize`; call it once after
@@ -155,16 +200,16 @@ fn create(instance_id: &str) -> Result<OfficeWasm, String> {
         .get_typed_func::<(u32, u32), u64>(&mut store, "handle")
         .map_err(|e| e.to_string())?;
 
-    Ok(OfficeWasm { store, alloc, handle, memory })
+    Ok(WasmInst { store, alloc, handle, memory })
 }
 
-/// `<instance>/office/` — holds `docs.db` + `<doc_id>.kbdoc`, written by the wasm.
-fn office_dir(instance_id: &str) -> Result<PathBuf, String> {
+/// `<instance>/<module>/` — holds the module's SQLite + files, written by the wasm.
+fn data_dir(spec: Spec, instance_id: &str) -> Result<PathBuf, String> {
     kubuno_sync::db_path(instance_id)
         .map_err(|e| e.to_string())?
         .parent()
-        .map(|p| p.join("office"))
-        .ok_or_else(|| "chemin office introuvable".to_string())
+        .map(|p| p.join(spec.subdir))
+        .ok_or_else(|| format!("chemin {} introuvable", spec.name))
 }
 
 /// The user id to scope data by: the cached server UUID if known, else the
@@ -177,32 +222,43 @@ fn user_id_for(instance_id: &str, data_dir: &std::path::Path) -> String {
         .unwrap_or_else(|| instance_id.to_string())
 }
 
-/// Route one office request to the local backend. Returns `(status, content_type,
-/// body)`, or `None` if the feature is disabled (caller falls through to proxy).
+/// Route one request to a module's local backend. Returns `(status, content_type,
+/// body)`, or `None` if that module is disabled (caller falls through to proxy).
+pub fn handle_for(
+    spec: Spec,
+    instance_id: &str,
+    method: &str,
+    path: &str,
+    body: &[u8],
+) -> Option<(u16, String, Vec<u8>)> {
+    if !enabled_for(spec) {
+        return None;
+    }
+    let w = match instance_for(spec, instance_id) {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("[wasmhost] init {} {instance_id} : {e}", spec.name);
+            return Some((500, json_ct(), err_json(&e)));
+        }
+    };
+    let mut guard = w.lock().unwrap_or_else(|p| p.into_inner());
+    match call(&mut guard, method, path, body) {
+        Ok(r) => Some(r),
+        Err(e) => {
+            eprintln!("[wasmhost] handle {} {method} {path} : {e}", spec.name);
+            Some((500, json_ct(), err_json(&e.to_string())))
+        }
+    }
+}
+
+/// Back-compat: route an office request to the office backend.
 pub fn handle(
     instance_id: &str,
     method: &str,
     path: &str,
     body: &[u8],
 ) -> Option<(u16, String, Vec<u8>)> {
-    if !enabled() {
-        return None;
-    }
-    let ow = match instance_for(instance_id) {
-        Ok(o) => o,
-        Err(e) => {
-            eprintln!("[wasmoffice] init {instance_id} : {e}");
-            return Some((500, json_ct(), err_json(&e)));
-        }
-    };
-    let mut guard = ow.lock().unwrap_or_else(|p| p.into_inner());
-    match call(&mut guard, method, path, body) {
-        Ok(r) => Some(r),
-        Err(e) => {
-            eprintln!("[wasmoffice] handle {method} {path} : {e}");
-            Some((500, json_ct(), err_json(&e.to_string())))
-        }
-    }
+    handle_for(OFFICE, instance_id, method, path, body)
 }
 
 fn json_ct() -> String {
@@ -217,15 +273,15 @@ fn err_json(msg: &str) -> Vec<u8> {
 /// in a single `alloc`, call, then read+copy the
 /// `[status u16][ctype_len u16][ctype][body]` result.
 fn call(
-    ow: &mut OfficeWasm,
+    w: &mut WasmInst,
     method: &str,
     path: &str,
     body: &[u8],
 ) -> wasmtime::Result<(u16, String, Vec<u8>)> {
-    let alloc = ow.alloc.clone();
-    let handle = ow.handle.clone();
-    let memory = ow.memory;
-    let store = &mut ow.store;
+    let alloc = w.alloc.clone();
+    let handle = w.handle.clone();
+    let memory = w.memory;
+    let store = &mut w.store;
 
     // Frame: [method_len u32 LE][method][path_len u32 LE][path][body_len u32 LE][body]
     let mut req = Vec::with_capacity(12 + method.len() + path.len() + body.len());

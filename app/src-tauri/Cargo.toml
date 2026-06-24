@@ -24,11 +24,18 @@ serde_json          = "1"
 anyhow              = "1"
 kubuno-sync         = { path = "../../crates/kubuno-sync" }
 ureq                = { version = "2", features = ["json"] }
+tokio               = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "sync", "time"] }
+
+# Desktop-only backends. The modules that use these (docproxy, wasmoffice,
+# office_sync) are all #[cfg(desktop)], so cross-compiling them to Android/iOS is
+# pointless — and wasmtime/axum would needlessly inflate the mobile build. They
+# are excluded from mobile builds via this target table (`target_os` is a real
+# cargo cfg, unlike Tauri's `desktop`/`mobile` which are not known at resolution).
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # Local document proxy (offline-capable web origin): a caching reverse proxy +
 # WebSocket bridge to the core, served from a fixed 127.0.0.1 port so the
 # embedded web app keeps a stable origin (IndexedDB) online and offline.
 axum                = { version = "0.7", features = ["ws"] }
-tokio               = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "sync", "time"] }
 reqwest-async       = { package = "reqwest", version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 # Pinned to 0.21 so its tungstenite Message (String/Vec<u8>) matches axum 0.7's
 # ws Message types — trivial conversion in the collab bridge.

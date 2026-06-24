@@ -329,6 +329,14 @@ async fn office_sync_now(instance_id: String) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Mobile stub: the office document proxy and its local sync are desktop-only
+/// (they rely on the WASM `documents-core` backend and a local reverse proxy).
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn office_sync_now(_instance_id: String) -> Result<String, String> {
+    Err("Synchronisation office indisponible sur mobile".into())
+}
+
 /// Behaviour of the custom title bar for borderless native app/document windows.
 /// Injected as a Tauri `initialization_script` (runs in the page before its own
 /// scripts, outside the module's CSP which blocks injected inline scripts): adds
@@ -475,6 +483,30 @@ async fn open_app(
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Mobile stubs: native sub-windows served by the local document proxy are a
+/// desktop concept. On mobile the SPA navigates in-place inside the single
+/// webview, so these commands are not wired to anything yet.
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn open_document(
+    _app: tauri::AppHandle,
+    _instance_id: String,
+    _doc_id: String,
+) -> Result<(), String> {
+    Err("Fenêtre document native indisponible sur mobile".into())
+}
+
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn open_app(
+    _app: tauri::AppHandle,
+    _instance_id: String,
+    _route: String,
+    _label: String,
+) -> Result<(), String> {
+    Err("Fenêtre application native indisponible sur mobile".into())
 }
 
 /// AppUserModelID — ties our toasts (and their "Kubuno" name + logo) to us.
