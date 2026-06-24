@@ -337,6 +337,11 @@ async fn collab_ws(
         .upstream
         .trim_start_matches("https://")
         .trim_start_matches("http://");
+    // Local-first: a doc born offline has a local id (doc-N). Once pushed and
+    // mapped to its core uuid, rewrite the collab room `office-document:doc-N` →
+    // `office-document:<uuid>` so the native editor joins the SAME server room as
+    // web clients. Unmapped (not yet synced) → left as-is (no server collab).
+    let room = rewrite_collab_room(&st.id, room);
     // Axum decodes the path param; the core expects the ':' percent-encoded.
     let room_enc = room.replace(':', "%3A");
     let mut up = format!("{scheme}://{host}/collab/{room_enc}/sync");
@@ -348,6 +353,21 @@ async fn collab_ws(
         up.push_str(&token);
     }
     ws.on_upgrade(move |client| bridge(client, up))
+}
+
+/// Map an `office-document:<doc-N>` collab room to `office-document:<uuid>` when
+/// the local doc is mapped to a core uuid. Other rooms pass through unchanged.
+fn rewrite_collab_room(instance_id: &str, room: String) -> String {
+    if !crate::wasmoffice::enabled() {
+        return room;
+    }
+    if let Some(doc_id) = room.strip_prefix("office-document:") {
+        if let Some(uuid) = crate::office_sync::mapped_uuid(instance_id, doc_id) {
+            eprintln!("[docproxy] room collab réécrite : {doc_id} → {uuid}");
+            return format!("office-document:{uuid}");
+        }
+    }
+    room
 }
 
 async fn bridge(client: WebSocket, upstream_url: String) {

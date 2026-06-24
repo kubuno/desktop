@@ -78,6 +78,13 @@ pub fn sync_summary(instance_id: &str) -> Result<String> {
     Ok(format!("{}\n{}", push.summary(), pull.summary()))
 }
 
+/// The core uuid mapped to a local document id, if the doc has been synced.
+/// Used by the collab WS bridge to rewrite the room id (`doc-N` → `uuid`).
+pub fn mapped_uuid(instance_id: &str, local_id: &str) -> Option<String> {
+    let db = open_db(instance_id).ok()?;
+    core_uuid(&db, local_id).ok().flatten()
+}
+
 // ── State (sync.db) ─────────────────────────────────────────────────────────
 
 fn sync_db_path(instance_id: &str) -> Result<PathBuf> {
