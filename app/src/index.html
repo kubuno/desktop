@@ -535,6 +535,19 @@
     .app-icon img.app-logo { width: 30px; height: 30px; object-fit: contain; display: block; }
     .app-icon .app-fallback { align-items: center; justify-content: center; }
     .apps-empty { font-size: 13px; color: var(--muted); padding: 24px 4px; }
+    /* Local-first badge: shows whether a module's offline WASM backend is downloaded. */
+    .app-icon { position: relative; }
+    .app-badge {
+      position: absolute; top: -4px; right: -4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--surface); box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .app-badge svg { width: 10px; height: 10px; display: block; }
+    .app-badge.on  { background: #1a7f37; color: #fff; }            /* installed (offline-ready) */
+    .app-badge.off { background: var(--muted); color: #fff; }       /* available to download */
+    .app-badge.busy { background: var(--accent); color: #fff; animation: kbn-pulse 1s ease-in-out infinite; }
+    @keyframes kbn-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
 
     /* Activity */
     .activity-list { display: flex; flex-direction: column; gap: 6px; }
@@ -756,7 +769,7 @@
 
 <!-- ═══ ABOUT OVERLAY ════════════════════════════════════════════════════ -->
 <!-- Context menu for launcher tiles (local vs web) -->
-<div class="dd-menu hidden" id="app-ctx" style="position:fixed;min-width:200px"></div>
+<div class="dd-menu hidden" id="app-ctx" style="position:fixed;right:auto;min-width:0;width:max-content;max-width:260px"></div>
 
 <div class="modal-backdrop hidden" id="about-overlay">
   <div class="about-card">
@@ -960,23 +973,6 @@
         </div>
 
         <div class="card">
-          <div class="card-title">Mode hors-ligne (local-first)</div>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
-            Téléchargez les composants pour ouvrir Documents et Drive en fenêtres
-            natives, éditables et navigables <strong>hors-ligne</strong>. Sans eux,
-            ces modules s'ouvrent dans votre navigateur web.
-          </p>
-          <div class="conn-toggle-row">
-            <div>
-              <div class="conn-toggle-label" id="lc-label">—</div>
-              <div class="conn-toggle-sub" id="lc-sub"></div>
-            </div>
-            <button class="btn-sync" id="lc-btn" style="white-space:nowrap">…</button>
-          </div>
-          <div id="lc-msg" class="hidden" style="font-size:12px;margin-top:8px"></div>
-        </div>
-
-        <div class="card">
           <div class="card-title">Liens rapides</div>
           <div class="quick-links">
             <button class="quick-link-btn" id="ql-sync">
@@ -1004,19 +1000,6 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title">Document (édition hors-ligne)</div>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
-            Ouvre un document dans sa propre fenêtre, servie localement : éditable
-            et rechargeable même hors-ligne. Colle l'identifiant du document
-            (l'URL web <code>/office/&lt;id&gt;</code>).
-          </p>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="doc-id" class="settings-input" placeholder="ID du document" style="flex:1" />
-            <button class="btn-sync" id="btn-open-doc" style="white-space:nowrap">Ouvrir</button>
-          </div>
-          <div id="doc-open-err" class="hidden" style="font-size:12px;color:var(--err-fg);margin-top:8px"></div>
-        </div>
       </div>
 
       <!-- ── ACTIVITY VIEW ──────────────────────────────────── -->
@@ -1582,23 +1565,6 @@
     if (currentStatus) try { invoke('open_in_browser', { url: currentStatus.server }); } catch (_) {}
   });
 
-  // ── Open a document in its own offline-capable window ───────────────────────
-  async function openDocument() {
-    const err = document.getElementById('doc-open-err');
-    err.classList.add('hidden');
-    const docId = document.getElementById('doc-id').value.trim();
-    if (!docId) { err.textContent = 'Renseigne un identifiant de document.'; err.classList.remove('hidden'); return; }
-    if (!activeId) { err.textContent = 'Aucune instance active.'; err.classList.remove('hidden'); return; }
-    try {
-      await invoke('open_document', { instanceId: activeId, docId });
-    } catch (e) {
-      err.textContent = 'Ouverture impossible : ' + String(e);
-      err.classList.remove('hidden');
-    }
-  }
-  document.getElementById('btn-open-doc').addEventListener('click', openDocument);
-  document.getElementById('doc-id').addEventListener('keydown', e => { if (e.key === 'Enter') openDocument(); });
-
   // ── App launcher (waffle) ────────────────────────────────────────────────────
   // Map a module id or a lucide icon name to a glyph (the desktop shell can't
   // render the web's lucide React components, so we approximate with emoji).
@@ -1628,6 +1594,34 @@
     return lucideOrEmoji(moduleId, icon);
   }
 
+  // ── Local-first WASM badges + per-tile download (right-click menu) ───────────
+  const WASM_DOC = 'documents-core.wasm', WASM_DRIVE = 'drive-core.wasm';
+  // Per-route spec: components NEEDED (for the badge), to INSTALL, and to UNINSTALL.
+  // Uninstall cascades the shared drive-core: removing it disables documents too.
+  function tileSpec(route) {
+    const r = (route || '').replace(/^\//, '');
+    if (r === 'office/documents' || r.startsWith('office/documents/'))
+      return { needs: [WASM_DOC, WASM_DRIVE], install: [WASM_DOC, WASM_DRIVE], uninstall: [WASM_DOC] };
+    if (r === 'drive' || r.startsWith('drive/'))
+      return { needs: [WASM_DRIVE], install: [WASM_DRIVE], uninstall: [WASM_DRIVE, WASM_DOC] };
+    return null;
+  }
+  let installedComps = [];
+  async function refreshInstalledComps() {
+    try { installedComps = (await invoke('installed_components')) || []; } catch (_) { installedComps = []; }
+  }
+  const tileInstalled = spec => !!spec && spec.needs.every(c => installedComps.includes(c));
+  const BADGE_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const BADGE_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7 11 12 16 17 11"/></svg>';
+  function tileBadge(route) {
+    const spec = tileSpec(route);
+    if (!spec) return '';
+    const on = tileInstalled(spec);
+    return '<span class="app-badge ' + (on ? 'on' : 'off') + '" title="'
+      + (on ? 'Hors-ligne installé' : 'Disponible hors-ligne — clic droit pour télécharger') + '">'
+      + (on ? BADGE_CHECK : BADGE_DL) + '</span>';
+  }
+
   let appsLoading = false;
   async function loadApps() {
     const c = document.getElementById('apps-container');
@@ -1641,13 +1635,14 @@
         c.innerHTML = '<div class="apps-empty">Aucune application détectée sur cette instance.</div>';
         return;
       }
+      await refreshInstalledComps();
       c.innerHTML = groups.map(g => `
         <div class="apps-group">
           <div class="apps-group-label">${escapeHtml(g.label)}</div>
           <div class="apps-grid">
             ${g.items.map(it => `
               <div class="app-tile" tabindex="0" data-route="${escapeHtml(it.path)}" data-label="${escapeHtml(it.label)}">
-                <div class="app-icon">${appIcon(g.module_id, it.icon, it.path)}</div>
+                <div class="app-icon">${appIcon(g.module_id, it.icon, it.path)}${tileBadge(it.path)}</div>
                 <div class="app-label">${escapeHtml(it.label)}</div>
               </div>`).join('')}
           </div>
@@ -1680,21 +1675,44 @@
     const tile = e.target.closest('.app-tile');
     if (tile) launchApp(tile.dataset.route, tile.dataset.label, 'local');
   });
-  // Right-click → choose local vs browser.
+  // Right-click → launch (local/browser) + manage the offline WASM backend.
   appsContainer.addEventListener('contextmenu', e => {
     const tile = e.target.closest('.app-tile');
     if (!tile) return;
     e.preventDefault();
     const route = tile.dataset.route, label = tile.dataset.label;
-    appCtx.innerHTML =
-      '<button class="dd-item" data-mode="local">Lancer en local</button>' +
-      '<button class="dd-item" data-mode="web">Ouvrir dans le navigateur</button>';
-    appCtx.querySelectorAll('.dd-item').forEach(b => b.addEventListener('click', () => {
-      launchApp(route, label, b.dataset.mode);
+    const spec = tileSpec(route);
+    let html =
+      '<button class="dd-item" data-act="local">Lancer en local</button>' +
+      '<button class="dd-item" data-act="web">Ouvrir dans le navigateur</button>';
+    if (spec) {
+      html += '<div class="dd-sep"></div>';
+      html += tileInstalled(spec)
+        ? '<button class="dd-item danger" data-act="uninstall">Retirer le hors-ligne</button>'
+        : '<button class="dd-item" data-act="download">Télécharger pour le hors-ligne</button>';
+    }
+    appCtx.innerHTML = html;
+    appCtx.querySelectorAll('.dd-item').forEach(b => b.addEventListener('click', async () => {
       appCtx.classList.add('hidden');
+      const act = b.dataset.act;
+      if (act === 'local') return launchApp(route, label, 'local');
+      if (act === 'web') return launchApp(route, label, 'web');
+      const badge = tile.querySelector('.app-badge');
+      if (act === 'download') {
+        if (badge) { badge.className = 'app-badge busy'; badge.innerHTML = BADGE_DL; }
+        try {
+          await invoke('install_local_components', { instanceId: activeId, components: spec.install });
+        } catch (err) {
+          if (badge) { badge.className = 'app-badge off'; badge.title = 'Échec : ' + err; }
+        }
+      } else if (act === 'uninstall') {
+        try { await invoke('uninstall_local_components', { components: spec.uninstall }); } catch (_) {}
+      }
+      await refreshInstalledComps();
+      loadApps();
     }));
-    appCtx.style.left = Math.min(e.clientX, window.innerWidth - 210) + 'px';
-    appCtx.style.top = Math.min(e.clientY, window.innerHeight - 90) + 'px';
+    appCtx.style.left = Math.min(e.clientX, window.innerWidth - 270) + 'px';
+    appCtx.style.top = Math.min(e.clientY, window.innerHeight - 150) + 'px';
     appCtx.classList.remove('hidden');
   });
   document.addEventListener('click', () => appCtx.classList.add('hidden'));
@@ -2081,53 +2099,6 @@
       updateConnState();
     } catch (_) {}
   });
-
-  // ── Local-first components (explicit, user-triggered download) ───────────────
-  async function refreshLocalComponents() {
-    const label = document.getElementById('lc-label');
-    if (!label) return;
-    const sub = document.getElementById('lc-sub');
-    const btn = document.getElementById('lc-btn');
-    let installed = false;
-    try { installed = await invoke('local_components_installed'); } catch (_) {}
-    if (installed) {
-      label.textContent = 'Installé';
-      sub.textContent = "Documents et Drive s'ouvrent en local-first (hors-ligne).";
-      btn.textContent = 'Retirer';
-      btn.dataset.installed = '1';
-    } else {
-      label.textContent = 'Non installé';
-      sub.textContent = "Documents et Drive s'ouvrent dans le navigateur.";
-      btn.textContent = 'Télécharger';
-      btn.dataset.installed = '';
-    }
-  }
-  document.getElementById('lc-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('lc-btn');
-    const msg = document.getElementById('lc-msg');
-    const installed = btn.dataset.installed === '1';
-    btn.disabled = true;
-    msg.classList.add('hidden');
-    try {
-      if (installed) {
-        await invoke('uninstall_local_components');
-      } else {
-        msg.classList.remove('hidden');
-        msg.style.color = 'var(--muted)';
-        msg.textContent = 'Téléchargement des composants…';
-        const r = await invoke('install_local_components', { instanceId: activeId });
-        msg.style.color = '#1a7f37';
-        msg.textContent = r || 'Installé.';
-      }
-    } catch (e) {
-      msg.classList.remove('hidden');
-      msg.style.color = 'var(--err-fg)';
-      msg.textContent = 'Échec : ' + e;
-    }
-    btn.disabled = false;
-    refreshLocalComponents();
-  });
-  (async () => { await refreshLocalComponents(); })();
 
   // Fetch and display the active instance's user identity. Best-effort; the
   // backend retries internally so a transient hiccup doesn't blank the account.
