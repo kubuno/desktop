@@ -207,13 +207,14 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         .await
         .unwrap_or_default();
 
-    // Local-first: the office namespace is offered to the embedded WASM backend
-    // (offline-capable) when its artifact is present. The module owns routes
-    // incrementally and returns the reserved `status == 0` for routes it doesn't
-    // handle (other sub-modules, online-only features) → we fall through to the
-    // core proxy below. Keeps the daemon agnostic of office's URL schema.
-    let office = path == "/api/v1/office" || path.starts_with("/api/v1/office/");
-    if crate::wasmoffice::enabled() && office {
+    // Local-first: the office DOCUMENTS sub-namespace is offered to the embedded
+    // WASM backend (offline-capable) when its artifact is present. The module
+    // returns the reserved `status == 0` for requests it doesn't own yet (e.g. a
+    // document that only exists on the server) → we fall through to the core
+    // proxy below. Everything else under /api/v1/office (fonts, recipients, other
+    // sub-modules) goes straight to the core. Keeps the daemon route-agnostic.
+    let office_doc = path.starts_with("/api/v1/office/documents");
+    if crate::wasmoffice::enabled() && office_doc {
         let id = st.id.clone();
         let m = method.as_str().to_string();
         let p = pq.clone();

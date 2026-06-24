@@ -7,7 +7,7 @@
 //! which it never touches directly.
 //!
 //! Detection uses the WASM's local change journal
-//! `GET /api/v1/office/_changes?since=<seq>` (kinds: created/modified/trashed/
+//! `GET /api/v1/office/documents/_changes?since=<seq>` (kinds: created/modified/trashed/
 //! restored/deleted, global monotone `seq`). Each change becomes an outbox op,
 //! replayed to the core with an `Idempotency-Key` (+ `If-Match` once we hold an
 //! etag). The `local_id ↔ core_uuid` mapping lets the daemon translate ids at
@@ -285,7 +285,7 @@ fn detect(instance_id: &str, db: &Connection) -> Result<()> {
     let (status, body) = local_call(
         instance_id,
         "GET",
-        &format!("/api/v1/office/_changes?since={last_seq}"),
+        &format!("/api/v1/office/documents/_changes?since={last_seq}"),
         &[],
     )?;
     if status == 404 {
@@ -328,7 +328,7 @@ fn detect(instance_id: &str, db: &Connection) -> Result<()> {
 /// Fallback for a WASM without `_changes`: enqueue a create for every local doc
 /// not yet mapped.
 fn detect_creates_fulldiff(instance_id: &str, db: &Connection) -> Result<()> {
-    let (status, body) = local_call(instance_id, "GET", "/api/v1/office", &[])?;
+    let (status, body) = local_call(instance_id, "GET", "/api/v1/office/documents", &[])?;
     if status != 200 {
         return Err(anyhow!("liste locale : HTTP {status}"));
     }
@@ -391,7 +391,7 @@ fn push_create(instance_id: &str, db: &Connection, key: &str, local_id: &str) ->
     let (cst, cbody) = core(
         instance_id,
         "POST",
-        "/api/v1/office",
+        "/api/v1/office/documents",
         Some(serde_json::json!({ "title": title }).to_string().into_bytes()),
         Some(key),
         None,
@@ -412,7 +412,7 @@ fn push_create(instance_id: &str, db: &Connection, key: &str, local_id: &str) ->
         let (pst, pbody) = core(
             instance_id,
             "PATCH",
-            &format!("/api/v1/office/{uuid}"),
+            &format!("/api/v1/office/documents/{uuid}"),
             Some(serde_json::json!({ "content_json": content }).to_string().into_bytes()),
             Some(key),
             etag.as_deref(),
@@ -444,7 +444,7 @@ fn push_modify(instance_id: &str, db: &Connection, key: &str, local_id: &str) ->
     let (st, body) = core(
         instance_id,
         "PATCH",
-        &format!("/api/v1/office/{uuid}"),
+        &format!("/api/v1/office/documents/{uuid}"),
         Some(Value::Object(payload).to_string().into_bytes()),
         Some(key),
         core_etag(db, local_id)?.as_deref(),
@@ -459,13 +459,13 @@ fn push_modify(instance_id: &str, db: &Connection, key: &str, local_id: &str) ->
     Ok(())
 }
 
-/// trash / restore — `POST /api/v1/office/:uuid/{trash,restore}`.
+/// trash / restore — `POST /api/v1/office/documents/:uuid/{trash,restore}`.
 fn push_lifecycle(instance_id: &str, db: &Connection, local_id: &str, action: &str) -> Result<()> {
     let Some(uuid) = core_uuid(db, local_id)? else { return Ok(()) };
     let (st, body) = core(
         instance_id,
         "POST",
-        &format!("/api/v1/office/{uuid}/{action}"),
+        &format!("/api/v1/office/documents/{uuid}/{action}"),
         Some(b"{}".to_vec()),
         None,
         None,
@@ -476,13 +476,13 @@ fn push_lifecycle(instance_id: &str, db: &Connection, local_id: &str, action: &s
     Ok(())
 }
 
-/// Hard delete — `DELETE /api/v1/office/:uuid/delete` (→ 204) — then drop mapping.
+/// Hard delete — `DELETE /api/v1/office/documents/:uuid/delete` (→ 204) — then drop mapping.
 fn push_delete(instance_id: &str, db: &Connection, local_id: &str) -> Result<()> {
     let Some(uuid) = core_uuid(db, local_id)? else { return Ok(()) };
     let (st, body) = core(
         instance_id,
         "DELETE",
-        &format!("/api/v1/office/{uuid}/delete"),
+        &format!("/api/v1/office/documents/{uuid}/delete"),
         None,
         None,
         core_etag(db, local_id)?.as_deref(),
@@ -506,7 +506,7 @@ fn pull_changes(instance_id: &str, db: &Connection) -> Result<PullStats> {
         let (st, body) = core(
             instance_id,
             "GET",
-            &format!("/api/v1/office/delta?cursor={cursor}&limit=200"),
+            &format!("/api/v1/office/documents/delta?cursor={cursor}&limit=200"),
             None,
             None,
             None,
@@ -551,18 +551,25 @@ fn apply_pull_change(
     match kind {
         "deleted" => {
             if let Some(lid) = local {
-                let _ = local_call(instance_id, "DELETE", &format!("/api/v1/office/{lid}/delete"), &[]);
+                let _ = local_call(instance_id, "DELETE", &format!("/api/v1/office/documents/{lid}/delete"), &[]);
                 drop_mapping(db, &lid)?;
                 stats.deleted += 1;
             }
         }
         "trashed" => {
             if let Some(lid) = local {
-                let _ = local_call(instance_id, "POST", &format!("/api/v1/office/{lid}/trash"), b"{}");
+                let _ = local_call(instance_id, "POST", &format!("/api/v1/office/documents/{lid}/trash"), b"{}");
                 stats.trashed += 1;
             }
         }
         "modified" => {
+            // Already at this version (e.g. our own push reflected back in the
+            // delta)? Skip — avoids a redundant local PATCH and a phantom update.
+            if let Some(lid) = &local {
+                if etag.is_some() && core_etag(db, lid)?.as_deref() == etag {
+                    return Ok(());
+                }
+            }
             // Build the metadata patch; refetch content only if it changed.
             let mut payload = serde_json::Map::new();
             payload.insert("title".into(), Value::String(title.to_string()));
@@ -576,7 +583,7 @@ fn apply_pull_change(
                             payload.insert("content_json".into(), content);
                         }
                     }
-                    local_call(instance_id, "PATCH", &format!("/api/v1/office/{lid}"),
+                    local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{lid}"),
                         Value::Object(payload).to_string().as_bytes())?;
                     set_etags(db, &lid, etag, cet)?;
                     stats.updated += 1;
@@ -584,7 +591,7 @@ fn apply_pull_change(
                 None => {
                     // New server document → materialize it locally.
                     let (cst, cbody) = local_call(
-                        instance_id, "POST", "/api/v1/office",
+                        instance_id, "POST", "/api/v1/office/documents",
                         serde_json::json!({ "title": title }).to_string().as_bytes(),
                     )?;
                     if !(cst == 200 || cst == 201) {
@@ -599,7 +606,7 @@ fn apply_pull_change(
                     if let Some(content) = fetch_core_content(instance_id, uuid)? {
                         payload.insert("content_json".into(), content);
                     }
-                    let _ = local_call(instance_id, "PATCH", &format!("/api/v1/office/{new_lid}"),
+                    let _ = local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{new_lid}"),
                         Value::Object(payload).to_string().as_bytes());
                     put_mapping_full(db, &new_lid, uuid, etag, cet)?;
                     stats.downloaded += 1;
@@ -613,7 +620,7 @@ fn apply_pull_change(
 
 /// Fetch a document's `content_json` from the core (for refetch on content change).
 fn fetch_core_content(instance_id: &str, uuid: &str) -> Result<Option<Value>> {
-    let (st, body) = core(instance_id, "GET", &format!("/api/v1/office/{uuid}"), None, None, None)?;
+    let (st, body) = core(instance_id, "GET", &format!("/api/v1/office/documents/{uuid}"), None, None, None)?;
     if st != 200 {
         return Ok(None);
     }
@@ -625,7 +632,7 @@ fn fetch_core_content(instance_id: &str, uuid: &str) -> Result<Option<Value>> {
 /// forward `last_seq` past them so push doesn't replay server-originated changes.
 fn consume_local_echoes(instance_id: &str, db: &Connection) -> Result<()> {
     let last: i64 = get_meta(db, "last_seq")?.and_then(|s| s.parse().ok()).unwrap_or(0);
-    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/_changes?since={last}"), &[])?;
+    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/documents/_changes?since={last}"), &[])?;
     if st == 200 {
         if let Ok(v) = serde_json::from_slice::<Value>(&body) {
             if let Some(max) = v.get("seq").and_then(|x| x.as_i64()) {
@@ -642,7 +649,7 @@ fn consume_local_echoes(instance_id: &str, db: &Connection) -> Result<()> {
 
 /// Read a local document `{document, content_json}` from the WASM backend.
 fn read_local(instance_id: &str, local_id: &str) -> Result<Option<Value>> {
-    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/{local_id}"), &[])?;
+    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/documents/{local_id}"), &[])?;
     if st == 404 {
         return Ok(None);
     }
