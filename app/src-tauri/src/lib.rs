@@ -38,13 +38,18 @@ fn emit_sync_event(id: &str, ev: kubuno_sync::daemon::SyncEvent) {
             }),
         );
     }
-    // Refresh the Explorer sync-status overlays so files just pulled get the
-    // green check without waiting for the next app start.
+    // Files just pulled by the daemon are full on disk — convert the tree to
+    // placeholders and make the new files online-only ("virtual"), so they don't
+    // accumulate locally and match the on-demand model.
     #[cfg(windows)]
     if kind == "synced" {
-        if let Some(cfg) = kubuno_sync::current_config(id) {
-            std::thread::spawn(move || cloudfiles::mark_tree_in_sync(&cfg.sync_root));
-        }
+        let id = id.to_string();
+        std::thread::spawn(move || {
+            if let Some(cfg) = kubuno_sync::current_config(&id) {
+                cloudfiles::mark_tree_in_sync(&cfg.sync_root);
+                cloudfiles::make_ondemand(&id, &instance_files(&id));
+            }
+        });
     }
     #[cfg(not(windows))]
     let _ = kind;
@@ -457,6 +462,20 @@ fn sync_all_instances() {
 
 /// Reconcile the Windows Explorer navigation-pane entries with the current
 /// instances so each sync folder shows up in the sidebar (no-op off Windows).
+/// The synced files of an instance as (local path, server file id) — used to
+/// turn them into online-only placeholders.
+#[cfg(windows)]
+fn instance_files(id: &str) -> Vec<(std::path::PathBuf, String)> {
+    kubuno_sync::db_path(id)
+        .ok()
+        .and_then(|db| kubuno_sync::store::Store::open(&db).ok())
+        .and_then(|s| s.all_files().ok())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(fid, _folder, _name, _etag, local_path)| (std::path::PathBuf::from(local_path), fid))
+        .collect()
+}
+
 fn refresh_explorer_nav() {
     #[cfg(windows)]
     {
@@ -465,7 +484,7 @@ fn refresh_explorer_nav() {
         //  - local folder  → WinRT sync root (adds the "Status" column + ✓ overlays)
         //  - network folder → plain shell-namespace entry (CfApi can't register it)
         let mut network_entries: Vec<(String, String, std::path::PathBuf)> = Vec::new();
-        let mut local_to_mark: Vec<std::path::PathBuf> = Vec::new();
+        let mut local_to_mark: Vec<(String, std::path::PathBuf)> = Vec::new();
         for c in &instances {
             let host = c
                 .server_url
@@ -478,7 +497,7 @@ fn refresh_explorer_nav() {
                 .to_string();
             let name = format!("Kubuno — {host}");
             if cloudfiles::register(&c.id, &name, &c.sync_root) {
-                local_to_mark.push(c.sync_root.clone());
+                local_to_mark.push((c.id.clone(), c.sync_root.clone()));
             } else {
                 network_entries.push((c.id.clone(), name, c.sync_root.clone()));
             }
@@ -488,9 +507,12 @@ fn refresh_explorer_nav() {
         explorer::sync(&network_entries);
         // Mark synced files in-sync off-thread (walking the tree can be slow).
         std::thread::spawn(move || {
-            for folder in local_to_mark {
+            for (id, folder) in local_to_mark {
                 cloudfiles::connect(&folder);
+                // Convert the tree to placeholders (Status column), then make the
+                // files online-only ("virtual") so they download on access.
                 cloudfiles::mark_tree_in_sync(&folder);
+                cloudfiles::make_ondemand(&id, &instance_files(&id));
             }
         });
     }

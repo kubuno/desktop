@@ -9,7 +9,7 @@
 
 #![cfg(windows)]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use windows::core::{HSTRING, PCWSTR};
 use windows::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE};
@@ -61,7 +61,11 @@ fn register_winrt(id: &str, name: &str, folder: &Path) -> windows::core::Result<
     info.SetIconResource(&HSTRING::from(format!("{exe},0")))?;
     info.SetVersion(&HSTRING::from("1.0.0"))?;
 
-    info.SetHydrationPolicy(StorageProviderHydrationPolicy::AlwaysFull)?;
+    // Population AlwaysFull keeps every file VISIBLE (the namespace is always
+    // fully present); Partial hydration lets a file's *content* be dehydrated
+    // (online-only) and re-fetched on access. Changing population to Full instead
+    // would make Windows expect provider-driven population and purge the files.
+    info.SetHydrationPolicy(StorageProviderHydrationPolicy::Partial)?;
     info.SetPopulationPolicy(StorageProviderPopulationPolicy::AlwaysFull)?;
     info.SetInSyncPolicy(StorageProviderInSyncPolicy::Default)?;
     info.SetHardlinkPolicy(StorageProviderHardlinkPolicy::None)?;
@@ -80,13 +84,114 @@ fn register_winrt(id: &str, name: &str, folder: &Path) -> windows::core::Result<
 /// provider stays "online" while the app runs.
 static CONNECTIONS: std::sync::Mutex<Vec<(String, i64)>> = std::sync::Mutex::new(Vec::new());
 
-/// FETCH_DATA callback. Our files are always fully present (population =
-/// always-full), so the OS never asks us to hydrate — this is a required but
-/// effectively no-op handler that keeps the connection valid.
+/// FETCH_DATA callback — invoked when an online-only file is opened. Reads the
+/// `"instanceId|serverFileId"` stored in the placeholder's FileIdentity,
+/// downloads the content from Kubuno and hands it back to the OS via CfExecute.
 unsafe extern "system" fn on_fetch_data(
-    _info: *const CF_CALLBACK_INFO,
+    info: *const CF_CALLBACK_INFO,
     _params: *const CF_CALLBACK_PARAMETERS,
 ) {
+    use windows::Win32::Foundation::NTSTATUS;
+    const STATUS_SUCCESS: NTSTATUS = NTSTATUS(0);
+    const STATUS_UNSUCCESSFUL: NTSTATUS = NTSTATUS(0xC000_0001u32 as i32);
+
+    let info = &*info;
+    let bytes =
+        std::slice::from_raw_parts(info.FileIdentity as *const u8, info.FileIdentityLength as usize);
+    let ident = String::from_utf8_lossy(bytes);
+
+    let mut data: Vec<u8> = Vec::new();
+    let mut status = STATUS_SUCCESS;
+    match ident.split_once('|') {
+        Some((instance, file_id)) => match kubuno_sync::download_for(instance, file_id) {
+            Ok(d) => data = d,
+            Err(e) => {
+                eprintln!("[cloudfiles] hydratation échouée ({ident}) : {e}");
+                status = STATUS_UNSUCCESSFUL;
+            }
+        },
+        None => status = STATUS_UNSUCCESSFUL,
+    }
+
+    let op_info = CF_OPERATION_INFO {
+        StructSize: std::mem::size_of::<CF_OPERATION_INFO>() as u32,
+        Type: CF_OPERATION_TYPE_TRANSFER_DATA,
+        ConnectionKey: info.ConnectionKey,
+        TransferKey: info.TransferKey,
+        CorrelationVector: std::ptr::null(),
+        SyncStatus: std::ptr::null(),
+        RequestKey: info.RequestKey,
+    };
+    let mut op_params = CF_OPERATION_PARAMETERS {
+        ParamSize: std::mem::size_of::<CF_OPERATION_PARAMETERS>() as u32,
+        Anonymous: CF_OPERATION_PARAMETERS_0 {
+            TransferData: CF_OPERATION_PARAMETERS_0_0 {
+                Flags: CF_OPERATION_TRANSFER_DATA_FLAG_NONE,
+                CompletionStatus: status,
+                Buffer: if data.is_empty() {
+                    std::ptr::null()
+                } else {
+                    data.as_ptr() as *const core::ffi::c_void
+                },
+                Offset: 0,
+                Length: data.len() as i64,
+            },
+        },
+    };
+    let _ = CfExecute(&op_info, &mut op_params);
+}
+
+/// Turn one already-present file into an online-only ("virtual") placeholder:
+/// record `"instanceId|serverFileId"` in its FileIdentity (for the fetch
+/// callback), unpin it, then dehydrate it (free the local bytes → cloud icon).
+fn dehydrate_one(instance: &str, path: &Path, server_id: &str) -> bool {
+    let wpath = HSTRING::from(path.as_os_str());
+    let ident = format!("{instance}|{server_id}");
+    let id_bytes = ident.as_bytes();
+    let id_ptr = id_bytes.as_ptr() as *const core::ffi::c_void;
+    unsafe {
+        let handle = CreateFileW(
+            PCWSTR(wpath.as_ptr()),
+            GENERIC_READ.0 | GENERIC_WRITE.0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            None,
+            OPEN_EXISTING,
+            FILE_FLAGS_AND_ATTRIBUTES(0),
+            None,
+        );
+        let Ok(handle) = handle else { return false };
+        let _ = CfUpdatePlaceholder(handle, None, Some(id_ptr), id_bytes.len() as u32, None, CF_UPDATE_FLAG_NONE, None, None);
+        let _ = CfSetPinState(handle, CF_PIN_STATE_UNPINNED, CF_SET_PIN_FLAG_NONE, None);
+        let ok = CfDehydratePlaceholder(handle, 0, -1, CF_DEHYDRATE_FLAG_NONE, None).is_ok();
+        let _ = CloseHandle(handle);
+        ok
+    }
+}
+
+/// Make every given file online-only ("virtual"). `files` = (local path, server
+/// file id). Already-dehydrated files are skipped (cheap, no hydration).
+pub fn make_ondemand(instance: &str, files: &[(PathBuf, String)]) {
+    let mut done = 0usize;
+    for (path, server_id) in files {
+        // Skip files that are already online-only (reading attributes only).
+        if is_online_only(path) {
+            continue;
+        }
+        if dehydrate_one(instance, path, server_id) {
+            done += 1;
+        }
+    }
+    eprintln!("[cloudfiles] {done} fichier(s) passés en on-demand pour {instance}");
+}
+
+/// True if `path` is already an online-only placeholder (attributes only — no
+/// hydration triggered).
+fn is_online_only(path: &Path) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x0040_0000;
+    std::fs::metadata(path)
+        .map(|m| m.file_attributes() & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS != 0)
+        .unwrap_or(false)
 }
 
 /// Connect to a registered sync root and report it "online/idle" so Explorer
