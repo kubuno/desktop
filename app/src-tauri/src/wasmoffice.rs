@@ -131,6 +131,13 @@ pub fn enabled_for(spec: Spec) -> bool {
     compiled(spec).is_some()
 }
 
+/// Drop the compiled-module cache so the next `enabled_for`/`handle_for` re-checks
+/// the artifact paths. Called after the user installs/removes the WASM backends so
+/// the change takes effect without a restart.
+pub fn invalidate() {
+    modules().lock().unwrap_or_else(|p| p.into_inner()).clear();
+}
+
 /// Back-compat: the office backend (used by the office document proxy + sync).
 pub fn enabled() -> bool {
     enabled_for(OFFICE)
