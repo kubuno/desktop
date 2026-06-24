@@ -290,10 +290,15 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     // Local-first Drive: the embedded drive-core WASM owns the read listings
     // (folders, files, breadcrumb, file metadata) and serves them from its local
     // store — fed by the drive delta sync. It returns `status == 0` for everything
-    // it doesn't own (mutations, downloads, thumbnails, /sync/*, global views) →
-    // those fall through to the core proxy.
+    // it doesn't own (downloads, thumbnails, /sync/*, global views) → those fall
+    // through to the core proxy.
+    //
+    // Only GET requests are routed for now: drive-core v2 also CLAIMS mutations
+    // (journaling them in a local outbox), but those only reach the server once the
+    // outbox push loop (_changes → replay → _ack) is wired. Until then mutations go
+    // straight to the core so they aren't trapped locally.
     let drive_req = path.starts_with("/api/v1/drive");
-    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req {
+    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req && is_get {
         let id = st.id.clone();
         let m = method.as_str().to_string();
         let p = pq.clone();
