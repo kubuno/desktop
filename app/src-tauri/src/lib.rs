@@ -419,6 +419,9 @@ async fn open_document(
         // background. Transparent means the brief resize gap is composited away.
         .transparent(true)
         .shadow(true)
+        // Let the web module handle file drag-and-drop (HTML5): without this Tauri's
+        // OS-level drop handler swallows the events and uploads never trigger.
+        .disable_drag_drop_handler()
         .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
@@ -468,6 +471,8 @@ async fn open_app(
         // See open_document: transparent + shadow avoids the black resize flicker.
         .transparent(true)
         .shadow(true)
+        // See open_document: let the web module handle HTML5 file drag-and-drop.
+        .disable_drag_drop_handler()
         .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
