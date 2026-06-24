@@ -129,13 +129,24 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
             .route("/collab/:room/sync", get(collab_ws))
             .fallback(proxy_all)
             .with_state(state.clone());
-        // Background cache warming: while online, keep the whole Drive tree
-        // (folders + file listings) and the bootstrap endpoints in the disk cache,
-        // so the app can browse the entire Drive offline without a prior visit.
+        // Background Drive sync. When the drive-core WASM is installed, pull the
+        // core delta and ingest it into its local store (true local-first listings).
+        // Otherwise fall back to cache-warming the whole Drive tree so browsing
+        // still works offline.
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(Duration::from_secs(5)).await;
             loop {
-                warm_drive_cache(&state).await;
+                if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) {
+                    let id = state.id.clone();
+                    if let Ok(Err(e)) =
+                        tauri::async_runtime::spawn_blocking(move || crate::drive_sync::sync(&id))
+                            .await
+                    {
+                        eprintln!("[docproxy] drive sync : {e}");
+                    }
+                } else {
+                    warm_drive_cache(&state).await;
+                }
                 tokio::time::sleep(Duration::from_secs(600)).await;
             }
         });
@@ -262,6 +273,33 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
                 return build_response(code, headers, out);
             }
             // status == 0 → passthrough: fall through to the core proxy.
+        }
+    }
+
+    // Local-first Drive: the embedded drive-core WASM owns the read listings
+    // (folders, files, breadcrumb, file metadata) and serves them from its local
+    // store — fed by the drive delta sync. It returns `status == 0` for everything
+    // it doesn't own (mutations, downloads, thumbnails, /sync/*, global views) →
+    // those fall through to the core proxy.
+    let drive_req = path.starts_with("/api/v1/drive");
+    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req {
+        let id = st.id.clone();
+        let m = method.as_str().to_string();
+        let p = pq.clone();
+        let b = body_bytes.to_vec();
+        let res = tokio::task::spawn_blocking(move || {
+            crate::wasmoffice::handle_for(crate::wasmoffice::DRIVE, &id, &m, &p, &b)
+        })
+        .await;
+        if let Ok(Some((status, ctype, out))) = res {
+            if status != 0 {
+                let mut headers = HeaderMap::new();
+                if let Ok(v) = HeaderValue::from_str(&ctype) {
+                    headers.insert(header::CONTENT_TYPE, v);
+                }
+                let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+                return build_response(code, headers, out);
+            }
         }
     }
 

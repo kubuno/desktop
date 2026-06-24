@@ -20,6 +20,8 @@ mod wasmoffice;
 #[cfg(desktop)]
 mod office_sync;
 #[cfg(desktop)]
+mod drive_sync;
+#[cfg(desktop)]
 use tauri::Manager;
 
 /// App handle stashed at startup so the background sync threads can emit events
