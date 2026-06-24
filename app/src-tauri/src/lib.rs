@@ -372,9 +372,13 @@ function scopeSettings(){
  var bc=document.querySelector('a[href="/office"]');if(bc){var nm=KBN_SUB.charAt(0).toUpperCase()+KBN_SUB.slice(1);for(var i=0;i<bc.childNodes.length;i++){var nd=bc.childNodes[i];if(nd.nodeType===3&&nd.textContent.trim()&&nd.textContent.trim()!==nm)nd.textContent=nm;}}
 }
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('a[href=\"/office\"]'):null;if(a&&KBN_SUB){e.preventDefault();e.stopPropagation();history.pushState({},'','/office/'+KBN_SUB);window.dispatchEvent(new PopStateEvent('popstate'));}},true);
-setInterval(scopeSettings,500);
-var n=0,iv=setInterval(function(){bar();pad();if(++n>40)clearInterval(iv);},350);
-if(document.readyState!=='loading'){bar();pad();}else{document.addEventListener('DOMContentLoaded',function(){bar();pad();});}
+/* Permanent tick: the office SPA re-renders its header on every in-app navigation
+   (e.g. Documents -> settings -> back), recreating the buttons without our inline
+   display:none — so the hiding/padding must be re-applied continuously, not just
+   for a few seconds after load. bar() and scopeSettings() are idempotent. */
+function tick(){bar();pad();scopeSettings();}
+setInterval(tick,400);
+if(document.readyState!=='loading'){tick();}else{document.addEventListener('DOMContentLoaded',tick);}
 })();"#;
 
 /// Open a document in its own native window, served by the local document proxy
