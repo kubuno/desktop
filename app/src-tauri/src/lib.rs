@@ -524,6 +524,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .on_window_event(|window, event| {
+            // Tray app: closing the window (title-bar ✕, Alt+F4, taskbar close)
+            // only hides it — the app keeps syncing in the background and is
+            // quit exclusively from the system-tray "Quitter" entry.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             is_logged_in,
             do_login,
