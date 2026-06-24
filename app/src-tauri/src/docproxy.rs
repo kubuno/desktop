@@ -207,22 +207,28 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         .await
         .unwrap_or_default();
 
-    // Local-first: document CRUD is served by the embedded office WASM backend
-    // (offline-capable) when its artifact is present. Anything it can't serve
-    // falls through to the core proxy below.
-    if crate::wasmoffice::enabled() && path.starts_with("/api/v1/office/documents") {
+    // Local-first: the office namespace is offered to the embedded WASM backend
+    // (offline-capable) when its artifact is present. The module owns routes
+    // incrementally and returns the reserved `status == 0` for routes it doesn't
+    // handle (other sub-modules, online-only features) → we fall through to the
+    // core proxy below. Keeps the daemon agnostic of office's URL schema.
+    let office = path == "/api/v1/office" || path.starts_with("/api/v1/office/");
+    if crate::wasmoffice::enabled() && office {
         let id = st.id.clone();
         let m = method.as_str().to_string();
         let p = pq.clone();
         let b = body_bytes.to_vec();
         let res = tokio::task::spawn_blocking(move || crate::wasmoffice::handle(&id, &m, &p, &b)).await;
         if let Ok(Some((status, ctype, out))) = res {
-            let mut headers = HeaderMap::new();
-            if let Ok(v) = HeaderValue::from_str(&ctype) {
-                headers.insert(header::CONTENT_TYPE, v);
+            if status != 0 {
+                let mut headers = HeaderMap::new();
+                if let Ok(v) = HeaderValue::from_str(&ctype) {
+                    headers.insert(header::CONTENT_TYPE, v);
+                }
+                let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+                return build_response(code, headers, out);
             }
-            let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-            return build_response(code, headers, out);
+            // status == 0 → passthrough: fall through to the core proxy.
         }
     }
 
