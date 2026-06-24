@@ -1219,6 +1219,18 @@
     return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   }
 
+  // Accept a server-provided URL only if it's a plain http(s) address. Returns ''
+  // otherwise, so it's safe to drop into a CSS url("…") or an <img> src without a
+  // scheme (javascript:/data:) or a context break-out (quotes, parens).
+  function safeUrl(u) {
+    try {
+      const url = new URL(String(u), window.location.href);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+      if (/["'()\\\s]/.test(url.href)) return '';
+      return url.href;
+    } catch (_) { return ''; }
+  }
+
   // True if the user enabled (or left enabled) a given notification toggle.
   const prefOn = (id) => {
     const v = localStorage.getItem('kubuno-' + id);
@@ -1356,11 +1368,13 @@
       list.innerHTML = '<div class="activity-empty">Aucune activité enregistrée.<br>Lance une synchronisation pour commencer.</div>';
       return;
     }
+    // e.text may carry server-derived content (sync-event titles/bodies, network
+    // error strings) — escape it to keep injected markup out of the DOM.
     list.innerHTML = activityLog.slice(0, 100).map(e => `
       <div class="activity-item">
-        <span class="activity-time">${e.time}</span>
+        <span class="activity-time">${escapeHtml(e.time)}</span>
         <span class="activity-dot ${e.isError ? 'error' : 'ok'}"></span>
-        <span class="activity-detail${e.isError ? ' is-err' : ''}">${e.text}</span>
+        <span class="activity-detail${e.isError ? ' is-err' : ''}">${escapeHtml(e.text)}</span>
       </div>`).join('');
   }
 
@@ -1491,8 +1505,8 @@
       }
       badge.textContent = modules.length;
       container.innerHTML = modules.map(mod => `
-        <div class="module-group-label">${mod.name}</div>
-        ${mod.settings.map(s => renderModuleSetting(mod.id, s)).join('')}
+        <div class="module-group-label">${escapeHtml(mod.name)}</div>
+        ${(mod.settings || []).map(s => renderModuleSetting(mod.id, s)).join('')}
       `).join('');
       // Wire up change events for module settings
       modules.forEach(mod => mod.settings.forEach(s => wireModuleSetting(mod.id, s)));
@@ -1504,29 +1518,34 @@
   function renderModuleSetting(moduleId, s) {
     const key = `kubuno-module-${moduleId}-${s.key}`;
     const stored = localStorage.getItem(key);
+    // Module settings come from the (possibly untrusted) instance server — escape
+    // every value to prevent HTML/attribute injection (XSS).
+    const id = escapeHtml('ms-' + moduleId + '-' + s.key);
+    const label = escapeHtml(s.label);
+    const desc = s.description ? escapeHtml(s.description) : '';
     if (s.kind === 'checkbox') {
       const checked = stored !== null ? stored === 'true' : s.value === true;
       return `<div class="check-row">
-        <input type="checkbox" id="ms-${moduleId}-${s.key}" ${checked ? 'checked' : ''} />
+        <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} />
         <div class="check-row-text">
-          <div class="check-row-title">${s.label}</div>
-          ${s.description ? `<div class="check-row-desc">${s.description}</div>` : ''}
+          <div class="check-row-title">${label}</div>
+          ${desc ? `<div class="check-row-desc">${desc}</div>` : ''}
         </div>
       </div>`;
     }
-    if (s.kind === 'select' && s.options) {
+    if (s.kind === 'select' && Array.isArray(s.options)) {
       const val = stored || s.value;
       return `<div class="settings-row">
-        <div class="settings-row-label">${s.label}</div>
-        <select class="settings-select" id="ms-${moduleId}-${s.key}">
-          ${s.options.map(o => `<option value="${o}" ${o === val ? 'selected' : ''}>${o}</option>`).join('')}
+        <div class="settings-row-label">${label}</div>
+        <select class="settings-select" id="${id}">
+          ${s.options.map(o => `<option value="${escapeHtml(o)}" ${o === val ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
         </select>
       </div>`;
     }
     // text / fallback
     return `<div class="settings-row">
-      <div class="settings-row-label">${s.label}</div>
-      <div class="settings-row-val">${stored || s.value}</div>
+      <div class="settings-row-label">${label}</div>
+      <div class="settings-row-val">${escapeHtml(stored || s.value)}</div>
     </div>`;
   }
 
@@ -1569,13 +1588,14 @@
     const check = '<svg class="ap-inst-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     box.innerHTML = instances.map(inst => {
       const host = instanceHost(inst.server);
-      const initial = (host[0] || 'K').toUpperCase();
+      const initial = escapeHtml((host[0] || 'K').toUpperCase());
       const active = inst.id === activeId;
-      return `<div class="ap-inst${active ? ' active' : ''}" data-id="${inst.id}">
-        <div class="ap-inst-avatar" data-avatar="${inst.id}">${initial}</div>
+      const id = escapeHtml(inst.id);
+      return `<div class="ap-inst${active ? ' active' : ''}" data-id="${id}">
+        <div class="ap-inst-avatar" data-avatar="${id}">${initial}</div>
         <div class="ap-inst-text">
-          <div class="ap-inst-name" data-name="${inst.id}">${host}</div>
-          <div class="ap-inst-sub">${inst.server}</div>
+          <div class="ap-inst-name" data-name="${id}">${escapeHtml(host)}</div>
+          <div class="ap-inst-sub">${escapeHtml(inst.server)}</div>
         </div>
         ${active ? check : ''}
       </div>`;
@@ -1588,15 +1608,16 @@
     try {
       const user = await invoke('get_user', { id: inst.id });
       if (!user) return;
-      const nameEl = document.querySelector(`[data-name="${inst.id}"]`);
+      const nameEl = document.querySelector(`[data-name="${CSS.escape(inst.id)}"]`);
       if (nameEl) nameEl.textContent = user.display_name || user.username || user.email;
-      if (user.avatar_url) {
+      const avatarUrl = safeUrl(user.avatar_url);
+      if (avatarUrl) {
         const probe = new Image();
         probe.onload = () => {
-          const av = document.querySelector(`[data-avatar="${inst.id}"]`);
-          if (av) { av.style.backgroundImage = `url("${user.avatar_url}")`; av.textContent = ''; }
+          const av = document.querySelector(`[data-avatar="${CSS.escape(inst.id)}"]`);
+          if (av) { av.style.backgroundImage = `url("${avatarUrl}")`; av.textContent = ''; }
         };
-        probe.src = user.avatar_url;
+        probe.src = avatarUrl;
       }
     } catch (_) {}
   }
@@ -1694,19 +1715,20 @@
       if (el) el.textContent = initial;
     });
 
-    if (user.avatar_url) {
+    const avatarUrl = safeUrl(user.avatar_url);
+    if (avatarUrl) {
       const probe = new Image();
       probe.onload = () => {
         avatarIds.forEach(id => {
           const el = document.getElementById(id);
           if (!el) return;
-          el.style.backgroundImage = `url("${user.avatar_url}")`;
+          el.style.backgroundImage = `url("${avatarUrl}")`;
           el.style.backgroundSize = 'cover';
           el.style.backgroundPosition = 'center';
           el.textContent = '';
         });
       };
-      probe.src = user.avatar_url;
+      probe.src = avatarUrl;
     }
   }
 
