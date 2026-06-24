@@ -298,7 +298,7 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     // outbox push loop (_changes → replay → _ack) is wired. Until then mutations go
     // straight to the core so they aren't trapped locally.
     let drive_req = path.starts_with("/api/v1/drive");
-    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req && is_get {
+    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req && method == Method::GET {
         let id = st.id.clone();
         let m = method.as_str().to_string();
         let p = pq.clone();
