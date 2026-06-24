@@ -194,7 +194,7 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
 /// True if `path` is a cloud placeholder whose content is not on disk (online-
 /// only). Reads only attributes, so it never triggers hydration.
 #[cfg(windows)]
-fn is_online_only(path: &Path) -> bool {
+pub(crate) fn is_online_only(path: &Path) -> bool {
     use std::os::windows::fs::MetadataExt;
     const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x0040_0000;
     std::fs::metadata(path)
@@ -202,7 +202,7 @@ fn is_online_only(path: &Path) -> bool {
         .unwrap_or(false)
 }
 #[cfg(not(windows))]
-fn is_online_only(_path: &Path) -> bool {
+pub(crate) fn is_online_only(_path: &Path) -> bool {
     false
 }
 
