@@ -38,19 +38,45 @@ impl PushStats {
     }
 }
 
-/// One push cycle for an instance. No-op if the local WASM backend is absent.
-pub fn push(instance_id: &str) -> Result<PushStats> {
+#[derive(Default)]
+pub struct PullStats {
+    pub downloaded: u32, // new server docs materialized locally
+    pub updated:    u32, // existing docs updated from the server
+    pub trashed:    u32,
+    pub deleted:    u32,
+}
+
+impl PullStats {
+    fn summary(&self) -> String {
+        format!(
+            "↓ office : {} nouveau(x), {} mis à jour, {} corbeille, {} supprimé(s)",
+            self.downloaded, self.updated, self.trashed, self.deleted
+        )
+    }
+}
+
+/// One full sync cycle: push local changes up, then pull server changes down.
+/// No-op if the local WASM backend is absent.
+pub fn sync(instance_id: &str) -> Result<(PushStats, PullStats)> {
     if !crate::wasmoffice::enabled() {
-        return Ok(PushStats::default());
+        return Ok((PushStats::default(), PullStats::default()));
     }
     let db = open_db(instance_id)?;
     detect(instance_id, &db)?;
-    drain(instance_id, &db)
+    let push = drain(instance_id, &db)?;
+    let pull = pull_changes(instance_id, &db)?;
+    // Echo guard: applying pulled changes via the local API journals them in
+    // `_changes`; advance `last_seq` past them so the next push doesn't replay
+    // server-originated changes back to the core. (Concurrent local edits during
+    // the pull window are a Phase 3 refinement.)
+    consume_local_echoes(instance_id, &db)?;
+    Ok((push, pull))
 }
 
 /// Public summary helper for the command layer.
-pub fn push_summary(instance_id: &str) -> Result<String> {
-    Ok(push(instance_id)?.summary())
+pub fn sync_summary(instance_id: &str) -> Result<String> {
+    let (push, pull) = sync(instance_id)?;
+    Ok(format!("{}\n{}", push.summary(), pull.summary()))
 }
 
 // ── State (sync.db) ─────────────────────────────────────────────────────────
@@ -85,6 +111,9 @@ fn open_db(instance_id: &str) -> Result<Connection> {
             created_at TEXT
          );",
     )?;
+    // Pull needs the core content etag to know when to refetch the .kbdoc.
+    // ALTER is idempotent-ish: ignore the error if the column already exists.
+    let _ = conn.execute("ALTER TABLE mapping ADD COLUMN core_content_etag TEXT", []);
     Ok(conn)
 }
 
@@ -129,6 +158,54 @@ fn put_mapping(db: &Connection, local_id: &str, uuid: &str, etag: Option<&str>) 
         "INSERT OR REPLACE INTO mapping (local_id, core_uuid, core_etag, updated_at)
          VALUES (?1, ?2, ?3, datetime('now'))",
         rusqlite::params![local_id, uuid, etag],
+    )?;
+    Ok(())
+}
+
+/// Reverse lookup (pull direction): the local id mapped to a core uuid, if any.
+fn local_id_by_uuid(db: &Connection, uuid: &str) -> Result<Option<String>> {
+    Ok(db
+        .query_row(
+            "SELECT local_id FROM mapping WHERE core_uuid = ?1",
+            [uuid],
+            |r| r.get::<_, String>(0),
+        )
+        .ok())
+}
+
+fn content_etag(db: &Connection, local_id: &str) -> Result<Option<String>> {
+    Ok(db
+        .query_row(
+            "SELECT core_content_etag FROM mapping WHERE local_id = ?1",
+            [local_id],
+            |r| r.get::<_, Option<String>>(0),
+        )
+        .ok()
+        .flatten())
+}
+
+/// Insert/replace a full mapping including both etags (pull direction).
+fn put_mapping_full(
+    db: &Connection,
+    local_id: &str,
+    uuid: &str,
+    etag: Option<&str>,
+    content_etag: Option<&str>,
+) -> Result<()> {
+    db.execute(
+        "INSERT OR REPLACE INTO mapping (local_id, core_uuid, core_etag, core_content_etag, updated_at)
+         VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+        rusqlite::params![local_id, uuid, etag, content_etag],
+    )?;
+    Ok(())
+}
+
+/// Update both etags on an existing mapping (pull applied an update).
+fn set_etags(db: &Connection, local_id: &str, etag: Option<&str>, content_etag: Option<&str>) -> Result<()> {
+    db.execute(
+        "UPDATE mapping SET core_etag = ?2, core_content_etag = ?3, updated_at = datetime('now')
+         WHERE local_id = ?1",
+        rusqlite::params![local_id, etag, content_etag],
     )?;
     Ok(())
 }
@@ -205,7 +282,7 @@ fn detect(instance_id: &str, db: &Connection) -> Result<()> {
     let last_seq: i64 = get_meta(db, "last_seq")?
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
-    let (status, body) = local(
+    let (status, body) = local_call(
         instance_id,
         "GET",
         &format!("/api/v1/office/_changes?since={last_seq}"),
@@ -251,7 +328,7 @@ fn detect(instance_id: &str, db: &Connection) -> Result<()> {
 /// Fallback for a WASM without `_changes`: enqueue a create for every local doc
 /// not yet mapped.
 fn detect_creates_fulldiff(instance_id: &str, db: &Connection) -> Result<()> {
-    let (status, body) = local(instance_id, "GET", "/api/v1/office", &[])?;
+    let (status, body) = local_call(instance_id, "GET", "/api/v1/office", &[])?;
     if status != 200 {
         return Err(anyhow!("liste locale : HTTP {status}"));
     }
@@ -417,11 +494,155 @@ fn push_delete(instance_id: &str, db: &Connection, local_id: &str) -> Result<()>
     Ok(())
 }
 
+// ── Pull (core delta → local) ───────────────────────────────────────────────
+
+fn pull_changes(instance_id: &str, db: &Connection) -> Result<PullStats> {
+    let mut stats = PullStats::default();
+    // Page through the delta; bound the loop as a runaway backstop.
+    for _ in 0..1000 {
+        let cursor: i64 = get_meta(db, "pull_cursor")?
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let (st, body) = core(
+            instance_id,
+            "GET",
+            &format!("/api/v1/office/delta?cursor={cursor}&limit=200"),
+            None,
+            None,
+            None,
+        )?;
+        if st != 200 {
+            return Err(anyhow!("delta core : HTTP {st} — {}", snippet(&body)));
+        }
+        let v: Value = serde_json::from_str(&body).context("delta illisible")?;
+        for ch in v.get("changes").and_then(|c| c.as_array()).cloned().unwrap_or_default() {
+            if let Err(e) = apply_pull_change(instance_id, db, &ch, &mut stats) {
+                eprintln!("[office_sync] pull change différé : {e}");
+            }
+        }
+        let new_cursor = v.get("cursor").and_then(|x| x.as_i64()).unwrap_or(cursor);
+        set_meta(db, "pull_cursor", &new_cursor.to_string())?;
+        let has_more = v.get("has_more").and_then(|x| x.as_bool()).unwrap_or(false);
+        if !has_more || new_cursor == cursor {
+            break;
+        }
+    }
+    Ok(stats)
+}
+
+fn apply_pull_change(
+    instance_id: &str,
+    db: &Connection,
+    ch: &Value,
+    stats: &mut PullStats,
+) -> Result<()> {
+    let uuid = ch.get("uuid").and_then(|x| x.as_str()).ok_or_else(|| anyhow!("uuid absent"))?;
+    let kind = ch.get("kind").and_then(|x| x.as_str()).unwrap_or("");
+    let local = local_id_by_uuid(db, uuid)?;
+    let etag = ch.pointer("/etag").and_then(|x| x.as_str());
+    let cet = ch.get("content_etag").and_then(|x| x.as_str());
+    let document = ch.get("document");
+    let title = document
+        .and_then(|d| d.get("title"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("Sans titre");
+    let is_starred = document.and_then(|d| d.get("is_starred")).and_then(|x| x.as_bool());
+
+    match kind {
+        "deleted" => {
+            if let Some(lid) = local {
+                let _ = local_call(instance_id, "DELETE", &format!("/api/v1/office/{lid}/delete"), &[]);
+                drop_mapping(db, &lid)?;
+                stats.deleted += 1;
+            }
+        }
+        "trashed" => {
+            if let Some(lid) = local {
+                let _ = local_call(instance_id, "POST", &format!("/api/v1/office/{lid}/trash"), b"{}");
+                stats.trashed += 1;
+            }
+        }
+        "modified" => {
+            // Build the metadata patch; refetch content only if it changed.
+            let mut payload = serde_json::Map::new();
+            payload.insert("title".into(), Value::String(title.to_string()));
+            if let Some(s) = is_starred {
+                payload.insert("is_starred".into(), Value::Bool(s));
+            }
+            match local {
+                Some(lid) => {
+                    if cet != content_etag(db, &lid)?.as_deref() {
+                        if let Some(content) = fetch_core_content(instance_id, uuid)? {
+                            payload.insert("content_json".into(), content);
+                        }
+                    }
+                    local_call(instance_id, "PATCH", &format!("/api/v1/office/{lid}"),
+                        Value::Object(payload).to_string().as_bytes())?;
+                    set_etags(db, &lid, etag, cet)?;
+                    stats.updated += 1;
+                }
+                None => {
+                    // New server document → materialize it locally.
+                    let (cst, cbody) = local_call(
+                        instance_id, "POST", "/api/v1/office",
+                        serde_json::json!({ "title": title }).to_string().as_bytes(),
+                    )?;
+                    if !(cst == 200 || cst == 201) {
+                        return Err(anyhow!("création locale : HTTP {cst}"));
+                    }
+                    let created: Value = serde_json::from_slice(&cbody)?;
+                    let new_lid = created
+                        .pointer("/document/id")
+                        .and_then(|x| x.as_str())
+                        .ok_or_else(|| anyhow!("id local absent"))?
+                        .to_string();
+                    if let Some(content) = fetch_core_content(instance_id, uuid)? {
+                        payload.insert("content_json".into(), content);
+                    }
+                    let _ = local_call(instance_id, "PATCH", &format!("/api/v1/office/{new_lid}"),
+                        Value::Object(payload).to_string().as_bytes());
+                    put_mapping_full(db, &new_lid, uuid, etag, cet)?;
+                    stats.downloaded += 1;
+                }
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Fetch a document's `content_json` from the core (for refetch on content change).
+fn fetch_core_content(instance_id: &str, uuid: &str) -> Result<Option<Value>> {
+    let (st, body) = core(instance_id, "GET", &format!("/api/v1/office/{uuid}"), None, None, None)?;
+    if st != 200 {
+        return Ok(None);
+    }
+    let v: Value = serde_json::from_str(&body)?;
+    Ok(v.get("content_json").filter(|c| !c.is_null()).cloned())
+}
+
+/// After applying pulled changes (which journal local `_changes` echoes), fast-
+/// forward `last_seq` past them so push doesn't replay server-originated changes.
+fn consume_local_echoes(instance_id: &str, db: &Connection) -> Result<()> {
+    let last: i64 = get_meta(db, "last_seq")?.and_then(|s| s.parse().ok()).unwrap_or(0);
+    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/_changes?since={last}"), &[])?;
+    if st == 200 {
+        if let Ok(v) = serde_json::from_slice::<Value>(&body) {
+            if let Some(max) = v.get("seq").and_then(|x| x.as_i64()) {
+                if max > last {
+                    set_meta(db, "last_seq", &max.to_string())?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Read a local document `{document, content_json}` from the WASM backend.
 fn read_local(instance_id: &str, local_id: &str) -> Result<Option<Value>> {
-    let (st, body) = local(instance_id, "GET", &format!("/api/v1/office/{local_id}"), &[])?;
+    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/{local_id}"), &[])?;
     if st == 404 {
         return Ok(None);
     }
@@ -442,7 +663,7 @@ fn snippet(s: &str) -> String {
     s.chars().take(160).collect()
 }
 
-fn local(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Result<(u16, Vec<u8>)> {
+fn local_call(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Result<(u16, Vec<u8>)> {
     crate::wasmoffice::handle(instance_id, method, path, body)
         .map(|(status, _ctype, body)| (status, body))
         .ok_or_else(|| anyhow!("backend office local indisponible"))

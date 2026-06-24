@@ -309,7 +309,7 @@ fn quit_app(app: tauri::AppHandle) {
 #[cfg(desktop)]
 #[tauri::command]
 async fn office_sync_now(instance_id: String) -> Result<String, String> {
-    tokio::task::spawn_blocking(move || office_sync::push_summary(&instance_id))
+    tokio::task::spawn_blocking(move || office_sync::sync_summary(&instance_id))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
