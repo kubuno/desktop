@@ -18,6 +18,8 @@ mod docproxy;
 #[cfg(desktop)]
 mod wasmoffice;
 #[cfg(desktop)]
+mod office_sync;
+#[cfg(desktop)]
 use tauri::Manager;
 
 /// App handle stashed at startup so the background sync threads can emit events
@@ -302,6 +304,17 @@ fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+/// Run one office documents push cycle (local → core) for an instance. Phase 1
+/// of the office sync. Returns a short summary or an error string.
+#[cfg(desktop)]
+#[tauri::command]
+async fn office_sync_now(instance_id: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || office_sync::push_summary(&instance_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
 /// Open a document in its own native window, served by the local document proxy
 /// (stable `http://127.0.0.1:<port>` origin) so it stays editable and reloadable
 /// offline. Reuses an existing window for the same document if already open.
@@ -530,21 +543,6 @@ async fn get_apps(id: String) -> Vec<AppGroup> {
                     icon:  module_id.clone(),
                 });
             }
-            // Stopgap: office's sidebar_items expose the suite root (/office) and
-            // the doc-type views, but not the Documents app itself
-            // (/office/documents). Surface it explicitly until office adds it to
-            // its own sidebar_items (tracked in COORDINATION_WASM.md). Skipped if
-            // the server already provides it, so there's no duplicate later.
-            if module_id == "office" && !items.iter().any(|i| i.path == "/office/documents") {
-                items.insert(
-                    0,
-                    AppItem {
-                        label: "Documents".to_string(),
-                        path:  "/office/documents".to_string(),
-                        icon:  "FileText".to_string(),
-                    },
-                );
-            }
             groups.push(AppGroup {
                 module_id: module_id.clone(),
                 label:     capitalize(&module_id),
@@ -754,7 +752,8 @@ pub fn run() {
             get_instance_modules,
             get_apps,
             open_document,
-            open_app
+            open_app,
+            office_sync_now
         ])
         .setup(|app| {
             // System tray (desktop only — mobile has no tray).
