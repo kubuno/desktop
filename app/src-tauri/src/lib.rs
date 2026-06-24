@@ -190,6 +190,89 @@ fn set_offline(offline: bool) -> Result<bool, String> {
     Ok(offline)
 }
 
+/// Whether the local-first WASM backends are installed (so modules open in native
+/// local-first windows instead of the web browser).
+#[tauri::command]
+fn local_components_installed() -> bool {
+    kubuno_sync::config::config_dir()
+        .map(|d| d.join("documents-core.wasm").is_file() && d.join("drive-core.wasm").is_file())
+        .unwrap_or(false)
+}
+
+/// Download the local-first WASM backends from the connected core and install them
+/// in the config dir (verifying each sha256 against the server manifest), then
+/// switch modules from the web browser to native local-first windows. Explicit,
+/// user-triggered — the backends are NOT shipped by default.
+#[tauri::command]
+async fn install_local_components(instance_id: String) -> Result<String, String> {
+    let msg = tauri::async_runtime::spawn_blocking(move || download_components(&instance_id))
+        .await
+        .map_err(|e| e.to_string())??;
+    // Pick up the freshly-installed artifacts without a restart.
+    #[cfg(desktop)]
+    wasmoffice::invalidate();
+    Ok(msg)
+}
+
+/// Fetch the WASM manifest then each backend from the core, verify and store them.
+fn download_components(instance_id: &str) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let server = kubuno_sync::server_url(instance_id).ok_or("instance inconnue")?;
+    let base = server.trim_end_matches('/').to_string();
+    let token = kubuno_sync::access_token(instance_id).unwrap_or_default();
+    let cfg = kubuno_sync::config::config_dir().map_err(|e| e.to_string())?;
+
+    let get = |path: &str| -> Result<ureq::Response, String> {
+        ureq::get(&format!("{base}{path}"))
+            .set("Authorization", &format!("Bearer {token}"))
+            .call()
+            .map_err(|e| e.to_string())
+    };
+
+    let manifest: serde_json::Value = get("/api/v1/desktop/wasm")?
+        .into_json()
+        .map_err(|e| format!("manifest illisible : {e}"))?;
+    let components = manifest["components"].as_array().ok_or("manifest invalide")?;
+
+    let mut count = 0u32;
+    for c in components {
+        let Some(name) = c["name"].as_str() else { continue };
+        // Only the two known backends, stored by basename in the config dir.
+        if name != "documents-core.wasm" && name != "drive-core.wasm" {
+            continue;
+        }
+        let want_sha = c["sha256"].as_str().unwrap_or_default();
+        let resp = get(&format!("/api/v1/desktop/wasm/{name}"))?;
+        let mut bytes = Vec::new();
+        resp.into_reader().read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+        if !want_sha.is_empty() {
+            let got = format!("{:x}", Sha256::digest(&bytes));
+            if got != want_sha {
+                return Err(format!("sha256 de {name} invalide"));
+            }
+        }
+        std::fs::write(cfg.join(name), &bytes).map_err(|e| e.to_string())?;
+        count += 1;
+    }
+    if count == 0 {
+        return Err("aucun composant local disponible sur le serveur".into());
+    }
+    Ok(format!("{count} composant(s) hors-ligne installé(s)"))
+}
+
+/// Remove the local-first backends — modules go back to opening in the web browser.
+#[tauri::command]
+fn uninstall_local_components() -> Result<(), String> {
+    let cfg = kubuno_sync::config::config_dir().map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(cfg.join("documents-core.wasm"));
+    let _ = std::fs::remove_file(cfg.join("drive-core.wasm"));
+    #[cfg(desktop)]
+    wasmoffice::invalidate();
+    Ok(())
+}
+
 /// Disconnect an instance (drops creds + local sync state; keeps the files).
 #[tauri::command]
 fn remove_instance(id: String) -> Result<(), String> {
@@ -901,6 +984,9 @@ pub fn run() {
             set_proxy,
             get_offline,
             set_offline,
+            local_components_installed,
+            install_local_components,
+            uninstall_local_components,
             get_status,
             get_user,
             sync_now,
