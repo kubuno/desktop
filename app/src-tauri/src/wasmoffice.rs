@@ -53,11 +53,7 @@ pub const OFFICE: Spec = Spec {
     subdir: "office",
 };
 
-/// Drive backend (local-first tree + file metadata, fed by the sync delta).
-/// Wired into the proxy routing + a delta sync loop once the `drive-core` v1
-/// artifact lands (the routing and ingest must ship together so an empty store
-/// can't shadow the core — until then this only declares the module spec).
-#[allow(dead_code)]
+/// Drive backend (local-first tree + file metadata, fed by the drive delta sync).
 pub const DRIVE: Spec = Spec {
     name:   "drive",
     env:    "KUBUNO_DRIVE_WASM",
