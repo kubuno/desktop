@@ -90,6 +90,15 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
         .map(|p| p.join("webcache"))
         .ok_or_else(|| "chemin de cache introuvable".to_string())?;
     std::fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+    // Cache format version. Bump to purge stale entries (v2: bodies are stored
+    // uncompressed — older gzipped bodies would be served as garbage offline).
+    const CACHE_VERSION: &str = "2";
+    let ver_file = cache_dir.join("cache_version");
+    if std::fs::read_to_string(&ver_file).ok().as_deref() != Some(CACHE_VERSION) {
+        let _ = std::fs::remove_dir_all(&cache_dir);
+        std::fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+        let _ = std::fs::write(&ver_file, CACHE_VERSION);
+    }
 
     let port = port_for(id);
     // Bind synchronously so we fail early (and keep ownership of the port) before
@@ -257,10 +266,6 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     }
 
     let url = format!("{}{}", st.upstream, pq);
-    let orig_ae = req_headers
-        .get(header::ACCEPT_ENCODING)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
     let mut rb = st.http.request(method.clone(), &url);
     for (k, v) in req_headers.iter() {
         if is_hop_by_hop(k.as_str()) || k == header::HOST || k == header::ACCEPT_ENCODING {
@@ -268,11 +273,12 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         }
         rb = rb.header(k.clone(), v.clone());
     }
-    // We rewrite the shell HTML (standalone CSS) but this reqwest has no
-    // auto-decompression → ask the upstream for an uncompressed response on
-    // navigations so the bytes are plain HTML. Assets keep their compression.
-    let accept_encoding = if navigation { "identity" } else { orig_ae.as_deref().unwrap_or("identity") };
-    rb = rb.header(header::ACCEPT_ENCODING, accept_encoding);
+    // This reqwest has no auto-decompression. Always ask the upstream for an
+    // UNCOMPRESSED response so the bytes we cache (and inject into) are plain:
+    // otherwise a gzipped JS bundle served from the disk cache offline — without a
+    // Content-Encoding header — is parsed as garbage (SyntaxError) and the app is
+    // blank. Assets are cached to disk, so the extra online bytes cost little.
+    rb = rb.header(header::ACCEPT_ENCODING, "identity");
     // Inject the native identity for API calls that arrive before the frontend
     // has its token (e.g. the un-awaited `fetchModules()` during bootstrap).
     if path.starts_with("/api/") && !req_headers.contains_key(header::AUTHORIZATION) {
