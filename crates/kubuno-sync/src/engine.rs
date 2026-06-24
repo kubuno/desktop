@@ -85,11 +85,21 @@ pub fn sync(api: &mut Api, store: &Store, cfg: &Config) -> Result<Stats> {
             if prev_etag.as_deref() == etag && local.exists() {
                 stats.up_to_date += 1;
             } else {
+                use anyhow::Context;
                 if let Some(parent) = local.parent() {
-                    std::fs::create_dir_all(parent)?;
+                    std::fs::create_dir_all(parent)
+                        .with_context(|| format!("mkdir {}", parent.display()))?;
                 }
                 let bytes = api.download(id)?;
-                std::fs::write(&local, bytes)?;
+                // If the target is an online-only ("virtual") cloud placeholder,
+                // writing over it fails with a Cloud Files error. Remove it first
+                // so we materialize a fresh, normal file; the desktop app will
+                // re-dehydrate it after the sync.
+                if crate::push::is_online_only(&local) {
+                    let _ = std::fs::remove_file(&local);
+                }
+                std::fs::write(&local, &bytes)
+                    .with_context(|| format!("write {} ({} octets)", local.display(), bytes.len()))?;
                 stats.downloaded += 1;
             }
             store.upsert_file(id, folder_id, name, etag, &local.to_string_lossy())?;
