@@ -933,6 +933,20 @@
             </button>
           </div>
         </div>
+
+        <div class="card">
+          <div class="card-title">Document (édition hors-ligne)</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+            Ouvre un document dans sa propre fenêtre, servie localement : éditable
+            et rechargeable même hors-ligne. Colle l'identifiant du document
+            (l'URL web <code>/office/&lt;id&gt;</code>).
+          </p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="doc-id" class="settings-input" placeholder="ID du document" style="flex:1" />
+            <button class="btn-sync" id="btn-open-doc" style="white-space:nowrap">Ouvrir</button>
+          </div>
+          <div id="doc-open-err" class="hidden" style="font-size:12px;color:var(--err-fg);margin-top:8px"></div>
+        </div>
       </div>
 
       <!-- ── ACTIVITY VIEW ──────────────────────────────────── -->
@@ -1482,6 +1496,23 @@
   document.getElementById('ql-web').addEventListener('click', () => {
     if (currentStatus) try { invoke('open_in_browser', { url: currentStatus.server }); } catch (_) {}
   });
+
+  // ── Open a document in its own offline-capable window ───────────────────────
+  async function openDocument() {
+    const err = document.getElementById('doc-open-err');
+    err.classList.add('hidden');
+    const docId = document.getElementById('doc-id').value.trim();
+    if (!docId) { err.textContent = 'Renseigne un identifiant de document.'; err.classList.remove('hidden'); return; }
+    if (!activeId) { err.textContent = 'Aucune instance active.'; err.classList.remove('hidden'); return; }
+    try {
+      await invoke('open_document', { instanceId: activeId, docId });
+    } catch (e) {
+      err.textContent = 'Ouverture impossible : ' + String(e);
+      err.classList.remove('hidden');
+    }
+  }
+  document.getElementById('btn-open-doc').addEventListener('click', openDocument);
+  document.getElementById('doc-id').addEventListener('keydown', e => { if (e.key === 'Enter') openDocument(); });
 
   // ── Open config dir ────────────────────────────────────────────────────────
   document.getElementById('btn-open-config-dir').addEventListener('click', async () => {

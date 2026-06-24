@@ -14,6 +14,8 @@ mod explorer;
 #[cfg(windows)]
 mod cloudfiles;
 #[cfg(desktop)]
+mod docproxy;
+#[cfg(desktop)]
 use tauri::Manager;
 
 /// App handle stashed at startup so the background sync threads can emit events
@@ -280,6 +282,41 @@ fn open_in_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+/// Open a document in its own native window, served by the local document proxy
+/// (stable `http://127.0.0.1:<port>` origin) so it stays editable and reloadable
+/// offline. Reuses an existing window for the same document if already open.
+#[cfg(desktop)]
+#[tauri::command]
+async fn open_document(
+    app: tauri::AppHandle,
+    instance_id: String,
+    doc_id: String,
+) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    let proxy_id = instance_id.clone();
+    let port = tokio::task::spawn_blocking(move || docproxy::ensure_started(&proxy_id))
+        .await
+        .map_err(|e| e.to_string())??;
+
+    let safe: String = doc_id
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '_' })
+        .collect();
+    let label = format!("doc-{safe}");
+    if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let url = format!("http://127.0.0.1:{port}/office/{doc_id}");
+    let parsed = url.parse().map_err(|_| "URL de document invalide".to_string())?;
+    WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
+        .title("Kubuno — Document")
+        .inner_size(1100.0, 800.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// AppUserModelID — ties our toasts (and their "Kubuno" name + logo) to us.
@@ -554,7 +591,8 @@ pub fn run() {
             open_config_dir,
             get_autostart,
             set_autostart,
-            get_instance_modules
+            get_instance_modules,
+            open_document
         ])
         .setup(|app| {
             // System tray (desktop only — mobile has no tray).

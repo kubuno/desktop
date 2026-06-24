@@ -23,6 +23,17 @@ serde               = { version = "1", features = ["derive"] }
 serde_json          = "1"
 kubuno-sync         = { path = "../../crates/kubuno-sync" }
 ureq                = { version = "2", features = ["json"] }
+# Local document proxy (offline-capable web origin): a caching reverse proxy +
+# WebSocket bridge to the core, served from a fixed 127.0.0.1 port so the
+# embedded web app keeps a stable origin (IndexedDB) online and offline.
+axum                = { version = "0.7", features = ["ws"] }
+tokio               = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "sync", "time"] }
+reqwest-async       = { package = "reqwest", version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+# Pinned to 0.21 so its tungstenite Message (String/Vec<u8>) matches axum 0.7's
+# ws Message types — trivial conversion in the collab bridge.
+tokio-tungstenite   = { version = "0.21", features = ["connect", "rustls-tls-webpki-roots"] }
+futures-util        = "0.3"
+sha2                = "0.10"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

@@ -155,6 +155,14 @@ impl Api {
         Ok(())
     }
 
+    /// Force a token refresh and return the fresh access token. Used by the
+    /// desktop document proxy to hand the web frontend a valid native token
+    /// (rotating the refresh token on disk) without requiring a web login.
+    pub fn refresh_access(&mut self) -> Result<String> {
+        self.refresh()?;
+        Ok(self.creds.access_token.clone())
+    }
+
     /// GET with a single auto-refresh retry on 401.
     fn get(&mut self, path: &str) -> Result<reqwest::blocking::Response> {
         let url = format!("{}{}", self.base, path);
