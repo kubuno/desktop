@@ -340,7 +340,7 @@ async fn open_document(
         let _ = w.set_focus();
         return Ok(());
     }
-    let url = format!("http://127.0.0.1:{port}/office/{doc_id}");
+    let url = format!("http://127.0.0.1:{port}/office/documents/{doc_id}");
     let parsed = url.parse().map_err(|_| "URL de document invalide".to_string())?;
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
         .title("Kubuno — Document")
