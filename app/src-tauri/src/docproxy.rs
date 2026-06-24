@@ -207,6 +207,23 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         .await
         .unwrap_or_default();
 
+    // Local-first: document CRUD is served by the embedded office WASM backend
+    // (offline-capable) when its artifact is present. Anything it can't serve
+    // falls through to the core proxy below.
+    if crate::wasmoffice::enabled() && path.starts_with("/api/v1/office/documents") {
+        let id = st.id.clone();
+        let m = method.as_str().to_string();
+        let p = pq.clone();
+        let b = body_bytes.to_vec();
+        let res = tokio::task::spawn_blocking(move || crate::wasmoffice::handle(&id, &m, &p, &b)).await;
+        if let Ok(Some((status, out))) = res {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+            let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            return build_response(code, headers, out);
+        }
+    }
+
     let is_get = method == Method::GET;
     let navigation = is_get && wants_html(&req_headers) && !is_asset_or_api(&path);
     let cacheable = is_get && (is_cacheable_asset(&path) || is_cacheable_api(&path));

@@ -16,6 +16,8 @@ mod cloudfiles;
 #[cfg(desktop)]
 mod docproxy;
 #[cfg(desktop)]
+mod wasmoffice;
+#[cfg(desktop)]
 use tauri::Manager;
 
 /// App handle stashed at startup so the background sync threads can emit events
