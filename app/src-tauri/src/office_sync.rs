@@ -65,11 +65,10 @@ pub fn sync(instance_id: &str) -> Result<(PushStats, PullStats)> {
     detect(instance_id, &db)?;
     let push = drain(instance_id, &db)?;
     let pull = pull_changes(instance_id, &db)?;
-    // Echo guard: applying pulled changes via the local API journals them in
-    // `_changes`; advance `last_seq` past them so the next push doesn't replay
-    // server-originated changes back to the core. (Concurrent local edits during
-    // the pull window are a Phase 3 refinement.)
-    consume_local_echoes(instance_id, &db)?;
+    // No echo guard needed: pull applies changes with `?origin=sync`, so the WASM
+    // doesn't journal them in `_changes`. Push therefore never replays
+    // server-originated changes, and concurrent local edits made during the pull
+    // are preserved (they journal normally and get pushed next cycle).
     Ok((push, pull))
 }
 
@@ -498,19 +497,24 @@ fn push_delete(instance_id: &str, db: &Connection, local_id: &str) -> Result<()>
 
 fn pull_changes(instance_id: &str, db: &Connection) -> Result<PullStats> {
     let mut stats = PullStats::default();
+    // Initial pull (cursor 0) = the full history → ask for inline content
+    // (`include=content`) to avoid a `GET /:uuid` per doc. Incremental deltas stay
+    // light (no flag); content is refetched only when `content_etag` changes.
+    let initial = get_meta(db, "pull_cursor")?
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0)
+        == 0;
     // Page through the delta; bound the loop as a runaway backstop.
-    for _ in 0..1000 {
+    for _ in 0..2000 {
         let cursor: i64 = get_meta(db, "pull_cursor")?
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let (st, body) = core(
-            instance_id,
-            "GET",
-            &format!("/api/v1/office/documents/delta?cursor={cursor}&limit=200"),
-            None,
-            None,
-            None,
-        )?;
+        let url = if initial {
+            format!("/api/v1/office/documents/delta?cursor={cursor}&limit=200&include=content")
+        } else {
+            format!("/api/v1/office/documents/delta?cursor={cursor}&limit=200")
+        };
+        let (st, body) = core(instance_id, "GET", &url, None, None, None)?;
         if st != 200 {
             return Err(anyhow!("delta core : HTTP {st} — {}", snippet(&body)));
         }
@@ -551,14 +555,16 @@ fn apply_pull_change(
     match kind {
         "deleted" => {
             if let Some(lid) = local {
-                let _ = local_call(instance_id, "DELETE", &format!("/api/v1/office/documents/{lid}/delete"), &[]);
+                let _ = local_call(instance_id, "DELETE",
+                    &format!("/api/v1/office/documents/{lid}/delete?origin=sync"), &[]);
                 drop_mapping(db, &lid)?;
                 stats.deleted += 1;
             }
         }
         "trashed" => {
             if let Some(lid) = local {
-                let _ = local_call(instance_id, "POST", &format!("/api/v1/office/documents/{lid}/trash"), b"{}");
+                let _ = local_call(instance_id, "POST",
+                    &format!("/api/v1/office/documents/{lid}/trash?origin=sync"), b"{}");
                 stats.trashed += 1;
             }
         }
@@ -579,11 +585,11 @@ fn apply_pull_change(
             match local {
                 Some(lid) => {
                     if cet != content_etag(db, &lid)?.as_deref() {
-                        if let Some(content) = fetch_core_content(instance_id, uuid)? {
+                        if let Some(content) = change_content(instance_id, ch, uuid)? {
                             payload.insert("content_json".into(), content);
                         }
                     }
-                    local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{lid}"),
+                    local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{lid}?origin=sync"),
                         Value::Object(payload).to_string().as_bytes())?;
                     set_etags(db, &lid, etag, cet)?;
                     stats.updated += 1;
@@ -591,7 +597,7 @@ fn apply_pull_change(
                 None => {
                     // New server document → materialize it locally.
                     let (cst, cbody) = local_call(
-                        instance_id, "POST", "/api/v1/office/documents",
+                        instance_id, "POST", "/api/v1/office/documents?origin=sync",
                         serde_json::json!({ "title": title }).to_string().as_bytes(),
                     )?;
                     if !(cst == 200 || cst == 201) {
@@ -603,10 +609,10 @@ fn apply_pull_change(
                         .and_then(|x| x.as_str())
                         .ok_or_else(|| anyhow!("id local absent"))?
                         .to_string();
-                    if let Some(content) = fetch_core_content(instance_id, uuid)? {
+                    if let Some(content) = change_content(instance_id, ch, uuid)? {
                         payload.insert("content_json".into(), content);
                     }
-                    let _ = local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{new_lid}"),
+                    let _ = local_call(instance_id, "PATCH", &format!("/api/v1/office/documents/{new_lid}?origin=sync"),
                         Value::Object(payload).to_string().as_bytes());
                     put_mapping_full(db, &new_lid, uuid, etag, cet)?;
                     stats.downloaded += 1;
@@ -618,6 +624,15 @@ fn apply_pull_change(
     Ok(())
 }
 
+/// The content for a pulled change: inline `content_json` if the delta included
+/// it (`?include=content` on the initial pull), else a targeted fetch.
+fn change_content(instance_id: &str, ch: &Value, uuid: &str) -> Result<Option<Value>> {
+    if let Some(c) = ch.get("content_json").filter(|c| !c.is_null()) {
+        return Ok(Some(c.clone()));
+    }
+    fetch_core_content(instance_id, uuid)
+}
+
 /// Fetch a document's `content_json` from the core (for refetch on content change).
 fn fetch_core_content(instance_id: &str, uuid: &str) -> Result<Option<Value>> {
     let (st, body) = core(instance_id, "GET", &format!("/api/v1/office/documents/{uuid}"), None, None, None)?;
@@ -626,23 +641,6 @@ fn fetch_core_content(instance_id: &str, uuid: &str) -> Result<Option<Value>> {
     }
     let v: Value = serde_json::from_str(&body)?;
     Ok(v.get("content_json").filter(|c| !c.is_null()).cloned())
-}
-
-/// After applying pulled changes (which journal local `_changes` echoes), fast-
-/// forward `last_seq` past them so push doesn't replay server-originated changes.
-fn consume_local_echoes(instance_id: &str, db: &Connection) -> Result<()> {
-    let last: i64 = get_meta(db, "last_seq")?.and_then(|s| s.parse().ok()).unwrap_or(0);
-    let (st, body) = local_call(instance_id, "GET", &format!("/api/v1/office/documents/_changes?since={last}"), &[])?;
-    if st == 200 {
-        if let Ok(v) = serde_json::from_slice::<Value>(&body) {
-            if let Some(max) = v.get("seq").and_then(|x| x.as_i64()) {
-                if max > last {
-                    set_meta(db, "last_seq", &max.to_string())?;
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
