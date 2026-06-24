@@ -24,17 +24,32 @@ fn refresh_lock(id: &str) -> Arc<Mutex<()>> {
     m.entry(id.to_string()).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
 }
 
-/// Build the HTTP client, applying the configured outbound proxy (if any) so
-/// instances reachable only through a proxy still work.
-fn build_http_client() -> reqwest::blocking::Client {
+/// Build an HTTP client with the given timeout, applying the configured outbound
+/// proxy (if any) so instances reachable only through a proxy still work.
+fn build_http_client_timeout(secs: u64) -> reqwest::blocking::Client {
     let mut builder =
-        reqwest::blocking::Client::builder().timeout(std::time::Duration::from_secs(60));
+        reqwest::blocking::Client::builder().timeout(std::time::Duration::from_secs(secs));
     if let Some(url) = crate::config::proxy_url() {
         if let Ok(proxy) = reqwest::Proxy::all(&url) {
             builder = builder.proxy(proxy);
         }
     }
     builder.build().unwrap_or_default()
+}
+
+fn build_http_client() -> reqwest::blocking::Client {
+    build_http_client_timeout(60)
+}
+
+/// Quick reachability check against the server's `/healthz` (proxy-aware,
+/// short timeout). Used to show the connection state on the home page.
+pub fn ping(base: &str) -> bool {
+    let url = format!("{}/healthz", base.trim_end_matches('/'));
+    build_http_client_timeout(5)
+        .get(&url)
+        .send()
+        .map(|r| r.status().is_success())
+        .unwrap_or(false)
 }
 
 pub struct Api {

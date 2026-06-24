@@ -25,9 +25,10 @@ use windows::Win32::Storage::FileSystem::{
 /// crucially, the status overlays) — the low-level Win32 `CfRegisterSyncRoot`
 /// only sets up the file-system filter and does *not* render overlays.
 /// Returns true if the folder was registered (fails on non-local volumes —
-/// CfApi/StorageProvider require a local NTFS path).
-pub fn register(id: &str, folder: &Path) -> bool {
-    match register_winrt(id, folder) {
+/// CfApi/StorageProvider require a local NTFS path). `name` is the label shown
+/// in the Explorer navigation pane.
+pub fn register(id: &str, name: &str, folder: &Path) -> bool {
+    match register_winrt(id, name, folder) {
         Ok(()) => {
             eprintln!("[cloudfiles] sync root (WinRT) enregistré : {}", folder.display());
             true
@@ -39,7 +40,7 @@ pub fn register(id: &str, folder: &Path) -> bool {
     }
 }
 
-fn register_winrt(id: &str, folder: &Path) -> windows::core::Result<()> {
+fn register_winrt(id: &str, name: &str, folder: &Path) -> windows::core::Result<()> {
     use windows::Security::Cryptography::{BinaryStringEncoding, CryptographicBuffer};
     use windows::Storage::Provider::*;
     use windows::Storage::StorageFolder;
@@ -52,7 +53,7 @@ fn register_winrt(id: &str, folder: &Path) -> windows::core::Result<()> {
     let sf = StorageFolder::GetFolderFromPathAsync(&folder_h)?.get()?;
     info.SetPath(&sf)?;
 
-    info.SetDisplayNameResource(&HSTRING::from("Kubuno"))?;
+    info.SetDisplayNameResource(&HSTRING::from(name))?;
     let exe = std::env::current_exe()
         .ok()
         .and_then(|p| p.to_str().map(str::to_string))

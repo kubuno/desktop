@@ -11,9 +11,22 @@ pub mod push;
 pub mod store;
 pub mod ws;
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+
 use anyhow::Result;
 
 pub use config::{db_path, migrate_legacy, Config, Creds};
+
+/// Per-instance lock serializing sync cycles and folder moves, so a folder move
+/// never runs while a push/pull is touching the same folder (which would make
+/// the daemon push spurious deletions for files being relocated).
+pub(crate) fn sync_lock(id: &str) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<String, Arc<Mutex<()>>>>> = OnceLock::new();
+    let map = LOCKS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut m = map.lock().unwrap_or_else(|p| p.into_inner());
+    m.entry(id.to_string()).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+}
 
 /// Combined result of one push+pull cycle.
 #[derive(Default, Clone)]
@@ -50,6 +63,8 @@ pub fn login(server: &str, login: &str, password: &str, folder: &str) -> Result<
 
 /// Run one push+pull cycle for a single instance and return a summary.
 pub fn sync_once(id: &str) -> Result<Summary> {
+    let lock = sync_lock(id);
+    let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
     let cfg = Config::load(id)?;
     let mut api = api::Api::new(id.to_string(), cfg.server_url.clone(), Creds::load(id)?);
     let store = store::Store::open(&db_path(id)?)?;
@@ -96,6 +111,14 @@ pub fn current_config(id: &str) -> Option<Config> {
     Config::load(id).ok()
 }
 
+/// Whether the instance's server is currently reachable (quick `/healthz` ping).
+pub fn is_online(id: &str) -> bool {
+    match current_config(id) {
+        Some(cfg) => api::ping(&cfg.server_url),
+        None => false,
+    }
+}
+
 /// Disconnect an instance: drop its credentials and local sync state (the
 /// already-downloaded files on disk are kept).
 pub fn remove_instance(id: &str) -> Result<()> {
@@ -107,6 +130,10 @@ pub fn remove_instance(id: &str) -> Result<()> {
 /// reloads its config each cycle, so it picks up the new location without a
 /// restart (and never re-downloads into the old folder).
 pub fn move_instance_folder(id: &str, new_path: &str) -> Result<()> {
+    // Hold the sync lock for the whole move so the daemon can't run a push/pull
+    // against the half-moved folder (which would delete files on the server).
+    let lock = sync_lock(id);
+    let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
     let mut cfg = Config::load(id)?;
     let old = cfg.sync_root.clone();
     let new = std::path::PathBuf::from(new_path);

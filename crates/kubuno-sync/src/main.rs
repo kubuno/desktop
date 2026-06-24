@@ -34,6 +34,15 @@ enum Cmd {
     },
     /// Afficher l'état courant.
     Status,
+    /// Déplacer le dossier local d'une instance (copie + rebase de l'état).
+    Move {
+        /// Identifiant de l'instance (voir `status`).
+        #[arg(long)]
+        id: String,
+        /// Nouveau chemin du dossier de synchronisation.
+        #[arg(long)]
+        to: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -84,6 +93,11 @@ fn main() -> Result<()> {
                 println!("  Dossier : {}", cfg.sync_root.display());
                 println!("  Curseur : {cursor}");
             }
+        }
+        Cmd::Move { id, to } => {
+            println!("Déplacement de l'instance « {id} » vers {to} (copie + rebase)…");
+            kubuno_sync::move_instance_folder(&id, &to)?;
+            println!("Terminé. Nouveau dossier : {to}");
         }
     }
     Ok(())
