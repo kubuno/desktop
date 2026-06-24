@@ -1137,7 +1137,9 @@
 
     document.getElementById('btn-win-min').addEventListener('click', () => appWin.minimize());
     btnMax.addEventListener('click', () => appWin.toggleMaximize().then(syncMaxIcon));
-    document.getElementById('btn-win-close').addEventListener('click', () => appWin.close());
+    // Closing only hides the window — the app lives in the system tray and is
+    // quit exclusively from the tray menu ("Quitter").
+    document.getElementById('btn-win-close').addEventListener('click', () => appWin.hide());
 
     appWin.onResized(syncMaxIcon);
     syncMaxIcon();
