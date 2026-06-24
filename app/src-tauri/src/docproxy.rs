@@ -92,7 +92,7 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
     std::fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
     // Cache format version. Bump to purge stale entries (v2: bodies are stored
     // uncompressed — older gzipped bodies would be served as garbage offline).
-    const CACHE_VERSION: &str = "2";
+    const CACHE_VERSION: &str = "3";
     let ver_file = cache_dir.join("cache_version");
     if std::fs::read_to_string(&ver_file).ok().as_deref() != Some(CACHE_VERSION) {
         let _ = std::fs::remove_dir_all(&cache_dir);
@@ -262,7 +262,7 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     // Forced offline → don't reach the core; serve the shell/assets from cache.
     // (Office document routes were already handled by the WASM backend above.)
     if kubuno_sync::is_offline() {
-        return from_cache(&st.cache_dir, &path, navigation);
+        return from_cache(&st.cache_dir, &pq, navigation);
     }
 
     let url = format!("{}{}", st.upstream, pq);
@@ -311,7 +311,9 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
             let bytes = resp.bytes().await.unwrap_or_default();
             if status.is_success() {
                 if cacheable {
-                    cache_write(&st.cache_dir, &path, &ct, &bytes);
+                    // Key by path+query: API listings (e.g. drive folders) differ by
+                    // query, so each must cache separately to be served back offline.
+                    cache_write(&st.cache_dir, &pq, &ct, &bytes);
                 }
                 if navigation && ct.contains("text/html") {
                     cache_write(&st.cache_dir, "__shell__", &ct, &bytes);
@@ -326,7 +328,7 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
             build_response(status, out, inject_standalone_css(&ct, bytes.to_vec()))
         }
         // Network error → serve from cache so the shell/app/editor can still load.
-        Err(_) => from_cache(&st.cache_dir, &path, navigation),
+        Err(_) => from_cache(&st.cache_dir, &pq, navigation),
     }
 }
 
@@ -581,9 +583,19 @@ fn is_cacheable_asset(path: &str) -> bool {
         || path == "/office-logo.svg"
 }
 
-/// Read-only API endpoints worth caching so the editor can mount offline.
+/// Read-only API endpoints worth caching so the app can mount and browse offline.
+/// Notably the document browser lists folders via the Drive API, so without the
+/// drive listings cached the offline view shows "Folder not found".
 fn is_cacheable_api(path: &str) -> bool {
-    path == "/api/v1/modules" || path == "/api/v1/me" || path.starts_with("/api/v1/office")
+    path == "/api/v1/modules"
+        || path == "/api/v1/me"
+        || path == "/api/v1/config"
+        || path == "/api/v1/themes"
+        || path.starts_with("/api/v1/office")
+        || path == "/api/v1/drive/" // file listing for a folder (?folder_id=…)
+        || path.starts_with("/api/v1/drive/folders")
+        || path.starts_with("/api/v1/drive/files")
+        || (path.starts_with("/api/v1/users/") && path.ends_with("/avatar"))
 }
 
 fn is_hop_by_hop(name: &str) -> bool {
