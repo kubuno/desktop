@@ -36,28 +36,53 @@ struct AppSettings {
     /// every instance's requests. `None`/empty = direct connection.
     #[serde(default)]
     proxy: Option<String>,
+    /// User-forced offline mode: the client stops talking to the core (sync,
+    /// connection state, document proxy all behave as offline) until turned back
+    /// on. Lets the user work fully local and test offline behaviour.
+    #[serde(default)]
+    offline: bool,
 }
 
 fn settings_path() -> Result<PathBuf> {
     Ok(config_dir()?.join("settings.json"))
 }
 
+fn load_settings() -> AppSettings {
+    settings_path()
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_settings(s: &AppSettings) -> Result<()> {
+    std::fs::write(settings_path()?, serde_json::to_string_pretty(s)?)?;
+    Ok(())
+}
+
 /// The configured outbound proxy URL, if any (used to access instances behind a
 /// proxy). Empty string is treated as unset.
 pub fn proxy_url() -> Option<String> {
-    let s = std::fs::read_to_string(settings_path().ok()?).ok()?;
-    serde_json::from_str::<AppSettings>(&s)
-        .ok()?
-        .proxy
-        .filter(|p| !p.trim().is_empty())
+    load_settings().proxy.filter(|p| !p.trim().is_empty())
 }
 
 /// Persist the outbound proxy URL (pass `None`/empty to clear it).
 pub fn set_proxy(url: Option<&str>) -> Result<()> {
-    let proxy = url.map(str::to_string).filter(|u| !u.trim().is_empty());
-    let s = AppSettings { proxy };
-    std::fs::write(settings_path()?, serde_json::to_string_pretty(&s)?)?;
-    Ok(())
+    let mut s = load_settings();
+    s.proxy = url.map(str::to_string).filter(|u| !u.trim().is_empty());
+    save_settings(&s)
+}
+
+/// True when the user has forced offline mode.
+pub fn is_offline() -> bool {
+    load_settings().offline
+}
+
+/// Turn forced offline mode on/off.
+pub fn set_offline(offline: bool) -> Result<()> {
+    let mut s = load_settings();
+    s.offline = offline;
+    save_settings(&s)
 }
 
 /// Directory holding one sub-directory per connected instance.

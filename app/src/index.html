@@ -456,6 +456,13 @@
     .conn-led { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex-shrink: 0; transition: background .3s; }
     .conn-led.online  { background: var(--ok-fg); box-shadow: 0 0 0 3px rgba(30,142,62,.15); }
     .conn-led.offline { background: var(--danger); box-shadow: 0 0 0 3px rgba(217,48,37,.15); }
+    .conn-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .conn-toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .conn-toggle-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .toggle-switch { position: relative; width: 52px; height: 30px; border-radius: 15px; border: none; padding: 0; cursor: pointer; flex-shrink: 0; background: var(--danger); transition: background .2s; }
+    .toggle-switch.on { background: var(--ok-fg); }
+    .toggle-knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: left .2s; }
+    .toggle-switch.on .toggle-knob { left: 25px; }
     .sync-indicator { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .sync-dot {
       width: 40px; height: 40px; border-radius: 50%;
@@ -937,6 +944,23 @@
           </div>
           <div id="sync-result" class="sync-result hidden"></div>
           <button class="btn-sync" id="btn-sync-now">Synchroniser maintenant</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Connexion</div>
+          <div class="conn-state">
+            <span class="conn-led" id="conn-led2"></span>
+            <span id="conn-text2">—</span>
+          </div>
+          <div class="conn-toggle-row">
+            <div>
+              <div class="conn-toggle-label" id="offline-mode-label">En ligne</div>
+              <div class="conn-toggle-sub" id="offline-mode-sub">Communication avec le serveur activée.</div>
+            </div>
+            <button class="toggle-switch" id="offline-toggle" role="switch" aria-checked="true" title="Basculer en ligne / hors ligne">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
         </div>
 
         <div class="card">
@@ -1992,24 +2016,51 @@
   async function updateConnState() {
     const led = document.getElementById('conn-led');
     const txt = document.getElementById('conn-text');
-    if (!activeId || !currentStatus) { led.className = 'conn-led'; txt.textContent = '—'; return; }
+    const led2 = document.getElementById('conn-led2');
+    const txt2 = document.getElementById('conn-text2');
+    const setBoth = (cls, text) => {
+      led.className = cls; if (led2) led2.className = cls;
+      if (text !== null) { txt.textContent = text; if (txt2) txt2.textContent = text; }
+    };
+    if (!activeId || !currentStatus) { setBoth('conn-led', '—'); return; }
     const host = (() => { try { return new URL(currentStatus.server).hostname; } catch (_) { return currentStatus.server; } })();
     let state = 'offline';
     try { state = await invoke('conn_state', { id: activeId }); } catch (_) {}
     if (state === 'online') {
-      led.className = 'conn-led online';
-      txt.textContent = 'Connecté à ' + host;
+      setBoth('conn-led online', 'Connecté à ' + host);
     } else if (state === 'expired') {
-      led.className = 'conn-led offline';
+      setBoth('conn-led offline', null);
+      if (led2) txt2.textContent = 'Session expirée — ' + host;
       txt.innerHTML = 'Session expirée — <a href="#" id="conn-relogin" style="color:var(--accent)">reconnectez-vous</a>';
       const a = document.getElementById('conn-relogin');
       if (a) a.onclick = (e) => { e.preventDefault(); document.getElementById('f-server').value = currentStatus.server; enterAddMode(false); };
     } else {
-      led.className = 'conn-led offline';
-      txt.textContent = 'Hors ligne — ' + host;
+      setBoth('conn-led offline', 'Hors ligne — ' + host);
     }
   }
   setInterval(() => { if (activeId) updateConnState(); }, 30000);
+
+  // ── Forced offline / online toggle ───────────────────────────────────────────
+  function applyOfflineToggle(offline) {
+    const t = document.getElementById('offline-toggle');
+    if (!t) return;
+    t.classList.toggle('on', !offline);
+    t.setAttribute('aria-checked', String(!offline));
+    document.getElementById('offline-mode-label').textContent = offline ? 'Hors ligne (forcé)' : 'En ligne';
+    document.getElementById('offline-mode-sub').textContent = offline
+      ? 'Communication serveur coupée — tout reste en local.'
+      : 'Communication avec le serveur activée.';
+  }
+  (async () => { try { applyOfflineToggle(await invoke('get_offline')); } catch (_) {} })();
+  document.getElementById('offline-toggle').addEventListener('click', async () => {
+    const t = document.getElementById('offline-toggle');
+    const goingOffline = t.classList.contains('on'); // currently online → switch off
+    try {
+      await invoke('set_offline', { offline: goingOffline });
+      applyOfflineToggle(goingOffline);
+      updateConnState();
+    } catch (_) {}
+  });
 
   // Fetch and display the active instance's user identity. Best-effort; the
   // backend retries internally so a transient hiccup doesn't blank the account.
