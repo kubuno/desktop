@@ -53,6 +53,10 @@ fn detect(store: &Store, cfg: &Config) -> Result<()> {
                 key: new_key(), op: "delete".into(),
                 file_id: Some(id), folder_id: None, name: None, local_path: None, base_etag: None,
             })?;
+        } else if is_online_only(p) {
+            // Online-only ("virtual") placeholder: its content isn't on disk, so
+            // it can't have local edits. Reading it to hash would needlessly
+            // hydrate (download) it — skip.
         } else if Some(&hash_file(p)?) != etag.as_ref() {
             store.enqueue(&OutboxOp {
                 key: new_key(), op: "modify".into(),
@@ -185,6 +189,21 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
         }
     }
     Ok(s)
+}
+
+/// True if `path` is a cloud placeholder whose content is not on disk (online-
+/// only). Reads only attributes, so it never triggers hydration.
+#[cfg(windows)]
+fn is_online_only(path: &Path) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x0040_0000;
+    std::fs::metadata(path)
+        .map(|m| m.file_attributes() & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS != 0)
+        .unwrap_or(false)
+}
+#[cfg(not(windows))]
+fn is_online_only(_path: &Path) -> bool {
+    false
 }
 
 fn hash_file(path: &Path) -> Result<String> {
