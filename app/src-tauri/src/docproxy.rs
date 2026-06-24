@@ -162,6 +162,19 @@ async fn auth_refresh(State(st): State<ProxyState>) -> Response {
             }
         }
     }
+    // Forced offline → never touch the network; serve the last good token so the
+    // embedded app still bootstraps from local data.
+    if kubuno_sync::is_offline() {
+        if let Ok(tok) = std::fs::read_to_string(st.cache_dir.join("last_token")) {
+            if !tok.is_empty() {
+                return token_json(tok);
+            }
+        }
+        if let Some(tok) = kubuno_sync::access_token(&st.id) {
+            return token_json(tok);
+        }
+        return (StatusCode::SERVICE_UNAVAILABLE, "hors-ligne").into_response();
+    }
     let id = st.id.clone();
     let refreshed = tokio::task::spawn_blocking(move || kubuno_sync::refresh_access(&id)).await;
     match refreshed {
@@ -237,6 +250,12 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
     let navigation = is_get && wants_html(&req_headers) && !is_asset_or_api(&path);
     let cacheable = is_get && (is_cacheable_asset(&path) || is_cacheable_api(&path));
 
+    // Forced offline → don't reach the core; serve the shell/assets from cache.
+    // (Office document routes were already handled by the WASM backend above.)
+    if kubuno_sync::is_offline() {
+        return from_cache(&st.cache_dir, &path, navigation);
+    }
+
     let url = format!("{}{}", st.upstream, pq);
     let orig_ae = req_headers
         .get(header::ACCEPT_ENCODING)
@@ -300,19 +319,23 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
             // Cache stays pristine; only the served HTML gets the standalone CSS.
             build_response(status, out, inject_standalone_css(&ct, bytes.to_vec()))
         }
-        Err(_) => {
-            // Offline: serve from cache so the shell/app/editor can still load.
-            if let Some((ct, bytes)) = cache_read(&st.cache_dir, &path) {
-                return cached(ct, bytes);
-            }
-            if navigation {
-                if let Some((ct, bytes)) = cache_read(&st.cache_dir, "__shell__") {
-                    return cached(ct, bytes);
-                }
-            }
-            (StatusCode::BAD_GATEWAY, "hors-ligne et non mis en cache").into_response()
+        // Network error → serve from cache so the shell/app/editor can still load.
+        Err(_) => from_cache(&st.cache_dir, &path, navigation),
+    }
+}
+
+/// Serve a request from the disk cache (offline / upstream unreachable): the
+/// exact path, else the cached shell for SPA navigations, else 502.
+fn from_cache(cache_dir: &std::path::Path, path: &str, navigation: bool) -> Response {
+    if let Some((ct, bytes)) = cache_read(cache_dir, path) {
+        return cached(ct, bytes);
+    }
+    if navigation {
+        if let Some((ct, bytes)) = cache_read(cache_dir, "__shell__") {
+            return cached(ct, bytes);
         }
     }
+    (StatusCode::BAD_GATEWAY, "hors-ligne et non mis en cache").into_response()
 }
 
 // ── Collab WebSocket bridge ─────────────────────────────────────────────────
@@ -323,6 +346,13 @@ async fn collab_ws(
     RawQuery(q): RawQuery,
     ws: WebSocketUpgrade,
 ) -> Response {
+    // Forced offline → no server collab: accept the upgrade then close so the
+    // editor falls back to its local (y-indexeddb) offline mode.
+    if kubuno_sync::is_offline() {
+        return ws.on_upgrade(|mut client| async move {
+            let _ = client.send(Message::Close(None)).await;
+        });
+    }
     // The frontend already puts its (native) token in `?token=`; keep it, but
     // fall back to the stored token if somehow absent.
     let query = q.unwrap_or_default();

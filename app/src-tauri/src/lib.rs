@@ -174,6 +174,20 @@ fn set_proxy(url: String) -> Result<(), String> {
     kubuno_sync::set_proxy(url).map_err(|e| e.to_string())
 }
 
+/// Whether the user has forced offline mode.
+#[tauri::command]
+fn get_offline() -> bool {
+    kubuno_sync::is_offline()
+}
+
+/// Toggle forced offline mode (stops all core communication: sync, connection
+/// state, document proxy). Returns the new state.
+#[tauri::command]
+fn set_offline(offline: bool) -> Result<bool, String> {
+    kubuno_sync::set_offline(offline).map_err(|e| e.to_string())?;
+    Ok(offline)
+}
+
 /// Disconnect an instance (drops creds + local sync state; keeps the files).
 #[tauri::command]
 fn remove_instance(id: String) -> Result<(), String> {
@@ -736,6 +750,8 @@ pub fn run() {
             conn_state,
             get_proxy,
             set_proxy,
+            get_offline,
+            set_offline,
             get_status,
             get_user,
             sync_now,

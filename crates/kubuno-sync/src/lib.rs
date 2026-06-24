@@ -63,6 +63,10 @@ pub fn login(server: &str, login: &str, password: &str, folder: &str) -> Result<
 
 /// Run one push+pull cycle for a single instance and return a summary.
 pub fn sync_once(id: &str) -> Result<Summary> {
+    // Forced offline → no network; report an up-to-date (no-op) cycle.
+    if config::is_offline() {
+        return Ok(Summary::default());
+    }
     let lock = sync_lock(id);
     let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
     let cfg = Config::load(id)?;
@@ -106,6 +110,16 @@ pub fn set_proxy(url: Option<String>) -> Result<()> {
     config::set_proxy(url.as_deref())
 }
 
+/// Whether the user has forced offline mode (no core communication).
+pub fn is_offline() -> bool {
+    config::is_offline()
+}
+
+/// Turn forced offline mode on/off.
+pub fn set_offline(offline: bool) -> Result<()> {
+    config::set_offline(offline)
+}
+
 /// The config of a single instance, if it exists.
 pub fn current_config(id: &str) -> Option<Config> {
     Config::load(id).ok()
@@ -115,6 +129,10 @@ pub fn current_config(id: &str) -> Option<Config> {
 /// "expired" (reachable but the session/refresh token is no longer accepted —
 /// the user must reconnect) or "offline" (server unreachable).
 pub fn connection_state(id: &str) -> &'static str {
+    // User-forced offline mode short-circuits everything.
+    if config::is_offline() {
+        return "offline";
+    }
     let Some(cfg) = current_config(id) else { return "offline" };
     if !api::ping(&cfg.server_url) {
         return "offline";
