@@ -80,6 +80,9 @@ pub struct Delta {
 /// needs to identify the account are kept.
 #[derive(Deserialize, Serialize, Clone)]
 pub struct User {
+    /// Server user id (UUID). Used to scope the local office WASM backend's data.
+    #[serde(default)]
+    pub id:           Option<String>,
     #[serde(default)]
     pub display_name: Option<String>,
     pub email:        String,

@@ -34,6 +34,10 @@ reqwest-async       = { package = "reqwest", version = "0.12", default-features 
 tokio-tungstenite   = { version = "0.21", features = ["connect", "rustls-tls-webpki-roots"] }
 futures-util        = "0.3"
 sha2                = "0.10"
+# Local office "documents-core" backend: run the WASM module (SQLite-in-WASI)
+# embedded so document CRUD works fully offline, no core round-trip.
+wasmtime            = "27"
+wasmtime-wasi       = "27"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
