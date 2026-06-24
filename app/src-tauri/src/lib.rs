@@ -403,6 +403,8 @@ async fn open_document(
         .collect();
     let label = format!("doc-{safe}");
     if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.show();
+        let _ = w.unminimize();
         let _ = w.set_focus();
         return Ok(());
     }
@@ -447,6 +449,8 @@ async fn open_app(
         .collect();
     let wlabel = format!("app-{safe}");
     if let Some(w) = app.get_webview_window(&wlabel) {
+        let _ = w.show();
+        let _ = w.unminimize();
         let _ = w.set_focus();
         return Ok(());
     }
@@ -802,8 +806,13 @@ pub fn run() {
             // only hides it — the app keeps syncing in the background and is
             // quit exclusively from the system-tray "Quitter" entry.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                // Only the main window is the tray app (hide on close). Secondary
+                // app/document windows must close for real, otherwise re-opening
+                // them just focuses a hidden window and nothing appears.
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
