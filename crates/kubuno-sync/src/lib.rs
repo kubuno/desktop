@@ -111,11 +111,19 @@ pub fn current_config(id: &str) -> Option<Config> {
     Config::load(id).ok()
 }
 
-/// Whether the instance's server is currently reachable (quick `/healthz` ping).
-pub fn is_online(id: &str) -> bool {
-    match current_config(id) {
-        Some(cfg) => api::ping(&cfg.server_url),
-        None => false,
+/// Connection state of an instance: "online" (reachable + session valid),
+/// "expired" (reachable but the session/refresh token is no longer accepted —
+/// the user must reconnect) or "offline" (server unreachable).
+pub fn connection_state(id: &str) -> &'static str {
+    let Some(cfg) = current_config(id) else { return "offline" };
+    if !api::ping(&cfg.server_url) {
+        return "offline";
+    }
+    // Reachable — is the session still valid? `current_user` refreshes on a 401,
+    // so a failure here means the refresh token itself was rejected.
+    match current_user(id) {
+        Ok(_) => "online",
+        Err(_) => "expired",
     }
 }
 
@@ -177,6 +185,14 @@ fn move_into(from: &std::path::Path, to: &std::path::Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Download a file's content by server id, for the given instance. Used by the
+/// on-demand hydration callback when a virtual (online-only) file is opened.
+pub fn download_for(id: &str, file_id: &str) -> Result<Vec<u8>> {
+    let cfg = Config::load(id)?;
+    let mut api = api::Api::new(id.to_string(), cfg.server_url, Creds::load(id)?);
+    api.download(file_id)
 }
 
 /// Fetch an instance's authenticated user profile (`GET /api/v1/me`).
