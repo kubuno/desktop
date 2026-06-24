@@ -190,32 +190,42 @@ fn set_offline(offline: bool) -> Result<bool, String> {
     Ok(offline)
 }
 
-/// Whether the local-first WASM backends are installed (so modules open in native
-/// local-first windows instead of the web browser).
+/// The local-first WASM backends currently installed in the config dir (basenames).
+/// Lets the launcher show, per tile, whether its backend is downloaded.
 #[tauri::command]
-fn local_components_installed() -> bool {
-    kubuno_sync::config::config_dir()
-        .map(|d| d.join("documents-core.wasm").is_file() && d.join("drive-core.wasm").is_file())
-        .unwrap_or(false)
+fn installed_components() -> Vec<String> {
+    let Ok(cfg) = kubuno_sync::config::config_dir() else {
+        return Vec::new();
+    };
+    ["documents-core.wasm", "drive-core.wasm"]
+        .into_iter()
+        .filter(|n| cfg.join(n).is_file())
+        .map(|n| n.to_string())
+        .collect()
 }
 
-/// Download the local-first WASM backends from the connected core and install them
-/// in the config dir (verifying each sha256 against the server manifest), then
-/// switch modules from the web browser to native local-first windows. Explicit,
-/// user-triggered — the backends are NOT shipped by default.
+/// Download the given local-first WASM backends from the connected core and install
+/// them in the config dir (verifying each sha256 against the server manifest), then
+/// switch the corresponding modules to native local-first windows. `components`
+/// empty = install everything advertised. Explicit, user-triggered — the backends
+/// are NOT shipped by default.
 #[tauri::command]
-async fn install_local_components(instance_id: String) -> Result<String, String> {
-    let msg = tauri::async_runtime::spawn_blocking(move || download_components(&instance_id))
-        .await
-        .map_err(|e| e.to_string())??;
+async fn install_local_components(
+    instance_id: String,
+    components: Vec<String>,
+) -> Result<String, String> {
+    let msg =
+        tauri::async_runtime::spawn_blocking(move || download_components(&instance_id, &components))
+            .await
+            .map_err(|e| e.to_string())??;
     // Pick up the freshly-installed artifacts without a restart.
     #[cfg(desktop)]
     wasmoffice::invalidate();
     Ok(msg)
 }
 
-/// Fetch the WASM manifest then each backend from the core, verify and store them.
-fn download_components(instance_id: &str) -> Result<String, String> {
+/// Fetch the WASM manifest then the wanted backends from the core, verify and store.
+fn download_components(instance_id: &str, want: &[String]) -> Result<String, String> {
     use sha2::{Digest, Sha256};
     use std::io::Read;
 
@@ -239,8 +249,12 @@ fn download_components(instance_id: &str) -> Result<String, String> {
     let mut count = 0u32;
     for c in components {
         let Some(name) = c["name"].as_str() else { continue };
-        // Only the two known backends, stored by basename in the config dir.
+        // Only the known backends, stored by basename in the config dir.
         if name != "documents-core.wasm" && name != "drive-core.wasm" {
+            continue;
+        }
+        // Respect an explicit selection (empty = all).
+        if !want.is_empty() && !want.iter().any(|w| w == name) {
             continue;
         }
         let want_sha = c["sha256"].as_str().unwrap_or_default();
@@ -262,12 +276,16 @@ fn download_components(instance_id: &str) -> Result<String, String> {
     Ok(format!("{count} composant(s) hors-ligne installé(s)"))
 }
 
-/// Remove the local-first backends — modules go back to opening in the web browser.
+/// Remove the given local-first backends (empty = all) — the corresponding modules
+/// go back to opening in the web browser.
 #[tauri::command]
-fn uninstall_local_components() -> Result<(), String> {
+fn uninstall_local_components(components: Vec<String>) -> Result<(), String> {
     let cfg = kubuno_sync::config::config_dir().map_err(|e| e.to_string())?;
-    let _ = std::fs::remove_file(cfg.join("documents-core.wasm"));
-    let _ = std::fs::remove_file(cfg.join("drive-core.wasm"));
+    for n in ["documents-core.wasm", "drive-core.wasm"] {
+        if components.is_empty() || components.iter().any(|c| c == n) {
+            let _ = std::fs::remove_file(cfg.join(n));
+        }
+    }
     #[cfg(desktop)]
     wasmoffice::invalidate();
     Ok(())
@@ -479,9 +497,10 @@ if(document.readyState!=='loading'){tick();}else{document.addEventListener('DOMC
 #[cfg(desktop)]
 fn has_local_backend(route: &str) -> bool {
     let r = route.trim_start_matches('/');
-    if r.starts_with("office") {
-        wasmoffice::enabled()
-    } else if r.starts_with("drive") {
+    if r == "office/documents" || r.starts_with("office/documents/") {
+        // The documents browser lists files via the Drive API, so it needs both.
+        wasmoffice::enabled() && wasmoffice::enabled_for(wasmoffice::DRIVE)
+    } else if r == "drive" || r.starts_with("drive/") {
         wasmoffice::enabled_for(wasmoffice::DRIVE)
     } else {
         false
@@ -515,7 +534,7 @@ async fn open_document(
     instance_id: String,
     doc_id: String,
 ) -> Result<(), String> {
-    if !has_local_backend("office") {
+    if !has_local_backend("office/documents") {
         return launch_in_browser(&app, &instance_id, &format!("/office/documents/{doc_id}"));
     }
     use tauri::{WebviewUrl, WebviewWindowBuilder};
@@ -984,7 +1003,7 @@ pub fn run() {
             set_proxy,
             get_offline,
             set_offline,
-            local_components_installed,
+            installed_components,
             install_local_components,
             uninstall_local_components,
             get_status,
