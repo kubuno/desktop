@@ -960,6 +960,23 @@
         </div>
 
         <div class="card">
+          <div class="card-title">Mode hors-ligne (local-first)</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+            Téléchargez les composants pour ouvrir Documents et Drive en fenêtres
+            natives, éditables et navigables <strong>hors-ligne</strong>. Sans eux,
+            ces modules s'ouvrent dans votre navigateur web.
+          </p>
+          <div class="conn-toggle-row">
+            <div>
+              <div class="conn-toggle-label" id="lc-label">—</div>
+              <div class="conn-toggle-sub" id="lc-sub"></div>
+            </div>
+            <button class="btn-sync" id="lc-btn" style="white-space:nowrap">…</button>
+          </div>
+          <div id="lc-msg" class="hidden" style="font-size:12px;margin-top:8px"></div>
+        </div>
+
+        <div class="card">
           <div class="card-title">Liens rapides</div>
           <div class="quick-links">
             <button class="quick-link-btn" id="ql-sync">
@@ -2064,6 +2081,53 @@
       updateConnState();
     } catch (_) {}
   });
+
+  // ── Local-first components (explicit, user-triggered download) ───────────────
+  async function refreshLocalComponents() {
+    const label = document.getElementById('lc-label');
+    if (!label) return;
+    const sub = document.getElementById('lc-sub');
+    const btn = document.getElementById('lc-btn');
+    let installed = false;
+    try { installed = await invoke('local_components_installed'); } catch (_) {}
+    if (installed) {
+      label.textContent = 'Installé';
+      sub.textContent = "Documents et Drive s'ouvrent en local-first (hors-ligne).";
+      btn.textContent = 'Retirer';
+      btn.dataset.installed = '1';
+    } else {
+      label.textContent = 'Non installé';
+      sub.textContent = "Documents et Drive s'ouvrent dans le navigateur.";
+      btn.textContent = 'Télécharger';
+      btn.dataset.installed = '';
+    }
+  }
+  document.getElementById('lc-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('lc-btn');
+    const msg = document.getElementById('lc-msg');
+    const installed = btn.dataset.installed === '1';
+    btn.disabled = true;
+    msg.classList.add('hidden');
+    try {
+      if (installed) {
+        await invoke('uninstall_local_components');
+      } else {
+        msg.classList.remove('hidden');
+        msg.style.color = 'var(--muted)';
+        msg.textContent = 'Téléchargement des composants…';
+        const r = await invoke('install_local_components', { instanceId: activeId });
+        msg.style.color = '#1a7f37';
+        msg.textContent = r || 'Installé.';
+      }
+    } catch (e) {
+      msg.classList.remove('hidden');
+      msg.style.color = 'var(--err-fg)';
+      msg.textContent = 'Échec : ' + e;
+    }
+    btn.disabled = false;
+    refreshLocalComponents();
+  });
+  (async () => { await refreshLocalComponents(); })();
 
   // Fetch and display the active instance's user identity. Best-effort; the
   // backend retries internally so a transient hiccup doesn't blank the account.
