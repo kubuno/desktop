@@ -126,6 +126,14 @@ fn list_instances() -> Vec<InstanceInfo> {
         .collect()
 }
 
+/// Whether the active instance's server is currently reachable.
+#[tauri::command]
+async fn is_online(id: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || kubuno_sync::is_online(&id))
+        .await
+        .unwrap_or(false)
+}
+
 /// The configured outbound proxy URL (empty string if none).
 #[tauri::command]
 fn get_proxy() -> String {
@@ -453,36 +461,38 @@ fn refresh_explorer_nav() {
     #[cfg(windows)]
     {
         let instances = kubuno_sync::list_instances();
-        // Surface sync-status in Explorer (a "Status" column + ✓ green check on
-        // synced files), like OneDrive. Done off-thread: registering + walking
-        // the tree to mark files in-sync can be slow, and it only works on local
-        // NTFS folders (network drives are silently skipped — register fails).
-        let cloud: Vec<(String, std::path::PathBuf)> =
-            instances.iter().map(|c| (c.id.clone(), c.sync_root.clone())).collect();
+        // Each instance gets exactly ONE navigation-pane entry:
+        //  - local folder  → WinRT sync root (adds the "Status" column + ✓ overlays)
+        //  - network folder → plain shell-namespace entry (CfApi can't register it)
+        let mut network_entries: Vec<(String, String, std::path::PathBuf)> = Vec::new();
+        let mut local_to_mark: Vec<std::path::PathBuf> = Vec::new();
+        for c in &instances {
+            let host = c
+                .server_url
+                .split("://")
+                .last()
+                .unwrap_or(&c.server_url)
+                .split('/')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            let name = format!("Kubuno — {host}");
+            if cloudfiles::register(&c.id, &name, &c.sync_root) {
+                local_to_mark.push(c.sync_root.clone());
+            } else {
+                network_entries.push((c.id.clone(), name, c.sync_root.clone()));
+            }
+        }
+        // Only network instances keep a namespace entry; this prunes stale ones,
+        // including the duplicate left over when an instance becomes local.
+        explorer::sync(&network_entries);
+        // Mark synced files in-sync off-thread (walking the tree can be slow).
         std::thread::spawn(move || {
-            for (id, folder) in cloud {
-                if cloudfiles::register(&id, &folder) {
-                    cloudfiles::connect(&folder);
-                    cloudfiles::mark_tree_in_sync(&folder);
-                }
+            for folder in local_to_mark {
+                cloudfiles::connect(&folder);
+                cloudfiles::mark_tree_in_sync(&folder);
             }
         });
-        let items: Vec<(String, String, std::path::PathBuf)> = instances
-            .into_iter()
-            .map(|c| {
-                let host = c
-                    .server_url
-                    .split("://")
-                    .last()
-                    .unwrap_or(&c.server_url)
-                    .split('/')
-                    .next()
-                    .unwrap_or("")
-                    .to_string();
-                (c.id, format!("Kubuno — {host}"), c.sync_root)
-            })
-            .collect();
-        explorer::sync(&items);
     }
 }
 
@@ -497,6 +507,7 @@ pub fn run() {
             do_login,
             list_instances,
             remove_instance,
+            is_online,
             get_proxy,
             set_proxy,
             get_status,

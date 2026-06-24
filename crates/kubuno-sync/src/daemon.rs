@@ -124,6 +124,9 @@ fn run_once<F>(api: &mut Api, store: &Store, id: &str, on_event: &F)
 where
     F: Fn(&str, SyncEvent),
 {
+    // Serialize with manual syncs and folder moves (see `sync_lock`).
+    let lock = crate::sync_lock(id);
+    let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
     let cfg = match Config::load(id) {
         Ok(c) => c,
         Err(e) => {

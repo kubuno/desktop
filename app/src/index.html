@@ -411,6 +411,10 @@
     .card-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
 
     /* Sync status */
+    .conn-state { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; color: var(--muted); }
+    .conn-led { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex-shrink: 0; transition: background .3s; }
+    .conn-led.online  { background: var(--ok-fg); box-shadow: 0 0 0 3px rgba(30,142,62,.15); }
+    .conn-led.offline { background: var(--danger); box-shadow: 0 0 0 3px rgba(217,48,37,.15); }
     .sync-indicator { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .sync-dot {
       width: 40px; height: 40px; border-radius: 50%;
@@ -423,6 +427,12 @@
     /* Spin the ⟳ icon while syncing to signal activity. */
     .sync-dot.syncing svg { animation: spin .9s linear infinite; transform-origin: 50% 50%; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    /* Inline button spinner (e.g. while moving the sync folder). */
+    .inline-spin {
+      display: inline-block; width: 13px; height: 13px; vertical-align: -2px; margin-right: 6px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
     .sync-text-label { font-size: 14px; font-weight: 600; }
     .sync-text-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .sync-result {
@@ -840,6 +850,10 @@
 
         <div class="card">
           <div class="card-title">État de synchronisation</div>
+          <div class="conn-state">
+            <span class="conn-led" id="conn-led"></span>
+            <span id="conn-text">Vérification de la connexion…</span>
+          </div>
           <div class="sync-indicator">
             <div class="sync-dot ok" id="sync-dot"></div>
             <div>
@@ -1378,7 +1392,10 @@
     if (!dest) return; // cancelled
     const btn = document.getElementById('cfg-move-folder');
     const prev = btn.innerHTML;
-    btn.disabled = true; btn.textContent = 'Déplacement…';
+    // Animated spinner while the (potentially long) cross-volume move runs. The
+    // command is async, so the UI stays responsive throughout.
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-spin"></span>Déplacement en cours…';
     try {
       await invoke('move_sync_folder', { id: activeId, newPath: dest });
       await loadInstanceView();          // refresh the displayed folder path
@@ -1710,8 +1727,26 @@
       document.getElementById('cfg-folder-short').textContent = parts.slice(-2).join('/') || currentStatus.folder;
     }
     await refreshActiveUser();
+    updateConnState();
     loadInstanceModules();
   }
+
+  // Reflect whether the active instance's server is reachable.
+  async function updateConnState() {
+    const led = document.getElementById('conn-led');
+    const txt = document.getElementById('conn-text');
+    if (!activeId || !currentStatus) { led.className = 'conn-led'; txt.textContent = '—'; return; }
+    const host = (() => { try { return new URL(currentStatus.server).hostname; } catch (_) { return currentStatus.server; } })();
+    try {
+      const online = await invoke('is_online', { id: activeId });
+      led.className = 'conn-led ' + (online ? 'online' : 'offline');
+      txt.textContent = online ? ('Connecté à ' + host) : 'Hors ligne — ' + host;
+    } catch (_) {
+      led.className = 'conn-led offline';
+      txt.textContent = 'Hors ligne';
+    }
+  }
+  setInterval(() => { if (activeId) updateConnState(); }, 30000);
 
   // Fetch and display the active instance's user identity. Best-effort; the
   // backend retries internally so a transient hiccup doesn't blank the account.
