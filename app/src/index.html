@@ -499,6 +499,33 @@
     .quick-link-btn:hover { background: var(--surface-2); }
     .quick-link-btn svg { flex-shrink: 0; color: var(--muted); }
 
+    /* ── App launcher (waffle) ── */
+    .apps-group { margin-bottom: 18px; }
+    .apps-group-label {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px 2px;
+    }
+    .apps-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px;
+    }
+    .app-tile {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 12px 6px; border-radius: var(--r-lg); border: 1px solid transparent;
+      background: none; cursor: pointer; user-select: none; transition: background .12s, border-color .12s;
+    }
+    .app-tile:hover { background: var(--surface-2); }
+    .app-tile:focus-visible { outline: none; border-color: var(--accent); }
+    .app-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; line-height: 1; background: var(--accent-light);
+    }
+    .app-label {
+      font-size: 12px; color: var(--text); text-align: center; line-height: 1.25;
+      max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .apps-empty { font-size: 13px; color: var(--muted); padding: 24px 4px; }
+
     /* Activity */
     .activity-list { display: flex; flex-direction: column; gap: 6px; }
     .activity-empty {
@@ -718,6 +745,9 @@
 </div>
 
 <!-- ═══ ABOUT OVERLAY ════════════════════════════════════════════════════ -->
+<!-- Context menu for launcher tiles (local vs web) -->
+<div class="dd-menu hidden" id="app-ctx" style="position:fixed;min-width:200px"></div>
+
 <div class="modal-backdrop hidden" id="about-overlay">
   <div class="about-card">
     <button class="modal-close" id="btn-close-about">✕</button>
@@ -957,6 +987,16 @@
             Aucune activité enregistrée.<br>Lance une synchronisation pour commencer.
           </div>
         </div>
+      </div>
+
+      <!-- ── APPS LAUNCHER VIEW ────────────────────────────── -->
+      <div class="view hidden" id="view-apps">
+        <p class="page-title">Applications</p>
+        <p style="font-size:12px;color:var(--muted);margin:-6px 0 4px">
+          Double-cliquez pour lancer en local (fenêtre native, hors-ligne).
+          Clic droit pour choisir local ou navigateur web.
+        </p>
+        <div id="apps-container"></div>
       </div>
 
       <!-- ── SETTINGS VIEW (scrollable) ────────────────────── -->
@@ -1206,12 +1246,15 @@
   const ICON_ERR  = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b83232" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
   // ── Nav routing ────────────────────────────────────────────────────────────
-  const VIEWS = ['home', 'activity', 'settings'];
+  const VIEWS = ['home', 'activity', 'settings', 'apps'];
   function showView(name) {
     VIEWS.forEach(v => {
       document.getElementById('view-' + v).classList.toggle('hidden', v !== name);
-      document.getElementById('nav-' + v).classList.toggle('active', v === name);
+      // The launcher ("apps") is opened from the header, not the sidebar nav.
+      const nav = document.getElementById('nav-' + v);
+      if (nav) nav.classList.toggle('active', v === name);
     });
+    if (name === 'apps') loadApps();
     closeAll();
   }
   VIEWS.forEach(v => document.getElementById('nav-' + v).addEventListener('click', () => showView(v)));
@@ -1355,9 +1398,7 @@
     closeAll();
     document.getElementById('about-overlay').classList.remove('hidden');
   });
-  document.getElementById('btn-apps').addEventListener('click', () => {
-    if (currentStatus) try { invoke('open_in_browser', { url: currentStatus.server }); } catch (_) {}
-  });
+  document.getElementById('btn-apps').addEventListener('click', () => showView('apps'));
 
   // ── Account popup ──────────────────────────────────────────────────────────
   document.getElementById('btn-avatar').addEventListener('click', e => {
@@ -1513,6 +1554,95 @@
   }
   document.getElementById('btn-open-doc').addEventListener('click', openDocument);
   document.getElementById('doc-id').addEventListener('keydown', e => { if (e.key === 'Enter') openDocument(); });
+
+  // ── App launcher (waffle) ────────────────────────────────────────────────────
+  // Map a module id or a lucide icon name to a glyph (the desktop shell can't
+  // render the web's lucide React components, so we approximate with emoji).
+  const APP_EMOJI = {
+    drive: '📁', calendar: '📅', photos: '🖼️', notes: '📝', office: '📄', paintsharp: '🎨',
+    jarvis: '🤖', forms: '📋', chat: '💬', contacts: '👥', mail: '✉️', code: '💻', media: '🎬',
+    keestore: '🔑', maps: '🗺️', tasks: '✅', forum: '🗣️', flow: '🔀',
+    'file-text': '📄', folder: '📁', 'folder-kanban': '📌', image: '🖼️', images: '🖼️',
+    mail: '✉️', users: '👥', user: '👤', table: '📊', 'table-properties': '📊',
+    'bar-chart': '📊', 'bar-chart-3': '📊', 'layout-template': '📽️', network: '🔗',
+    zap: '⚡', sigma: '∑', 'sticky-note': '🟨', 'message-circle': '💬', 'message-square': '💬',
+    map: '🗺️', music: '🎵', film: '🎬', key: '🔑', 'check-square': '✅', 'list-todo': '✅',
+    'pen-tool': '🖌️', palette: '🎨', settings: '⚙️',
+  };
+  const appEmoji = (moduleId, icon) =>
+    APP_EMOJI[(icon || '').toLowerCase()] || APP_EMOJI[moduleId] || '🧩';
+
+  let appsLoading = false;
+  async function loadApps() {
+    const c = document.getElementById('apps-container');
+    if (appsLoading) return;
+    if (!activeId) { c.innerHTML = '<div class="apps-empty">Aucune instance active.</div>'; return; }
+    appsLoading = true;
+    c.innerHTML = '<div class="apps-empty">Chargement des applications…</div>';
+    try {
+      const groups = await invoke('get_apps', { id: activeId });
+      if (!groups || !groups.length) {
+        c.innerHTML = '<div class="apps-empty">Aucune application détectée sur cette instance.</div>';
+        return;
+      }
+      c.innerHTML = groups.map(g => `
+        <div class="apps-group">
+          <div class="apps-group-label">${escapeHtml(g.label)}</div>
+          <div class="apps-grid">
+            ${g.items.map(it => `
+              <div class="app-tile" tabindex="0" data-route="${escapeHtml(it.path)}" data-label="${escapeHtml(it.label)}">
+                <div class="app-icon">${appEmoji(g.module_id, it.icon)}</div>
+                <div class="app-label">${escapeHtml(it.label)}</div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('');
+    } catch (_) {
+      c.innerHTML = '<div class="apps-empty">Impossible de charger les applications.</div>';
+    } finally {
+      appsLoading = false;
+    }
+  }
+
+  function launchApp(route, label, mode) {
+    if (mode === 'web') {
+      const base = (currentStatus && currentStatus.server) ? currentStatus.server.replace(/\/$/, '') : '';
+      if (base) try { invoke('open_in_browser', { url: base + route }); } catch (_) {}
+    } else {
+      try { invoke('open_app', { instanceId: activeId, route, label }); } catch (_) {}
+    }
+  }
+
+  const appsContainer = document.getElementById('apps-container');
+  const appCtx = document.getElementById('app-ctx');
+  // Double-click (or Enter) → launch locally.
+  appsContainer.addEventListener('dblclick', e => {
+    const tile = e.target.closest('.app-tile');
+    if (tile) launchApp(tile.dataset.route, tile.dataset.label, 'local');
+  });
+  appsContainer.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const tile = e.target.closest('.app-tile');
+    if (tile) launchApp(tile.dataset.route, tile.dataset.label, 'local');
+  });
+  // Right-click → choose local vs browser.
+  appsContainer.addEventListener('contextmenu', e => {
+    const tile = e.target.closest('.app-tile');
+    if (!tile) return;
+    e.preventDefault();
+    const route = tile.dataset.route, label = tile.dataset.label;
+    appCtx.innerHTML =
+      '<button class="dd-item" data-mode="local">Lancer en local</button>' +
+      '<button class="dd-item" data-mode="web">Ouvrir dans le navigateur</button>';
+    appCtx.querySelectorAll('.dd-item').forEach(b => b.addEventListener('click', () => {
+      launchApp(route, label, b.dataset.mode);
+      appCtx.classList.add('hidden');
+    }));
+    appCtx.style.left = Math.min(e.clientX, window.innerWidth - 210) + 'px';
+    appCtx.style.top = Math.min(e.clientY, window.innerHeight - 90) + 'px';
+    appCtx.classList.remove('hidden');
+  });
+  document.addEventListener('click', () => appCtx.classList.add('hidden'));
+  window.addEventListener('blur', () => appCtx.classList.add('hidden'));
 
   // ── Open config dir ────────────────────────────────────────────────────────
   document.getElementById('btn-open-config-dir').addEventListener('click', async () => {

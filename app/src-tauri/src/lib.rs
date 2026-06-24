@@ -84,6 +84,22 @@ struct ModuleInfo {
     settings: Vec<ModuleSetting>,
 }
 
+/// One launchable app/sub-module shown in the in-app launcher ("waffle").
+#[derive(Serialize, Clone)]
+struct AppItem {
+    label: String,
+    path:  String,
+    icon:  String,
+}
+
+/// A module and its launchable entries (its sidebar items), for the launcher.
+#[derive(Serialize, Clone)]
+struct AppGroup {
+    module_id: String,
+    label:     String,
+    items:     Vec<AppItem>,
+}
+
 #[derive(Serialize)]
 struct StatusInfo {
     server: String,
@@ -319,6 +335,48 @@ async fn open_document(
     Ok(())
 }
 
+/// Launch a module/app in its own native window, served by the local document
+/// proxy (offline-capable, stable origin). `route` is the web SPA path (e.g.
+/// `/office` or `/drive/recent`). Reuses an existing window for the same route.
+#[cfg(desktop)]
+#[tauri::command]
+async fn open_app(
+    app: tauri::AppHandle,
+    instance_id: String,
+    route: String,
+    label: String,
+) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    let proxy_id = instance_id.clone();
+    let port = tokio::task::spawn_blocking(move || docproxy::ensure_started(&proxy_id))
+        .await
+        .map_err(|e| e.to_string())??;
+
+    let path = route.trim_start_matches('/');
+    let safe: String = path
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    let wlabel = format!("app-{safe}");
+    if let Some(w) = app.get_webview_window(&wlabel) {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let url = format!("http://127.0.0.1:{port}/{path}");
+    let parsed = url.parse().map_err(|_| "URL d'application invalide".to_string())?;
+    let title = if label.is_empty() {
+        "Kubuno".to_string()
+    } else {
+        format!("Kubuno — {label}")
+    };
+    WebviewWindowBuilder::new(&app, &wlabel, WebviewUrl::External(parsed))
+        .title(&title)
+        .inner_size(1200.0, 820.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// AppUserModelID — ties our toasts (and their "Kubuno" name + logo) to us.
 #[cfg(windows)]
 const AUMID: &str = "com.kubuno.desktop";
@@ -403,6 +461,91 @@ async fn get_instance_modules(id: String) -> Vec<ModuleInfo> {
     })
     .await
     .unwrap_or_default()
+}
+
+/// List the instance's activated modules and their sub-modules (from the core's
+/// `/api/v1/modules`) for the in-app launcher. Each entry carries a route to
+/// launch (locally via the document proxy, or in the browser) and a lucide icon
+/// name the frontend maps to a glyph.
+#[tauri::command]
+async fn get_apps(id: String) -> Vec<AppGroup> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Ok(cfg) = kubuno_sync::config::Config::load(&id) else {
+            return Vec::new();
+        };
+        let Ok(creds) = kubuno_sync::config::Creds::load(&id) else {
+            return Vec::new();
+        };
+        let url = format!("{}/api/v1/modules", cfg.server_url.trim_end_matches('/'));
+        let Ok(r) = ureq::get(&url)
+            .set("Authorization", &format!("Bearer {}", creds.access_token))
+            .call()
+        else {
+            return Vec::new();
+        };
+        if r.status() != 200 {
+            return Vec::new();
+        }
+        let Ok(v) = r.into_json::<serde_json::Value>() else {
+            return Vec::new();
+        };
+        // The endpoint may return `{ "modules": [...] }` or a bare array.
+        let arr = v
+            .get("modules")
+            .and_then(|m| m.as_array())
+            .or_else(|| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let mut groups = Vec::new();
+        for m in arr {
+            let module_id = m
+                .get("module_id")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string();
+            if module_id.is_empty() {
+                continue;
+            }
+            let mut items = Vec::new();
+            if let Some(si) = m.get("sidebar_items").and_then(|x| x.as_array()) {
+                for it in si {
+                    let path = it.get("path").and_then(|x| x.as_str()).unwrap_or("");
+                    if path.is_empty() {
+                        continue;
+                    }
+                    items.push(AppItem {
+                        label: it.get("label").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+                        path:  path.to_string(),
+                        icon:  it.get("icon").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+                    });
+                }
+            }
+            // A module without sidebar items still launches at its root route.
+            if items.is_empty() {
+                items.push(AppItem {
+                    label: capitalize(&module_id),
+                    path:  format!("/{module_id}"),
+                    icon:  module_id.clone(),
+                });
+            }
+            groups.push(AppGroup {
+                module_id: module_id.clone(),
+                label:     capitalize(&module_id),
+                items,
+            });
+        }
+        groups
+    })
+    .await
+    .unwrap_or_default()
+}
+
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
 }
 
 #[tauri::command]
@@ -592,7 +735,9 @@ pub fn run() {
             get_autostart,
             set_autostart,
             get_instance_modules,
-            open_document
+            get_apps,
+            open_document,
+            open_app
         ])
         .setup(|app| {
             // System tray (desktop only — mobile has no tray).
