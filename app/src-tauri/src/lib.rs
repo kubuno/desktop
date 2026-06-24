@@ -349,7 +349,12 @@ function bar(){
 }
 function pad(){
  var a=document.elementFromPoint(Math.round(window.innerWidth/2),6),h=a;
- while(h&&h!==document.body){var r=h.getBoundingClientRect();if(r.width>=window.innerWidth-4&&r.top<=4&&r.height>=36&&r.height<=160){if(!h.hasAttribute('data-kbn-pad')){h.setAttribute('data-kbn-pad','1');h.style.paddingRight=((parseFloat(getComputedStyle(h).paddingRight)||0)+150)+'px';}break;}h=h.parentElement;}
+ while(h&&h!==document.body){var r=h.getBoundingClientRect();if(r.width>=window.innerWidth-4&&r.top<=4&&r.height>=36&&r.height<=160){
+   if(!h.hasAttribute('data-kbn-pad')){h.setAttribute('data-kbn-pad','1');h.style.paddingRight=((parseFloat(getComputedStyle(h).paddingRight)||0)+150)+'px';}
+   /* hide shell-global header controls that make no sense in a standalone window:
+      back arrow, notifications, app launcher (kept: search, settings, help, account) */
+   ['lucide-arrow-left','lucide-bell','lucide-layout-grid'].forEach(function(cls){var ic=h.querySelector('svg.'+cls);if(ic){var b=ic.closest('button');if(b)b.style.display='none';}});
+   break;}h=h.parentElement;}
 }
 document.addEventListener('mousedown',function(e){if(e.button)return;if(e.clientY>44)return;if(e.clientX>window.innerWidth-150)return;if(e.target.closest('button,a,input,select,textarea,[role=button],[contenteditable],svg'))return;var k=w();if(k)k.startDragging();},true);
 document.addEventListener('dblclick',function(e){if(e.clientY>44)return;if(e.target.closest('button,a,input'))return;var k=w();if(k)k.toggleMaximize();},true);
