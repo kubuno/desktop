@@ -126,12 +126,12 @@ fn list_instances() -> Vec<InstanceInfo> {
         .collect()
 }
 
-/// Whether the active instance's server is currently reachable.
+/// Connection state of the active instance: "online" | "offline" | "expired".
 #[tauri::command]
-async fn is_online(id: String) -> bool {
-    tauri::async_runtime::spawn_blocking(move || kubuno_sync::is_online(&id))
+async fn conn_state(id: String) -> String {
+    tauri::async_runtime::spawn_blocking(move || kubuno_sync::connection_state(&id).to_string())
         .await
-        .unwrap_or(false)
+        .unwrap_or_else(|_| "offline".into())
 }
 
 /// The configured outbound proxy URL (empty string if none).
@@ -507,7 +507,7 @@ pub fn run() {
             do_login,
             list_instances,
             remove_instance,
-            is_online,
+            conn_state,
             get_proxy,
             set_proxy,
             get_status,

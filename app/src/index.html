@@ -1228,6 +1228,14 @@
   };
 
   function addNotification(kind, title, body) {
+    // De-dupe a repeating notification (e.g. a sync error firing every poll):
+    // refresh the existing entry instead of stacking identical ones + toasting.
+    const last = notifications[0];
+    if (last && last.title === title && last.body === body) {
+      last.ts = new Date();
+      renderNotifList();
+      return;
+    }
     const n = { id: Date.now() + '-' + Math.random(), kind, title, body, ts: new Date(), read: false };
     notifications.unshift(n);
     if (notifications.length > 50) notifications.length = 50;
@@ -1731,19 +1739,25 @@
     loadInstanceModules();
   }
 
-  // Reflect whether the active instance's server is reachable.
+  // Reflect the active instance's connection state: online / offline / expired.
   async function updateConnState() {
     const led = document.getElementById('conn-led');
     const txt = document.getElementById('conn-text');
     if (!activeId || !currentStatus) { led.className = 'conn-led'; txt.textContent = '—'; return; }
     const host = (() => { try { return new URL(currentStatus.server).hostname; } catch (_) { return currentStatus.server; } })();
-    try {
-      const online = await invoke('is_online', { id: activeId });
-      led.className = 'conn-led ' + (online ? 'online' : 'offline');
-      txt.textContent = online ? ('Connecté à ' + host) : 'Hors ligne — ' + host;
-    } catch (_) {
+    let state = 'offline';
+    try { state = await invoke('conn_state', { id: activeId }); } catch (_) {}
+    if (state === 'online') {
+      led.className = 'conn-led online';
+      txt.textContent = 'Connecté à ' + host;
+    } else if (state === 'expired') {
       led.className = 'conn-led offline';
-      txt.textContent = 'Hors ligne';
+      txt.innerHTML = 'Session expirée — <a href="#" id="conn-relogin" style="color:var(--accent)">reconnectez-vous</a>';
+      const a = document.getElementById('conn-relogin');
+      if (a) a.onclick = (e) => { e.preventDefault(); document.getElementById('f-server').value = currentStatus.server; enterAddMode(false); };
+    } else {
+      led.className = 'conn-led offline';
+      txt.textContent = 'Hors ligne — ' + host;
     }
   }
   setInterval(() => { if (activeId) updateConnState(); }, 30000);
