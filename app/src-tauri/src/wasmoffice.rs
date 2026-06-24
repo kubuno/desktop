@@ -8,7 +8,9 @@
 //!   • `handle(req_ptr: u32, req_len: u32) -> u64`
 //!       request buffer (one alloc): [method_len u32 LE][method][path_len u32 LE][path][body_len u32 LE][body]
 //!       return = (res_ptr as u64) << 32 | (res_len as u32) ;
-//!       result buffer at res_ptr: [status u16 LE][body bytes...]  (res_len = total, status incl.)
+//!       result buffer at res_ptr: [status u16 LE][ctype_len u16 LE][ctype UTF-8][body bytes...]
+//!       (res_len = total length; the module sets ctype per response — JSON for metadata,
+//!        application/octet-stream for .kbdoc content and DOCX/ODT exports)
 //!       The guest reuses a static result buffer → the host COPIES it before the next `handle` call
 //!       (guaranteed here: calls are serialized per instance and the result is read fully under the lock).
 //!
@@ -175,9 +177,14 @@ fn user_id_for(instance_id: &str, data_dir: &std::path::Path) -> String {
         .unwrap_or_else(|| instance_id.to_string())
 }
 
-/// Route one office request to the local backend. Returns `(status, body)`, or
-/// `None` if the feature is disabled (caller should fall through to the proxy).
-pub fn handle(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Option<(u16, Vec<u8>)> {
+/// Route one office request to the local backend. Returns `(status, content_type,
+/// body)`, or `None` if the feature is disabled (caller falls through to proxy).
+pub fn handle(
+    instance_id: &str,
+    method: &str,
+    path: &str,
+    body: &[u8],
+) -> Option<(u16, String, Vec<u8>)> {
     if !enabled() {
         return None;
     }
@@ -185,7 +192,7 @@ pub fn handle(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Optio
         Ok(o) => o,
         Err(e) => {
             eprintln!("[wasmoffice] init {instance_id} : {e}");
-            return Some((500, format!("office local: {e}").into_bytes()));
+            return Some((500, json_ct(), err_json(&e)));
         }
     };
     let mut guard = ow.lock().unwrap_or_else(|p| p.into_inner());
@@ -193,14 +200,28 @@ pub fn handle(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Optio
         Ok(r) => Some(r),
         Err(e) => {
             eprintln!("[wasmoffice] handle {method} {path} : {e}");
-            Some((500, format!("office local: {e}").into_bytes()))
+            Some((500, json_ct(), err_json(&e.to_string())))
         }
     }
 }
 
+fn json_ct() -> String {
+    "application/json".to_string()
+}
+
+fn err_json(msg: &str) -> Vec<u8> {
+    format!("{{\"error\":{}}}", serde_json::Value::String(msg.into())).into_bytes()
+}
+
 /// One `handle` round-trip: build the framed request, copy it into linear memory
-/// in a single `alloc`, call, then read+copy the `[status u16 LE][body]` result.
-fn call(ow: &mut OfficeWasm, method: &str, path: &str, body: &[u8]) -> wasmtime::Result<(u16, Vec<u8>)> {
+/// in a single `alloc`, call, then read+copy the
+/// `[status u16][ctype_len u16][ctype][body]` result.
+fn call(
+    ow: &mut OfficeWasm,
+    method: &str,
+    path: &str,
+    body: &[u8],
+) -> wasmtime::Result<(u16, String, Vec<u8>)> {
     let alloc = ow.alloc.clone();
     let handle = ow.handle.clone();
     let memory = ow.memory;
@@ -222,12 +243,17 @@ fn call(ow: &mut OfficeWasm, method: &str, path: &str, body: &[u8]) -> wasmtime:
     let res_ptr = (ret >> 32) as usize;
     let res_len = (ret & 0xffff_ffff) as usize;
 
-    // result = [status u16 LE][body...]; copy it out before any further call.
-    if res_len < 2 {
-        return Ok((502, Vec::new()));
+    // result = [status u16][ctype_len u16][ctype][body]; copy out before any
+    // further call (the guest reuses a static buffer).
+    if res_len < 4 {
+        return Ok((502, json_ct(), Vec::new()));
     }
     let mut buf = vec![0u8; res_len];
     memory.read(&mut *store, res_ptr, &mut buf)?;
     let status = u16::from_le_bytes([buf[0], buf[1]]);
-    Ok((status, buf[2..].to_vec()))
+    let ctype_len = u16::from_le_bytes([buf[2], buf[3]]) as usize;
+    let ctype_end = (4 + ctype_len).min(buf.len());
+    let ctype = String::from_utf8_lossy(&buf[4..ctype_end]).into_owned();
+    let body = buf[ctype_end..].to_vec();
+    Ok((status, ctype, body))
 }

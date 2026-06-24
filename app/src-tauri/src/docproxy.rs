@@ -216,9 +216,11 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         let p = pq.clone();
         let b = body_bytes.to_vec();
         let res = tokio::task::spawn_blocking(move || crate::wasmoffice::handle(&id, &m, &p, &b)).await;
-        if let Ok(Some((status, out))) = res {
+        if let Ok(Some((status, ctype, out))) = res {
             let mut headers = HeaderMap::new();
-            headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+            if let Ok(v) = HeaderValue::from_str(&ctype) {
+                headers.insert(header::CONTENT_TYPE, v);
+            }
             let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             return build_response(code, headers, out);
         }
