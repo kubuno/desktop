@@ -1257,7 +1257,11 @@
     if (name === 'apps') loadApps();
     closeAll();
   }
-  VIEWS.forEach(v => document.getElementById('nav-' + v).addEventListener('click', () => showView(v)));
+  VIEWS.forEach(v => {
+    // "apps" has no sidebar nav button (opened from the header) — skip it here.
+    const nav = document.getElementById('nav-' + v);
+    if (nav) nav.addEventListener('click', () => showView(v));
+  });
 
   // ── Close all popups / dropdowns ───────────────────────────────────────────
   function closeAll() {
