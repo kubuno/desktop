@@ -26,6 +26,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use axum::{
     body::Body,
@@ -133,15 +134,42 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
 
 // ── Auth interception ───────────────────────────────────────────────────────
 
-/// `POST /api/v1/auth/refresh` → answer from the native session. Online: force a
-/// kubuno-sync refresh (rotates the refresh token on disk) and return the fresh
-/// access token. Offline: return the last good / stored token so the web app can
-/// still bootstrap and mount the editor from IndexedDB.
+/// How long a freshly minted access token is reused before we rotate again. The
+/// core's access token lives ~15 min; rotating at most every 10 min keeps the
+/// frontend authenticated without churning the server's limited session slots
+/// (which, done on every bootstrap/retry, would evict the active token and log
+/// the user out).
+const REFRESH_TTL: Duration = Duration::from_secs(600);
+
+/// Per-instance cache of the last access token handed out and when. Shared by all
+/// document/app windows so a flurry of `/auth/refresh` calls maps to one rotation.
+fn token_cache() -> &'static Mutex<HashMap<String, (String, Instant)>> {
+    static C: OnceLock<Mutex<HashMap<String, (String, Instant)>>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// `POST /api/v1/auth/refresh` → answer from the native session WITHOUT rotating
+/// every time. Returns the cached token while it's fresh; otherwise forces one
+/// kubuno-sync refresh (rotating on disk) and caches it. Offline: returns the
+/// last good / stored token so the web app can still bootstrap from IndexedDB.
 async fn auth_refresh(State(st): State<ProxyState>) -> Response {
+    // Reuse the still-fresh token (no rotation) — this is the hot path.
+    {
+        let cache = token_cache().lock().unwrap_or_else(|p| p.into_inner());
+        if let Some((tok, at)) = cache.get(&st.id) {
+            if at.elapsed() < REFRESH_TTL {
+                return token_json(tok.clone());
+            }
+        }
+    }
     let id = st.id.clone();
     let refreshed = tokio::task::spawn_blocking(move || kubuno_sync::refresh_access(&id)).await;
     match refreshed {
         Ok(Ok(tok)) => {
+            token_cache()
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .insert(st.id.clone(), (tok.clone(), Instant::now()));
             let _ = std::fs::write(st.cache_dir.join("last_token"), &tok);
             token_json(tok)
         }
