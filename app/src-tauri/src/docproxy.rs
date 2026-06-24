@@ -1,0 +1,430 @@
+//! Local document proxy — gives the embedded web app a STABLE origin
+//! (`http://127.0.0.1:<fixed port>`) online and offline, which is what makes
+//! offline reload work: IndexedDB (where `y-indexeddb` persists the document) is
+//! keyed by origin, so the window must never switch between the remote core and
+//! a local URL.
+//!
+//! The proxy:
+//!   • serves the web shell + module bundle + assets, caching every successful
+//!     GET to disk so a reload while offline is served from cache;
+//!   • passes `/api/v1/*` through to the core, injecting the native session
+//!     (`Authorization: Bearer`) so the web app is authenticated WITHOUT a web
+//!     login — and caches a few read endpoints (`/me`, `/modules`, the document)
+//!     so the editor can still mount offline;
+//!   • intercepts `POST /api/v1/auth/refresh` and answers it from the native
+//!     kubuno-sync session (rotating on disk), so the frontend's bootstrap
+//!     (`initialize()` → refresh → `/me`) succeeds with a real core token that it
+//!     then reuses for every request and for the collab WebSocket token;
+//!   • bridges the collab WebSocket (`/collab/:room/sync`) to the core, failing
+//!     cleanly when offline (the frontend falls back to `y-indexeddb`).
+//!
+//! Auth design: a SINGLE interception point (`/auth/refresh`) hands the frontend
+//! the native access token. After that the frontend carries a valid token in
+//! `Authorization` and in the WS `?token=` itself — no per-request rewriting and
+//! no frontend changes.
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
+
+use axum::{
+    body::Body,
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Path as AxPath, RawQuery, Request, State,
+    },
+    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Router,
+};
+use futures_util::{SinkExt, StreamExt};
+use sha2::{Digest, Sha256};
+use tokio_tungstenite::tungstenite::Message as TMsg;
+
+const MAX_BODY: usize = 32 * 1024 * 1024;
+
+#[derive(Clone)]
+struct ProxyState {
+    id:        String,
+    upstream:  String, // e.g. "https://dev.kubuno.com" (no trailing slash)
+    http:      reqwest_async::Client,
+    cache_dir: PathBuf,
+}
+
+/// instance id → loopback port of its running proxy.
+fn registry() -> &'static Mutex<HashMap<String, u16>> {
+    static R: OnceLock<Mutex<HashMap<String, u16>>> = OnceLock::new();
+    R.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Deterministic, stable loopback port for an instance (FNV-1a over the id).
+/// Stability across restarts is what keeps the web origin — and therefore the
+/// offline IndexedDB store — identical between sessions.
+fn port_for(id: &str) -> u16 {
+    let mut h: u32 = 0x811c_9dc5;
+    for b in id.as_bytes() {
+        h ^= *b as u32;
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    8700 + (h % 80) as u16
+}
+
+/// Ensure the proxy for `id` is running and return its loopback port. Idempotent:
+/// a second call for the same instance returns the already-bound port.
+pub fn ensure_started(id: &str) -> Result<u16, String> {
+    {
+        let reg = registry().lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(p) = reg.get(id) {
+            return Ok(*p);
+        }
+    }
+    let upstream = kubuno_sync::server_url(id)
+        .ok_or_else(|| format!("instance inconnue : {id}"))?
+        .trim_end_matches('/')
+        .to_string();
+    let cache_dir = kubuno_sync::db_path(id)
+        .map_err(|e| e.to_string())?
+        .parent()
+        .map(|p| p.join("webcache"))
+        .ok_or_else(|| "chemin de cache introuvable".to_string())?;
+    std::fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+
+    let port = port_for(id);
+    // Bind synchronously so we fail early (and keep ownership of the port) before
+    // the window is told to load it.
+    let std_listener =
+        std::net::TcpListener::bind(("127.0.0.1", port)).map_err(|e| format!("bind {port} : {e}"))?;
+    std_listener.set_nonblocking(true).map_err(|e| e.to_string())?;
+
+    let state = ProxyState {
+        id: id.to_string(),
+        upstream,
+        http: reqwest_async::Client::builder()
+            .build()
+            .map_err(|e| e.to_string())?,
+        cache_dir,
+    };
+
+    tauri::async_runtime::spawn(async move {
+        let listener = match tokio::net::TcpListener::from_std(std_listener) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("[docproxy] from_std : {e}");
+                return;
+            }
+        };
+        let app = Router::new()
+            .route("/api/v1/auth/refresh", post(auth_refresh))
+            .route("/collab/:room/sync", get(collab_ws))
+            .fallback(proxy_all)
+            .with_state(state);
+        if let Err(e) = axum::serve(listener, app).await {
+            eprintln!("[docproxy] serve : {e}");
+        }
+    });
+
+    registry()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .insert(id.to_string(), port);
+    Ok(port)
+}
+
+// ── Auth interception ───────────────────────────────────────────────────────
+
+/// `POST /api/v1/auth/refresh` → answer from the native session. Online: force a
+/// kubuno-sync refresh (rotates the refresh token on disk) and return the fresh
+/// access token. Offline: return the last good / stored token so the web app can
+/// still bootstrap and mount the editor from IndexedDB.
+async fn auth_refresh(State(st): State<ProxyState>) -> Response {
+    let id = st.id.clone();
+    let refreshed = tokio::task::spawn_blocking(move || kubuno_sync::refresh_access(&id)).await;
+    match refreshed {
+        Ok(Ok(tok)) => {
+            let _ = std::fs::write(st.cache_dir.join("last_token"), &tok);
+            token_json(tok)
+        }
+        _ => {
+            if let Ok(tok) = std::fs::read_to_string(st.cache_dir.join("last_token")) {
+                if !tok.is_empty() {
+                    return token_json(tok);
+                }
+            }
+            if let Some(tok) = kubuno_sync::access_token(&st.id) {
+                return token_json(tok);
+            }
+            (StatusCode::SERVICE_UNAVAILABLE, "hors-ligne, aucune session en cache").into_response()
+        }
+    }
+}
+
+fn token_json(token: String) -> Response {
+    let body = serde_json::json!({ "access_token": token }).to_string();
+    ([(header::CONTENT_TYPE, "application/json")], body).into_response()
+}
+
+// ── Generic caching reverse proxy ───────────────────────────────────────────
+
+async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    let path = uri.path().to_string();
+    let pq = uri
+        .path_and_query()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_else(|| path.clone());
+    let req_headers = req.headers().clone();
+    let body_bytes = axum::body::to_bytes(req.into_body(), MAX_BODY)
+        .await
+        .unwrap_or_default();
+
+    let is_get = method == Method::GET;
+    let navigation = is_get && wants_html(&req_headers) && !is_asset_or_api(&path);
+    let cacheable = is_get && (is_cacheable_asset(&path) || is_cacheable_api(&path));
+
+    let url = format!("{}{}", st.upstream, pq);
+    let mut rb = st.http.request(method.clone(), &url);
+    for (k, v) in req_headers.iter() {
+        if is_hop_by_hop(k.as_str()) || k == header::HOST {
+            continue;
+        }
+        rb = rb.header(k.clone(), v.clone());
+    }
+    // Inject the native identity for API calls that arrive before the frontend
+    // has its token (e.g. the un-awaited `fetchModules()` during bootstrap).
+    if path.starts_with("/api/") && !req_headers.contains_key(header::AUTHORIZATION) {
+        if let Some(tok) = kubuno_sync::access_token(&st.id) {
+            if let Ok(v) = HeaderValue::from_str(&format!("Bearer {tok}")) {
+                rb = rb.header(header::AUTHORIZATION, v);
+            }
+        }
+    }
+    if !body_bytes.is_empty() {
+        rb = rb.body(body_bytes.to_vec());
+    }
+
+    match rb.send().await {
+        Ok(resp) => {
+            let status = resp.status();
+            let ct = resp
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("application/octet-stream")
+                .to_string();
+            let mut out = HeaderMap::new();
+            for (k, v) in resp.headers().iter() {
+                if is_hop_by_hop(k.as_str()) {
+                    continue;
+                }
+                out.insert(k.clone(), v.clone());
+            }
+            let bytes = resp.bytes().await.unwrap_or_default();
+            if status.is_success() {
+                if cacheable {
+                    cache_write(&st.cache_dir, &path, &ct, &bytes);
+                }
+                if navigation && ct.contains("text/html") {
+                    cache_write(&st.cache_dir, "__shell__", &ct, &bytes);
+                }
+            }
+            build_response(status, out, bytes.to_vec())
+        }
+        Err(_) => {
+            // Offline: serve from cache so the shell/app/editor can still load.
+            if let Some((ct, bytes)) = cache_read(&st.cache_dir, &path) {
+                return cached(ct, bytes);
+            }
+            if navigation {
+                if let Some((ct, bytes)) = cache_read(&st.cache_dir, "__shell__") {
+                    return cached(ct, bytes);
+                }
+            }
+            (StatusCode::BAD_GATEWAY, "hors-ligne et non mis en cache").into_response()
+        }
+    }
+}
+
+// ── Collab WebSocket bridge ─────────────────────────────────────────────────
+
+async fn collab_ws(
+    State(st): State<ProxyState>,
+    AxPath(room): AxPath<String>,
+    RawQuery(q): RawQuery,
+    ws: WebSocketUpgrade,
+) -> Response {
+    // The frontend already puts its (native) token in `?token=`; keep it, but
+    // fall back to the stored token if somehow absent.
+    let query = q.unwrap_or_default();
+    let has_token = query.split('&').any(|p| p.starts_with("token="));
+    let token = if has_token {
+        String::new()
+    } else {
+        kubuno_sync::access_token(&st.id).unwrap_or_default()
+    };
+    let scheme = if st.upstream.starts_with("https") { "wss" } else { "ws" };
+    let host = st
+        .upstream
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    // Axum decodes the path param; the core expects the ':' percent-encoded.
+    let room_enc = room.replace(':', "%3A");
+    let mut up = format!("{scheme}://{host}/collab/{room_enc}/sync");
+    if !query.is_empty() {
+        up.push('?');
+        up.push_str(&query);
+    } else if !token.is_empty() {
+        up.push_str("?token=");
+        up.push_str(&token);
+    }
+    ws.on_upgrade(move |client| bridge(client, up))
+}
+
+async fn bridge(client: WebSocket, upstream_url: String) {
+    let upstream = match tokio_tungstenite::connect_async(&upstream_url).await {
+        Ok((s, _)) => s,
+        Err(_) => {
+            // Offline / refused: close the client socket so the frontend treats
+            // collab as disconnected and stays in offline (y-indexeddb) mode.
+            let mut c = client;
+            let _ = c.send(Message::Close(None)).await;
+            return;
+        }
+    };
+    let (mut up_tx, mut up_rx) = upstream.split();
+    let (mut cl_tx, mut cl_rx) = client.split();
+
+    let client_to_up = async {
+        while let Some(Ok(msg)) = cl_rx.next().await {
+            let fwd = match msg {
+                Message::Binary(b) => TMsg::Binary(b),
+                Message::Text(t) => TMsg::Text(t),
+                Message::Ping(p) => TMsg::Ping(p),
+                Message::Pong(p) => TMsg::Pong(p),
+                Message::Close(_) => break,
+            };
+            if up_tx.send(fwd).await.is_err() {
+                break;
+            }
+        }
+        let _ = up_tx.close().await;
+    };
+    let up_to_client = async {
+        while let Some(Ok(msg)) = up_rx.next().await {
+            let fwd = match msg {
+                TMsg::Binary(b) => Message::Binary(b),
+                TMsg::Text(t) => Message::Text(t),
+                TMsg::Ping(p) => Message::Ping(p),
+                TMsg::Pong(p) => Message::Pong(p),
+                TMsg::Close(_) => break,
+                TMsg::Frame(_) => continue,
+            };
+            if cl_tx.send(fwd).await.is_err() {
+                break;
+            }
+        }
+        let _ = cl_tx.close().await;
+    };
+    tokio::select! {
+        _ = client_to_up => {},
+        _ = up_to_client => {},
+    }
+}
+
+// ── Disk cache ──────────────────────────────────────────────────────────────
+
+fn cache_key(path: &str) -> String {
+    let mut h = Sha256::new();
+    h.update(path.as_bytes());
+    hex(&h.finalize())
+}
+
+fn hex(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        s.push_str(&format!("{b:02x}"));
+    }
+    s
+}
+
+fn cache_write(dir: &std::path::Path, path: &str, content_type: &str, body: &[u8]) {
+    let key = cache_key(path);
+    let _ = std::fs::write(dir.join(&key), body);
+    let _ = std::fs::write(dir.join(format!("{key}.ct")), content_type);
+}
+
+fn cache_read(dir: &std::path::Path, path: &str) -> Option<(String, Vec<u8>)> {
+    let key = cache_key(path);
+    let body = std::fs::read(dir.join(&key)).ok()?;
+    let ct = std::fs::read_to_string(dir.join(format!("{key}.ct")))
+        .unwrap_or_else(|_| "application/octet-stream".into());
+    Some((ct, body))
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+fn cached(content_type: String, body: Vec<u8>) -> Response {
+    let mut headers = HeaderMap::new();
+    if let Ok(v) = HeaderValue::from_str(&content_type) {
+        headers.insert(header::CONTENT_TYPE, v);
+    }
+    build_response(StatusCode::OK, headers, body)
+}
+
+fn build_response(status: StatusCode, headers: HeaderMap, body: Vec<u8>) -> Response {
+    let mut resp = Response::builder().status(status);
+    if let Some(h) = resp.headers_mut() {
+        *h = headers;
+    }
+    resp.body(Body::from(body))
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
+}
+
+fn wants_html(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .map(|a| a.contains("text/html"))
+        .unwrap_or(false)
+}
+
+/// True for paths that are static assets or API/collab (i.e. NOT SPA navigations).
+fn is_asset_or_api(path: &str) -> bool {
+    path.starts_with("/assets/")
+        || path.starts_with("/shared/")
+        || path.starts_with("/modules/")
+        || path.starts_with("/api/")
+        || path.starts_with("/collab/")
+        || path == "/favicon.svg"
+        || path == "/office-logo.svg"
+}
+
+fn is_cacheable_asset(path: &str) -> bool {
+    path == "/"
+        || path.starts_with("/assets/")
+        || path.starts_with("/shared/")
+        || path.starts_with("/modules/")
+        || path == "/favicon.svg"
+        || path == "/office-logo.svg"
+}
+
+/// Read-only API endpoints worth caching so the editor can mount offline.
+fn is_cacheable_api(path: &str) -> bool {
+    path == "/api/v1/modules" || path == "/api/v1/me" || path.starts_with("/api/v1/office")
+}
+
+fn is_hop_by_hop(name: &str) -> bool {
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        "connection"
+            | "keep-alive"
+            | "proxy-authenticate"
+            | "proxy-authorization"
+            | "te"
+            | "trailer"
+            | "transfer-encoding"
+            | "upgrade"
+            | "content-length"
+    )
+}

@@ -187,6 +187,26 @@ fn move_into(from: &std::path::Path, to: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
+/// Force a token refresh and return the fresh access token for an instance.
+/// Used by the desktop document proxy to authenticate the embedded web app with
+/// the native session (rotating the refresh token on disk) — no web login.
+pub fn refresh_access(id: &str) -> Result<String> {
+    let cfg = Config::load(id)?;
+    let mut api = api::Api::new(id.to_string(), cfg.server_url, Creds::load(id)?);
+    api.refresh_access()
+}
+
+/// The current (possibly stale) access token stored for an instance, if any.
+/// Returned offline so the embedded web app can still bootstrap from cache.
+pub fn access_token(id: &str) -> Option<String> {
+    Creds::load(id).ok().map(|c| c.access_token).filter(|t| !t.is_empty())
+}
+
+/// The upstream core URL of an instance (proxy target).
+pub fn server_url(id: &str) -> Option<String> {
+    Config::load(id).ok().map(|c| c.server_url)
+}
+
 /// Download a file's content by server id, for the given instance. Used by the
 /// on-demand hydration callback when a virtual (online-only) file is opened.
 pub fn download_for(id: &str, file_id: &str) -> Result<Vec<u8>> {
