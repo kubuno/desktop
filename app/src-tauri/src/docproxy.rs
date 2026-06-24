@@ -129,13 +129,24 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
             .route("/collab/:room/sync", get(collab_ws))
             .fallback(proxy_all)
             .with_state(state.clone());
-        // Background Drive sync. When the drive-core WASM is installed, pull the
-        // core delta and ingest it into its local store (true local-first listings).
-        // Otherwise fall back to cache-warming the whole Drive tree so browsing
-        // still works offline.
+        // Background local-first sync. While online:
+        //  • office documents content → documents-core (push local edits + pull),
+        //  • Drive tree/listings → drive-core delta ingest (true local-first), or
+        //    cache-warming the whole tree as a fallback when drive-core is absent.
+        // Keeps both local stores populated so the app works fully offline.
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(Duration::from_secs(5)).await;
             loop {
+                let online = !kubuno_sync::is_offline();
+                if online && crate::wasmoffice::enabled() {
+                    let id = state.id.clone();
+                    if let Ok(Err(e)) =
+                        tauri::async_runtime::spawn_blocking(move || crate::office_sync::sync(&id))
+                            .await
+                    {
+                        eprintln!("[docproxy] office sync : {e}");
+                    }
+                }
                 if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) {
                     let id = state.id.clone();
                     if let Ok(Err(e)) =
@@ -144,7 +155,7 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
                     {
                         eprintln!("[docproxy] drive sync : {e}");
                     }
-                } else {
+                } else if online {
                     warm_drive_cache(&state).await;
                 }
                 tokio::time::sleep(Duration::from_secs(600)).await;
