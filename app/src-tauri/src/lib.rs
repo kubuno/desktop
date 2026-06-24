@@ -393,6 +393,10 @@ async fn open_document(
         .title("Kubuno — Document")
         .inner_size(1100.0, 800.0)
         .decorations(false)
+        // Opaque white background for window + webview: stops the white flash on
+        // resize (a borderless window otherwise paints its default background
+        // before WebView2 repaints). The flush content meets the edges in white.
+        .background_color(tauri::window::Color(255, 255, 255, 255))
         .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
@@ -437,6 +441,8 @@ async fn open_app(
         .title(&title)
         .inner_size(1200.0, 820.0)
         .decorations(false)
+        // See open_document: opaque background kills the borderless resize flicker.
+        .background_color(tauri::window::Color(255, 255, 255, 255))
         .initialization_script(TITLEBAR_JS)
         .build()
         .map_err(|e| e.to_string())?;
