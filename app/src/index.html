@@ -1562,19 +1562,29 @@
   // ── App launcher (waffle) ────────────────────────────────────────────────────
   // Map a module id or a lucide icon name to a glyph (the desktop shell can't
   // render the web's lucide React components, so we approximate with emoji).
-  const APP_EMOJI = {
+  // Per-item glyph, keyed by the exact lucide icon name the core exposes
+  // (PascalCase) so each sub-app gets a distinct icon.
+  const ICON_EMOJI = {
+    Map: '🗺️', ClipboardList: '📋', AppWindow: '🪟', Briefcase: '💼', Clock: '🕘',
+    Star: '⭐', BookOpen: '📖', TableProperties: '📊', Network: '🕸️', LayoutTemplate: '📽️',
+    FolderKanban: '🗂️', BarChart3: '📈', StickyNote: '📝', Trash2: '🗑️', Trash: '🗑️',
+    Workflow: '🔀', Image: '🖼️', BookImage: '📔', Heart: '❤️', Code2: '💻', Code: '💻',
+    Archive: '🗄️', Calendar: '📅', Users: '👥', User: '👤', BookMarked: '🔖',
+    FolderOpen: '📂', Folder: '📁', Share2: '🤝', Tv: '📺', Music: '🎵',
+    MessageSquare: '💬', MessagesSquare: '💬', CheckSquare: '✅', Columns3: '📋',
+    Palette: '🎨', Box: '📦', PenTool: '🖊️', Film: '🎬', Clapperboard: '🎬',
+    FileEdit: '📝', FileText: '📄', Inbox: '📥', Send: '📤', ShieldAlert: '🛡️',
+    Sparkles: '✨', KeyRound: '🔑', Key: '🔑', Calculator: '🧮', Sigma: '∑',
+  };
+  // Fallback per module id when the icon name isn't mapped.
+  const MODULE_EMOJI = {
     drive: '📁', calendar: '📅', photos: '🖼️', notes: '📝', office: '📄', paintsharp: '🎨',
     jarvis: '🤖', forms: '📋', chat: '💬', contacts: '👥', mail: '✉️', code: '💻', media: '🎬',
-    keestore: '🔑', maps: '🗺️', tasks: '✅', forum: '🗣️', flow: '🔀',
-    'file-text': '📄', folder: '📁', 'folder-kanban': '📌', image: '🖼️', images: '🖼️',
-    mail: '✉️', users: '👥', user: '👤', table: '📊', 'table-properties': '📊',
-    'bar-chart': '📊', 'bar-chart-3': '📊', 'layout-template': '📽️', network: '🔗',
-    zap: '⚡', sigma: '∑', 'sticky-note': '🟨', 'message-circle': '💬', 'message-square': '💬',
-    map: '🗺️', music: '🎵', film: '🎬', key: '🔑', 'check-square': '✅', 'list-todo': '✅',
-    'pen-tool': '🖌️', palette: '🎨', settings: '⚙️',
+    keestore: '🔑', maps: '🗺️', tasks: '✅', forum: '🗣️', flow: '🔀', wiki: '📚',
+    books: '📚', app: '🪟',
   };
   const appEmoji = (moduleId, icon) =>
-    APP_EMOJI[(icon || '').toLowerCase()] || APP_EMOJI[moduleId] || '🧩';
+    ICON_EMOJI[icon] || MODULE_EMOJI[moduleId] || '🧩';
 
   let appsLoading = false;
   async function loadApps() {
