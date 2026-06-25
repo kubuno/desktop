@@ -685,10 +685,10 @@ const STANDALONE_INJECT: &str = r#"<style>
    module fills every edge. Targets the core shell layout (same for all modules). */
 .h-screen > .flex.flex-1{padding:0 !important;gap:0 !important}
 .h-screen > .flex.flex-1 > .bg-white{border-radius:0 !important}
-#kbn-winctl{position:fixed;top:0;right:0;height:38px;display:flex;z-index:2147483647}
-#kbn-winctl button{width:46px;height:38px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-#kbn-winctl button svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:1.4;stroke-linecap:round}
-#kbn-winctl button:hover{background:rgba(255,255,255,.18)}
+#kbn-winctl{position:fixed;top:0;right:0;display:flex;gap:6px;padding:6px;z-index:2147483647}
+#kbn-winctl button{width:32px;height:32px;border:0;border-radius:8px;background:rgba(255,255,255,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .12s}
+#kbn-winctl button svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:1.4;stroke-linecap:round}
+#kbn-winctl button:hover{background:rgba(255,255,255,.28)}
 #kbn-winctl button.kbn-close:hover{background:#e81123}
 </style></head>"#;
 
