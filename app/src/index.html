@@ -520,7 +520,7 @@
       padding: 12px 6px; border-radius: var(--r-lg); border: 1px solid transparent;
       background: none; cursor: pointer; user-select: none; transition: background .12s, border-color .12s;
     }
-    .app-tile:hover { background: var(--surface-2); }
+    .app-tile:hover { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 3px rgba(0,0,0,.06); }
     .app-tile:focus-visible { outline: none; border-color: var(--accent); }
     .app-icon {
       width: 52px; height: 52px; border-radius: 14px;
@@ -1722,6 +1722,13 @@
   });
   document.addEventListener('click', () => appCtx.classList.add('hidden'));
   window.addEventListener('blur', () => appCtx.classList.add('hidden'));
+
+  // Suppress WebView2's default browser context menu (Back / Refresh / Save as /
+  // Print…) — inappropriate for a desktop shell. Custom menus (launcher tiles)
+  // call preventDefault themselves; native copy/paste stays on text fields.
+  document.addEventListener('contextmenu', e => {
+    if (!e.target.closest('input, textarea, [contenteditable]')) e.preventDefault();
+  });
 
   // ── Open config dir ────────────────────────────────────────────────────────
   document.getElementById('btn-open-config-dir').addEventListener('click', async () => {
