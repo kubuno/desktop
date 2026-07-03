@@ -405,6 +405,9 @@
     .dd-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--muted); }
     .dd-item:hover { background: var(--hover); }
     .dd-item.danger, .dd-item.danger svg { color: var(--danger); }
+    .dd-item.disabled, .dd-item.disabled svg { color: var(--muted); opacity: .5; }
+    .dd-item.disabled { cursor: default; }
+    .dd-item.disabled:hover { background: none; }
     .dd-sep { height: 1px; background: var(--border); margin: 4px 0; }
 
     /* ── App body ── */
@@ -513,20 +516,25 @@
       text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px 2px;
     }
     .apps-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px;
+      /* Large outer gap (non-clickable) between tiles. */
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 20px;
     }
     .app-tile {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 12px 6px; border-radius: var(--r-lg); border: 1px solid transparent;
+      /* Tight inner padding so the clickable hit area hugs the icon + label. */
+      padding: 4px 2px; border-radius: var(--r-lg); border: 1px solid transparent;
       background: none; cursor: pointer; user-select: none; transition: background .12s, border-color .12s;
     }
-    .app-tile:hover { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 3px rgba(0,0,0,.06); }
     .app-tile:focus-visible { outline: none; border-color: var(--accent); }
     .app-icon {
       width: 52px; height: 52px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 26px; line-height: 1; background: var(--accent-light); color: var(--accent);
+      font-size: 26px; line-height: 1; color: var(--accent);
+      /* Blue tile background — its opacity intensifies on hover (see .app-tile:hover).
+         Rest .20 ≈ the original --accent-light (#d3e3fd); hover roughly doubles it. */
+      background: rgb(26 115 232 / .20); transition: background .12s;
     }
+    .app-tile:hover .app-icon { background: rgb(26 115 232 / .42); }
     .app-label {
       font-size: 12px; color: var(--text); text-align: center; line-height: 1.25;
       max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -546,8 +554,31 @@
     .app-badge svg { width: 10px; height: 10px; display: block; }
     .app-badge.on  { background: #1a7f37; color: #fff; }            /* installed (offline-ready) */
     .app-badge.off { background: var(--muted); color: #fff; }       /* available to download */
+    .app-badge.upd { background: #d97706; color: #fff; }            /* installed, update available */
     .app-badge.busy { background: var(--accent); color: #fff; animation: kbn-pulse 1s ease-in-out infinite; }
     @keyframes kbn-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+
+    /* Consent-gated update banner (installed local-first backends). */
+    #wasm-updates { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+    .upd-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: var(--r-md);
+      background: rgb(26 115 232 / .08); border: 1px solid rgb(26 115 232 / .25);
+    }
+    .upd-card svg { width: 18px; height: 18px; color: var(--accent); flex: 0 0 auto; }
+    .upd-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; }
+    .upd-text b { font-weight: 600; }
+    .upd-text .upd-note { color: var(--muted); font-size: 12px; }
+    .upd-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+    .upd-btn {
+      font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: var(--r-sm);
+      border: 1px solid transparent; cursor: pointer;
+    }
+    .upd-btn.primary { background: var(--accent); color: #fff; }
+    .upd-btn.ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+    .upd-btn:disabled { opacity: .55; cursor: default; }
+    .upd-card.app-needed { background: rgb(217 119 6 / .08); border-color: rgb(217 119 6 / .3); }
+    .upd-card.app-needed svg { color: #b45309; }
 
     /* Activity */
     .activity-list { display: flex; flex-direction: column; gap: 6px; }
@@ -1014,11 +1045,17 @@
 
       <!-- ── APPS LAUNCHER VIEW ────────────────────────────── -->
       <div class="view hidden" id="view-apps">
-        <p class="page-title">Applications</p>
-        <p style="font-size:12px;color:var(--muted);margin:-6px 0 4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <p class="page-title" style="margin-bottom:0">Applications</p>
+          <!-- Manual trigger of the periodic (6 h) WASM update check. -->
+          <button class="upd-btn ghost" id="btn-check-updates" title="Recherche immédiate de mises à jour des backends hors-ligne (sinon vérifiées toutes les 6 h)">Vérifier les mises à jour</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:6px 0 4px">
           Double-cliquez pour lancer en local (fenêtre native, hors-ligne).
           Clic droit pour choisir local ou navigateur web.
         </p>
+        <!-- Consent-gated update prompts for installed local-first backends. -->
+        <div id="wasm-updates"></div>
         <div id="apps-container"></div>
       </div>
 
@@ -1613,14 +1650,145 @@
   const tileInstalled = spec => !!spec && spec.needs.every(c => installedComps.includes(c));
   const BADGE_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const BADGE_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7 11 12 16 17 11"/></svg>';
+  const BADGE_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="6"/><polyline points="6 12 12 6 18 12"/></svg>';
+  // Components (installed) that have a pending update — drives the on-tile indicator.
+  let updatableComps = new Set();
   function tileBadge(route) {
     const spec = tileSpec(route);
     if (!spec) return '';
     const on = tileInstalled(spec);
+    // Installed + a newer WASM is available for one of its backends → update badge.
+    if (on && spec.needs.some(c => updatableComps.has(c))) {
+      return '<span class="app-badge upd" title="Mise à jour hors-ligne disponible">' + BADGE_UP + '</span>';
+    }
     return '<span class="app-badge ' + (on ? 'on' : 'off') + '" title="'
       + (on ? 'Hors-ligne installé' : 'Disponible hors-ligne — clic droit pour télécharger') + '">'
       + (on ? BADGE_CHECK : BADGE_DL) + '</span>';
   }
+
+  // Re-render each tile's badge in place from the current install/update state
+  // (used after an async update check resolves, without rebuilding the grid).
+  function applyTileBadges() {
+    document.querySelectorAll('.app-tile').forEach(t => {
+      const icon = t.querySelector('.app-icon');
+      if (!icon) return;
+      const old = icon.querySelector('.app-badge');
+      if (old) old.remove();
+      const html = tileBadge(t.dataset.route);
+      if (html) icon.insertAdjacentHTML('beforeend', html);
+    });
+  }
+
+  // ── Local-first WASM updates (detect + consent, never auto-download) ─────────
+  const WASM_LABEL = { 'documents-core.wasm': 'Documents (hors-ligne)', 'drive-core.wasm': 'Drive (hors-ligne)' };
+  const ICO_UPD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
+  // A short-sha suffix keyed per component; "Plus tard" suppresses THIS sha only,
+  // so a newer build re-prompts.
+  const updDismissKey = name => 'kubuno-wasm-skip-' + name;
+  const updDismissed = (name, sha) => localStorage.getItem(updDismissKey(name)) === sha;
+
+  // Query the backend for updates, refresh the on-tile indicator state, and return
+  // the list. Shared by the banner and the tile badges (single source of truth).
+  async function checkUpdates() {
+    if (!activeId) return [];
+    let list = [];
+    try { list = (await invoke('check_component_updates', { instanceId: activeId })) || []; }
+    catch (_) { return []; }
+    updatableComps = new Set(list.filter(u => u.update_available).map(u => u.name));
+    applyTileBadges();
+    // Surface each newly-seen update as a notification (bell + optional toast),
+    // ONCE per (component, sha) — the periodic re-checks stay silent afterwards.
+    for (const u of list) {
+      if (!u.update_available) continue;
+      const k = 'kubuno-wasm-notified-' + u.name;
+      if (localStorage.getItem(k) === u.available_sha) continue;
+      localStorage.setItem(k, u.available_sha);
+      const ver = u.available_version ? ' (v' + u.available_version + ')' : '';
+      addNotification('synced', 'Mise à jour hors-ligne disponible',
+        (WASM_LABEL[u.name] || u.name) + ver + ' — ouvrez le lanceur pour l\'installer.');
+    }
+    return list;
+  }
+
+  async function renderWasmUpdates() {
+    const box = document.getElementById('wasm-updates');
+    if (!box || !activeId) return;
+    const list = await checkUpdates();
+    // Show updatable components (respecting per-sha dismissal) + app-needed ones.
+    const cards = list.filter(u =>
+      (u.update_available && !updDismissed(u.name, u.available_sha)) || u.needs_app_update);
+    box.innerHTML = cards.map(u => {
+      const label = WASM_LABEL[u.name] || u.name;
+      const ver = u.available_version ? ' (→ v' + escapeHtml(u.available_version) + ')' : '';
+      if (u.needs_app_update) {
+        return `<div class="upd-card app-needed" data-name="${escapeHtml(u.name)}" data-sha="${escapeHtml(u.available_sha)}">
+          ${ICO_UPD}
+          <div class="upd-text"><b>${escapeHtml(label)}</b> : une mise à jour existe${ver} mais nécessite une version plus récente de l'application.</div>
+          <div class="upd-actions"><button class="upd-btn ghost" data-act="skip">Ignorer</button></div>
+        </div>`;
+      }
+      const note = u.notes ? `<div class="upd-note">${escapeHtml(u.notes)}</div>` : '';
+      return `<div class="upd-card" data-name="${escapeHtml(u.name)}" data-sha="${escapeHtml(u.available_sha)}">
+        ${ICO_UPD}
+        <div class="upd-text"><b>${escapeHtml(label)}</b> : mise à jour disponible${ver}.${note}</div>
+        <div class="upd-actions">
+          <button class="upd-btn primary" data-act="update">Mettre à jour</button>
+          <button class="upd-btn ghost" data-act="later">Plus tard</button>
+        </div>
+      </div>`;
+    }).join('');
+    return list;
+  }
+
+  // Manual "check now" — same code path as the 6 h periodic check, with feedback.
+  document.getElementById('btn-check-updates').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-check-updates');
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Vérification…';
+    try {
+      const list = await renderWasmUpdates() || [];
+      const n = list.filter(u => u.update_available).length;
+      btn.textContent = n > 0
+        ? (n + ' mise(s) à jour disponible(s)')
+        : 'Tout est à jour';
+    } catch (_) {
+      btn.textContent = 'Vérification impossible';
+    }
+    setTimeout(() => { btn.textContent = prev; btn.disabled = false; }, 2500);
+  });
+
+  // Delegated consent actions for the update cards.
+  document.getElementById('wasm-updates').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.upd-btn');
+    if (!btn) return;
+    const card = btn.closest('.upd-card');
+    const name = card.dataset.name, sha = card.dataset.sha, act = btn.dataset.act;
+    if (act === 'later' || act === 'skip') {
+      localStorage.setItem(updDismissKey(name), sha); // suppress this sha only
+      card.remove();
+      return;
+    }
+    if (act === 'update') {
+      const actions = card.querySelector('.upd-actions');
+      actions.querySelectorAll('button').forEach(b => b.disabled = true);
+      btn.textContent = 'Mise à jour…';
+      try {
+        // Reuses the install path: fetch + mandatory sha verify + atomic hot-swap.
+        await invoke('install_local_components', { instanceId: activeId, components: [name] });
+        localStorage.removeItem(updDismissKey(name));
+        updatableComps.delete(name); // clear the on-tile indicator optimistically
+        card.remove();
+        await refreshInstalledComps();
+        applyTileBadges();         // back to the green "installed" badge
+        renderWasmUpdates();       // re-verify (in case another component still lags)
+      } catch (err) {
+        btn.textContent = 'Échec — réessayer';
+        actions.querySelectorAll('button').forEach(b => b.disabled = false);
+        addNotification('error', 'Mise à jour hors-ligne', WASM_LABEL[name] || name + ' : ' + String(err));
+      }
+    }
+  });
 
   let appsLoading = false;
   async function loadApps() {
@@ -1636,6 +1804,7 @@
         return;
       }
       await refreshInstalledComps();
+      renderWasmUpdates(); // fire-and-forget: check for backend updates (consent-gated)
       c.innerHTML = groups.map(g => `
         <div class="apps-group">
           <div class="apps-group-label">${escapeHtml(g.label)}</div>
@@ -1665,15 +1834,21 @@
 
   const appsContainer = document.getElementById('apps-container');
   const appCtx = document.getElementById('app-ctx');
-  // Double-click (or Enter) → launch locally.
+  // A route can run locally only if it has a WASM backend AND it is installed.
+  // Otherwise "run local" would just fall back to the browser, so we treat the
+  // default launch as a web launch and disable the "Lancer en local" menu item.
+  const canRunLocalRoute = route => { const s = tileSpec(route); return !!s && tileInstalled(s); };
+  const defaultLaunch = (route, label) =>
+    launchApp(route, label, canRunLocalRoute(route) ? 'local' : 'web');
+  // Double-click (or Enter) → launch (local if available, else browser).
   appsContainer.addEventListener('dblclick', e => {
     const tile = e.target.closest('.app-tile');
-    if (tile) launchApp(tile.dataset.route, tile.dataset.label, 'local');
+    if (tile) defaultLaunch(tile.dataset.route, tile.dataset.label);
   });
   appsContainer.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     const tile = e.target.closest('.app-tile');
-    if (tile) launchApp(tile.dataset.route, tile.dataset.label, 'local');
+    if (tile) defaultLaunch(tile.dataset.route, tile.dataset.label);
   });
   // Right-click → launch (local/browser) + manage the offline WASM backend.
   appsContainer.addEventListener('contextmenu', e => {
@@ -1687,8 +1862,14 @@
     const ICO_WEB = `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
     const ICO_DL = `<svg viewBox="0 0 24 24" ${SW}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
     const ICO_TRASH = `<svg viewBox="0 0 24 24" ${SW}><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+    // "Lancer en local" is only meaningful when a local WASM backend is installed
+    // for this route; otherwise it's greyed out (no offline version to run).
+    const canLocal = canRunLocalRoute(route);
+    const localBtn = canLocal
+      ? `<button class="dd-item" data-act="local">${ICO_LOCAL}<span>Lancer en local</span></button>`
+      : `<button class="dd-item disabled" disabled title="Aucune version hors-ligne installée">${ICO_LOCAL}<span>Lancer en local</span></button>`;
     let html =
-      `<button class="dd-item" data-act="local">${ICO_LOCAL}<span>Lancer en local</span></button>` +
+      localBtn +
       `<button class="dd-item" data-act="web">${ICO_WEB}<span>Ouvrir dans le navigateur</span></button>`;
     if (spec) {
       html += '<div class="dd-sep"></div>';
@@ -2089,6 +2270,8 @@
     }
   }
   setInterval(() => { if (activeId) updateConnState(); }, 30000);
+  // Periodically re-check for local-first backend updates (consent-gated, ~6 h).
+  setInterval(() => { if (activeId) renderWasmUpdates(); }, 6 * 3600 * 1000);
 
   // ── Forced offline / online toggle ───────────────────────────────────────────
   function applyOfflineToggle(offline) {
@@ -2149,6 +2332,9 @@
 
     showView('home');
     setSyncState('ok', 'Vos fichiers sont à jour', 'Les activités s\'afficheront ici');
+
+    // Startup check for local-first backend updates (consent-gated, no auto-download).
+    if (activeId) renderWasmUpdates();
   }
 
   loadApp();
