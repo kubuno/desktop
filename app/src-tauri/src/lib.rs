@@ -22,6 +22,8 @@ mod office_sync;
 #[cfg(desktop)]
 mod components;
 #[cfg(desktop)]
+mod office_entities;
+#[cfg(desktop)]
 mod drive_sync;
 #[cfg(desktop)]
 mod drive_push;
@@ -402,6 +404,7 @@ fn component_updates(instance_id: &str) -> Result<Vec<ComponentUpdate>, String> 
 /// per-claim primed/pushable flags (drives tile badges + context menus, claims-
 /// driven — no hardcoded route map in the frontend).
 #[tauri::command]
+#[allow(clippy::needless_return)] // the `return` is required by the mobile cfg branch
 fn component_status(instance_id: String) -> Vec<serde_json::Value> {
     #[cfg(desktop)]
     {

@@ -33,9 +33,16 @@ pub struct Component {
 }
 
 /// Prefixes whose local mutations are replayed to the core by a push loop
-/// (office_sync for documents, drive_push for drive). Everything else is
-/// GET-only until its push loop lands.
-const PUSHABLE: [&str; 2] = ["/api/v1/office/documents", "/api/v1/drive"];
+/// (office_sync for documents, drive_push for drive, office_entities for the
+/// office sub-modules). Everything else is GET-only until its push loop lands.
+const PUSHABLE: [&str; 6] = [
+    "/api/v1/office/documents",
+    "/api/v1/drive",
+    "/api/v1/office/spreadsheets",
+    "/api/v1/office/presentations",
+    "/api/v1/office/diagrams",
+    "/api/v1/office/whiteboard/boards",
+];
 
 /// Builtin fallback for installs that predate the `module`/`claims` manifest
 /// fields (or before the first successful manifest fetch).
@@ -150,11 +157,26 @@ fn primed_marker(instance_id: &str, spec: Spec, prefix: &str) -> Option<PathBuf>
         .map(|p| p.join(spec.subdir).join(format!("primed_{sane}")))
 }
 
+/// Prefixes primed by design: their sync loops predate the primed markers and
+/// keep the store fed from the very first cycle.
+const ALWAYS_PRIMED: [&str; 2] = ["/api/v1/office/documents", "/api/v1/drive"];
+
 fn primed(instance_id: &str, spec: Spec, prefix: &str) -> bool {
-    if PUSHABLE.contains(&prefix) {
-        return true; // documents/drive: their sync loops run since v1
+    if ALWAYS_PRIMED.contains(&prefix) {
+        return true;
     }
     primed_marker(instance_id, spec, prefix).is_some_and(|p| p.is_file())
+}
+
+/// Record that a prefix completed its first full pull: from now on the proxy
+/// serves it from the local store. Called by the prefix's pull loop.
+pub fn mark_primed(instance_id: &str, spec: Spec, prefix: &str) {
+    if let Some(p) = primed_marker(instance_id, spec, prefix) {
+        if let Some(dir) = p.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(p, "1");
+    }
 }
 
 /// Full component status for the launcher UI: per component, whether its
