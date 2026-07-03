@@ -12,6 +12,30 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Creds;
 
+/// Why a token refresh failed, so the UI can tell a real logout from a blip.
+///
+/// - `Genuine`: the core rejected the refresh token itself (401/403) — the
+///   session is truly over and the user must reconnect.
+/// - `Transient`: a network error, timeout, rate-limit (429) or 5xx — **no new
+///   token was issued, so the existing refresh token is still valid**. We must
+///   NOT tell the user "session expired"; just retry later.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuthFailure {
+    Genuine,
+    Transient,
+}
+
+impl std::fmt::Display for AuthFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthFailure::Genuine => write!(f, "session rejetée — reconnexion nécessaire"),
+            AuthFailure::Transient => write!(f, "rafraîchissement temporairement indisponible"),
+        }
+    }
+}
+
+impl std::error::Error for AuthFailure {}
+
 /// Per-instance lock serializing token refreshes. Several `Api` values can exist
 /// for the same instance (the background sync thread plus on-demand calls like
 /// the account popup); without this they would refresh concurrently, each
@@ -22,6 +46,33 @@ fn refresh_lock(id: &str) -> Arc<Mutex<()>> {
     let map = LOCKS.get_or_init(|| Mutex::new(HashMap::new()));
     let mut m = map.lock().unwrap_or_else(|p| p.into_inner());
     m.entry(id.to_string()).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+}
+
+/// How long a successfully rotated access token is shared before rotating again.
+/// The access token lives ~15 min server-side, so reusing it for 5 min is safe —
+/// and it collapses a burst of independent refreshers (doc proxy, sync daemon,
+/// connection probe, WASM update check…) into ONE network rotation. Without
+/// this, every caller rotated its own token: ~6 rotations per app start, which
+/// trips the core's `/auth/refresh` rate-limit (10/min) after a few restarts.
+const FRESH_TTL: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// Per-instance cache of the last successfully rotated access token.
+fn fresh_cache() -> &'static Mutex<HashMap<String, (String, std::time::Instant)>> {
+    static C: OnceLock<Mutex<HashMap<String, (String, std::time::Instant)>>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// After a TRANSIENT refresh failure (rate-limit, 5xx, network), don't hit the
+/// network again for this long — fail fast with `Transient` instead. Without it,
+/// a sync cycle with many pending ops retries the refresh once per op, keeping
+/// the core's 60 s rate-limit window permanently saturated (a self-sustaining
+/// 429 loop). 45 s < the server window, so at most ~1 probe per window.
+const REFRESH_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(45);
+
+/// Per-instance timestamp of the last transient refresh failure.
+fn refresh_cooldown() -> &'static Mutex<HashMap<String, std::time::Instant>> {
+    static C: OnceLock<Mutex<HashMap<String, std::time::Instant>>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Build an HTTP client with the given timeout, applying the configured outbound
@@ -133,6 +184,21 @@ impl Api {
         let lock = refresh_lock(&self.id);
         let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
 
+        // A rotation from the last few minutes is still perfectly valid — adopt
+        // it instead of rotating again (see `FRESH_TTL`). Collapses refresh storms.
+        {
+            let cache = fresh_cache().lock().unwrap_or_else(|p| p.into_inner());
+            if let Some((token, at)) = cache.get(&self.id) {
+                if at.elapsed() < FRESH_TTL && self.creds.access_token != *token {
+                    self.creds.access_token = token.clone();
+                    if let Ok(disk) = Creds::load(&self.id) {
+                        self.creds.refresh_token = disk.refresh_token;
+                    }
+                    return Ok(());
+                }
+            }
+        }
+
         // While we waited for the lock, another Api may have already refreshed
         // and saved a fresh token. Adopt it instead of rotating again (which
         // would invalidate the one just saved).
@@ -143,19 +209,61 @@ impl Api {
             }
         }
 
-        let resp = self
+        // Cooling down after a recent transient failure → fail fast, no network.
+        {
+            let cd = refresh_cooldown().lock().unwrap_or_else(|p| p.into_inner());
+            if let Some(at) = cd.get(&self.id) {
+                if at.elapsed() < REFRESH_COOLDOWN {
+                    return Err(AuthFailure::Transient.into());
+                }
+            }
+        }
+        let note_transient = |id: &str| {
+            refresh_cooldown()
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .insert(id.to_string(), std::time::Instant::now());
+        };
+
+        // A network error/timeout is transient — the session isn't rejected.
+        let resp = match self
             .http
             .post(format!("{}/api/v1/auth/refresh", self.base))
             .json(&serde_json::json!({ "refresh_token": self.creds.refresh_token }))
-            .send()?;
-        if !resp.status().is_success() {
-            bail!("rafraîchissement de session échoué : HTTP {} — reconnecte-toi.", resp.status());
+            .send()
+        {
+            Ok(r) => r,
+            Err(_e) => {
+                note_transient(&self.id);
+                return Err(AuthFailure::Transient.into());
+            }
+        };
+        let status = resp.status();
+        if status.is_success() {
+            let t: NativeTokens = resp.json()?;
+            self.creds.access_token = t.access_token;
+            self.creds.refresh_token = t.refresh_token; // rotation
+            self.creds.save(&self.id)?;
+            // Share this rotation with every other caller for FRESH_TTL,
+            // and clear any failure cooldown.
+            fresh_cache()
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .insert(self.id.clone(), (self.creds.access_token.clone(), std::time::Instant::now()));
+            refresh_cooldown()
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .remove(&self.id);
+            return Ok(());
         }
-        let t: NativeTokens = resp.json()?;
-        self.creds.access_token = t.access_token;
-        self.creds.refresh_token = t.refresh_token; // rotation
-        self.creds.save(&self.id)?;
-        Ok(())
+        // Only a rejected token (401/403) means the session is really over. A 429
+        // (rate-limit) or 5xx issues no token → the refresh token stays valid, so
+        // keep the session and retry later instead of forcing a reconnect.
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Err(AuthFailure::Genuine.into());
+        }
+        note_transient(&self.id);
+        Err(AuthFailure::Transient.into())
     }
 
     /// Force a token refresh and return the fresh access token. Used by the
