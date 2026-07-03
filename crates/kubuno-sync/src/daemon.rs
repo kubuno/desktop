@@ -32,6 +32,12 @@ pub struct SyncEvent {
     pub body:  String,
 }
 
+/// Number of consecutive failed sync cycles before an error is surfaced as a
+/// notification. Transient blips (a flaky network, a server restart) usually
+/// recover within a cycle or two, so we stay silent until the failure looks
+/// persistent. The counter resets the moment a cycle completes without error.
+const ERROR_NOTIFY_THRESHOLD: u32 = 3;
+
 /// Watch every configured instance at once: one background thread per instance,
 /// each running its own filesystem watcher + server poll. `on_event` is invoked
 /// (with the instance id) for each notable sync outcome. Blocks until interrupted.
@@ -70,8 +76,12 @@ where
     let store = Store::open(&db_path(id)?)?;
     std::fs::create_dir_all(&cfg.sync_root)?;
 
+    // Count of consecutive failed sync cycles (push or pull error). Drives the
+    // notification gate so transient errors stay silent (see ERROR_NOTIFY_THRESHOLD).
+    let mut consecutive_errors: u32 = 0;
+
     // Catch up once before watching.
-    run_once(&mut api, &store, id, &on_event);
+    run_once(&mut api, &store, id, &on_event, &mut consecutive_errors);
 
     let (tx, rx) = channel();
 
@@ -105,10 +115,12 @@ where
             // Local change(s): wait for the write burst to settle, then sync.
             Ok(()) => {
                 while rx.recv_timeout(debounce).is_ok() {}
-                run_once(&mut api, &store, id, &on_event);
+                run_once(&mut api, &store, id, &on_event, &mut consecutive_errors);
             }
             // Periodic remote poll.
-            Err(RecvTimeoutError::Timeout) => run_once(&mut api, &store, id, &on_event),
+            Err(RecvTimeoutError::Timeout) => {
+                run_once(&mut api, &store, id, &on_event, &mut consecutive_errors)
+            }
             Err(RecvTimeoutError::Disconnected) => break,
         }
         // Discard events caused by our own writes during the sync above.
@@ -120,10 +132,20 @@ where
 /// One push+pull cycle. The config is reloaded each cycle so a sync-folder move
 /// (which updates `sync_root`) is picked up without restarting the daemon — and
 /// we never re-download into a stale folder. Errors are logged, never fatal.
-fn run_once<F>(api: &mut Api, store: &Store, id: &str, on_event: &F)
+fn run_once<F>(
+    api: &mut Api,
+    store: &Store,
+    id: &str,
+    on_event: &F,
+    consecutive_errors: &mut u32,
+)
 where
     F: Fn(&str, SyncEvent),
 {
+    // Error events are gated behind ERROR_NOTIFY_THRESHOLD consecutive failures,
+    // so we don't notify on a single transient blip. Success/conflict events fire
+    // immediately. We keep the cycle's error (if any) here and decide at the end.
+    let mut cycle_error: Option<SyncEvent> = None;
     // Serialize with manual syncs and folder moves (see `sync_lock`).
     let lock = crate::sync_lock(id);
     let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
@@ -160,7 +182,7 @@ where
         Ok(_) => {}
         Err(e) => {
             eprintln!("  push : {e}");
-            on_event(id, SyncEvent {
+            cycle_error = Some(SyncEvent {
                 kind:  "error".into(),
                 title: "Erreur de synchronisation".into(),
                 body:  e.to_string(),
@@ -182,11 +204,77 @@ where
         Ok(_) => {}
         Err(e) => {
             eprintln!("  pull : {e}");
-            on_event(id, SyncEvent {
+            cycle_error = Some(SyncEvent {
                 kind:  "error".into(),
                 title: "Erreur de synchronisation".into(),
                 body:  e.to_string(),
             });
+        }
+    }
+
+    // Gate: only surface the error once it has persisted for N consecutive
+    // cycles. A clean cycle resets the counter so the next blip starts fresh.
+    let had_error = cycle_error.is_some();
+    if note_cycle(consecutive_errors, had_error) {
+        if let Some(ev) = cycle_error {
+            on_event(id, ev);
+        }
+    } else if had_error {
+        eprintln!(
+            "  (échec {}/{ERROR_NOTIFY_THRESHOLD} — notification différée)",
+            *consecutive_errors
+        );
+    }
+}
+
+/// Update the consecutive-failure counter for one cycle outcome and return
+/// whether an error notification should be surfaced now. An error bumps the
+/// counter and fires once it reaches `ERROR_NOTIFY_THRESHOLD`; a clean cycle
+/// resets it.
+fn note_cycle(consecutive_errors: &mut u32, had_error: bool) -> bool {
+    if had_error {
+        *consecutive_errors = consecutive_errors.saturating_add(1);
+        *consecutive_errors >= ERROR_NOTIFY_THRESHOLD
+    } else {
+        *consecutive_errors = 0;
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{note_cycle, ERROR_NOTIFY_THRESHOLD};
+
+    #[test]
+    fn first_failures_stay_silent_then_notify_on_threshold() {
+        assert_eq!(ERROR_NOTIFY_THRESHOLD, 3);
+        let mut n = 0;
+        assert!(!note_cycle(&mut n, true)); // 1st failure → silent
+        assert!(!note_cycle(&mut n, true)); // 2nd failure → silent
+        assert!(note_cycle(&mut n, true)); //  3rd failure → notify
+        assert!(note_cycle(&mut n, true)); //  keeps notifying while it persists
+    }
+
+    #[test]
+    fn a_clean_cycle_resets_the_counter() {
+        let mut n = 0;
+        note_cycle(&mut n, true);
+        note_cycle(&mut n, true);
+        assert_eq!(n, 2);
+        assert!(!note_cycle(&mut n, false)); // success resets
+        assert_eq!(n, 0);
+        // Must fail 3 more consecutive times before notifying again.
+        assert!(!note_cycle(&mut n, true));
+        assert!(!note_cycle(&mut n, true));
+        assert!(note_cycle(&mut n, true));
+    }
+
+    #[test]
+    fn intermittent_failures_never_reach_the_threshold() {
+        let mut n = 0;
+        for _ in 0..10 {
+            assert!(!note_cycle(&mut n, true)); // fail
+            assert!(!note_cycle(&mut n, false)); // recover before the 3rd
         }
     }
 }
