@@ -1,13 +1,18 @@
-//! Drive delta sync: pull the core's drive change-feed (`?full=true`, which embeds
+//! Drive delta PULL: pull the core's drive change-feed (`?full=true`, which embeds
 //! the full folder/file model in every change) and feed each page verbatim to the
 //! local `drive-core` WASM store via `POST /_ingest`, so Drive folder/file listings
 //! are served locally and keep working offline.
 //!
-//! Pull-only (v1): mutations still go to the core and come back on the next delta.
 //! The cursor is owned HERE (persisted per instance, separate from kubuno-sync's
 //! own drive cursor); drive-core is stateless about it and applies pages
 //! idempotently (conditional upsert by `change_seq`).
+//!
+//! On top of the ingest, the pull also **captures the server `change_seq`** of any
+//! row id in `watch` (the ids of currently-pending outbox ops). `drive_push` uses
+//! that to detect a server-side change that raced an offline mutation (the
+//! optimistic conflict guard, server-wins). See `drive_push` + COORDINATION_WASM.md.
 
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -15,11 +20,16 @@ use serde_json::Value;
 use crate::wasmoffice::{self, DRIVE};
 
 /// Pull the drive delta from the stored cursor and ingest every page into
-/// drive-core. No-op when offline or when drive-core isn't installed. Returns the
-/// number of changes applied across all pages.
-pub fn sync(instance_id: &str) -> Result<u32, String> {
+/// drive-core. Returns the number of changes applied plus, for every id in
+/// `watch`, the highest server `change_seq` seen across the pulled pages (used by
+/// the conflict guard). No-op when offline or when drive-core isn't installed.
+pub fn pull(
+    instance_id: &str,
+    watch: &HashSet<String>,
+) -> Result<(u32, HashMap<String, i64>), String> {
+    let mut bumped: HashMap<String, i64> = HashMap::new();
     if kubuno_sync::is_offline() || !wasmoffice::enabled_for(DRIVE) {
-        return Ok(0);
+        return Ok((0, bumped));
     }
     let mut total = 0u32;
     // Page through the delta; bound the loop as a runaway backstop.
@@ -31,9 +41,26 @@ pub fn sync(instance_id: &str) -> Result<u32, String> {
             return Err(format!("delta drive : HTTP {status} — {}", snippet(&body)));
         }
         let v: Value = serde_json::from_str(&body).map_err(|e| format!("delta illisible : {e}"))?;
-        let n = v.get("changes").and_then(|c| c.as_array()).map(|a| a.len()).unwrap_or(0);
+        let changes = v.get("changes").and_then(|c| c.as_array());
+        let n = changes.map(|a| a.len()).unwrap_or(0);
         let new_cursor = v.get("cursor").and_then(|x| x.as_i64()).unwrap_or(cursor);
         let has_more = v.get("has_more").and_then(|x| x.as_bool()).unwrap_or(false);
+
+        // Capture the server change_seq of any watched (pending-outbox) row.
+        if let Some(arr) = changes {
+            if !watch.is_empty() {
+                for ch in arr {
+                    let Some(id) = ch.get("id").and_then(|x| x.as_str()) else { continue };
+                    if !watch.contains(id) {
+                        continue;
+                    }
+                    if let Some(seq) = ch.get("change_seq").and_then(|x| x.as_i64()) {
+                        let e = bumped.entry(id.to_string()).or_insert(seq);
+                        *e = (*e).max(seq);
+                    }
+                }
+            }
+        }
 
         if n > 0 {
             // Feed the page verbatim ({changes, cursor, …}); drive-core applies all
@@ -53,7 +80,7 @@ pub fn sync(instance_id: &str) -> Result<u32, String> {
             break;
         }
     }
-    Ok(total)
+    Ok((total, bumped))
 }
 
 /// GET a core path with the native session (Bearer + refresh on 401). GET-only
