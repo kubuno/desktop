@@ -61,6 +61,34 @@ pub const DRIVE: Spec = Spec {
     subdir: "drive",
 };
 
+/// Resolve the spec for a manifest component (`<file>` owned by `<module>`).
+/// The two historical components map to their existing consts (same cache keys
+/// and data subdirs); any FUTURE `<module>-core.wasm` published by the core gets
+/// a spec derived from its module id, interned once (bounded by the number of
+/// distinct components, so the leak is a one-off per component).
+pub fn spec_for(file: &str, module: &str) -> Spec {
+    match file {
+        "documents-core.wasm" => return OFFICE,
+        "drive-core.wasm" => return DRIVE,
+        _ => {}
+    }
+    static DYN: OnceLock<Mutex<HashMap<String, Spec>>> = OnceLock::new();
+    let map = DYN.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut m = map.lock().unwrap_or_else(|p| p.into_inner());
+    if let Some(s) = m.get(file) {
+        return *s;
+    }
+    let name: &'static str = Box::leak(module.to_string().into_boxed_str());
+    let spec = Spec {
+        name,
+        env: Box::leak(format!("KUBUNO_{}_WASM", module.to_uppercase()).into_boxed_str()),
+        file: Box::leak(file.to_string().into_boxed_str()),
+        subdir: name,
+    };
+    m.insert(file.to_string(), spec);
+    spec
+}
+
 /// One live instance of a hosted module (warm SQLite via WASI).
 struct WasmInst {
     store:  Store<WasiP1Ctx>,
