@@ -137,11 +137,17 @@ pub fn connection_state(id: &str) -> &'static str {
     if !api::ping(&cfg.server_url) {
         return "offline";
     }
-    // Reachable — is the session still valid? `current_user` refreshes on a 401,
-    // so a failure here means the refresh token itself was rejected.
+    // Reachable — is the session still valid? `current_user` refreshes on a 401.
+    // Only a GENUINE rejection (the refresh token itself was refused) means the
+    // session is over; a transient failure (rate-limit, 5xx, network blip) leaves
+    // the refresh token valid, so we stay "online" and retry rather than alarming
+    // the user with "session expired".
     match current_user(id) {
         Ok(_) => "online",
-        Err(_) => "expired",
+        Err(e) => match e.downcast_ref::<api::AuthFailure>() {
+            Some(api::AuthFailure::Genuine) => "expired",
+            _ => "online",
+        },
     }
 }
 
