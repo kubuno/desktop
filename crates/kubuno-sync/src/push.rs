@@ -36,23 +36,42 @@ pub fn push(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
     drain(api, store, cfg)
 }
 
+/// Above this share of tracked files apparently deleted in ONE scan, deletions
+/// are NOT queued: a vanished/inaccessible sync root (moved folder, unmounted
+/// drive, a WinRT cloud-files registration window returning "access denied")
+/// makes every file look deleted, and pushing that would trash the user's whole
+/// server drive. Legitimate bulk deletes below the floor still sync normally.
+const MASS_DELETE_RATIO: f64 = 0.2;
+/// The ratio only kicks in past this absolute count (small stores: deleting
+/// 2 files out of 5 is normal).
+const MASS_DELETE_FLOOR: usize = 50;
+
 /// Records local create/modify/delete into the outbox (skipping ops already queued).
 fn detect(store: &Store, cfg: &Config) -> Result<()> {
+    // Root sanity: if the sync root itself is gone or unreadable while we track
+    // files, this scan would see 100% deletions. Don't detect anything.
+    let tracked = store.all_files()?;
+    if !tracked.is_empty() && std::fs::read_dir(&cfg.sync_root).is_err() {
+        anyhow::bail!(
+            "dossier de synchronisation inaccessible ({}) — détection annulée",
+            cfg.sync_root.display()
+        );
+    }
+
     let ob = store.outbox()?;
     let queued_files: HashSet<String> = ob.iter().filter_map(|o| o.file_id.clone()).collect();
     let queued_paths: HashSet<String> = ob.iter().filter_map(|o| o.local_path.clone()).collect();
 
-    // Tracked files → modify or delete.
-    for (id, _folder_id, _name, etag, local_path) in store.all_files()? {
+    // Tracked files → modify or delete. Deletions are collected first and only
+    // queued if they stay under the mass-deletion guard (see above).
+    let mut deletions: Vec<String> = Vec::new();
+    for (id, _folder_id, _name, etag, local_path) in tracked.iter().cloned() {
         if queued_files.contains(&id) {
             continue;
         }
         let p = Path::new(&local_path);
         if !p.exists() {
-            store.enqueue(&OutboxOp {
-                key: new_key(), op: "delete".into(),
-                file_id: Some(id), folder_id: None, name: None, local_path: None, base_etag: None,
-            })?;
+            deletions.push(id);
         } else if is_online_only(p) {
             // Online-only ("virtual") placeholder: its content isn't on disk, so
             // it can't have local edits. Reading it to hash would needlessly
@@ -62,6 +81,25 @@ fn detect(store: &Store, cfg: &Config) -> Result<()> {
                 key: new_key(), op: "modify".into(),
                 file_id: Some(id), folder_id: None, name: None,
                 local_path: Some(local_path), base_etag: etag,
+            })?;
+        }
+    }
+
+    // Mass-deletion guard: an implausible share of the store vanishing in one
+    // scan means the FOLDER was unavailable, not that the user deleted it all.
+    let massive = deletions.len() >= MASS_DELETE_FLOOR
+        && (deletions.len() as f64) > (tracked.len() as f64) * MASS_DELETE_RATIO;
+    if massive {
+        eprintln!(
+            "  ⚠ {} fichier(s) sur {} semblent supprimés d'un coup — suppression NON synchronisée (protection anti-suppression massive). Si c'est voulu, supprime-les côté serveur.",
+            deletions.len(),
+            tracked.len()
+        );
+    } else {
+        for id in deletions {
+            store.enqueue(&OutboxOp {
+                key: new_key(), op: "delete".into(),
+                file_id: Some(id), folder_id: None, name: None, local_path: None, base_etag: None,
             })?;
         }
     }
@@ -111,10 +149,24 @@ fn split_last(rel: &str) -> (String, String) {
     }
 }
 
+/// True when the error chain is an auth failure: the session can't produce a
+/// token right now, so EVERY remaining op would fail identically. Draining on
+/// regardless would fire one doomed request per op (a 1000-op backlog = a
+/// self-inflicted request flood that trips the server's global rate-limit).
+fn is_auth_down(e: &anyhow::Error) -> bool {
+    e.chain().any(|c| c.downcast_ref::<crate::api::AuthFailure>().is_some())
+}
+
 /// Replays queued ops to the server. Failures stay queued (offline-first).
+/// Aborts the cycle on the first auth failure (see `is_auth_down`).
 fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
     let mut s = PushStats::default();
+    let mut auth_down = false;
     for op in store.outbox()? {
+        if auth_down {
+            s.pending += 1;
+            continue;
+        }
         match op.op.as_str() {
             "modify" => {
                 let id = op.file_id.clone().unwrap_or_default();
@@ -137,6 +189,7 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
                     Err(e) => {
                         eprintln!("  modification différée ({id}) : {e}");
                         s.pending += 1;
+                        auth_down = is_auth_down(&e);
                     }
                 }
             }
@@ -151,6 +204,7 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
                     Err(e) => {
                         eprintln!("  suppression différée ({id}) : {e}");
                         s.pending += 1;
+                        auth_down = is_auth_down(&e);
                     }
                 }
             }
@@ -168,6 +222,7 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
                     Err(e) => {
                         eprintln!("  dossier différé ('{rel_parent}') : {e}");
                         s.pending += 1;
+                        auth_down = is_auth_down(&e);
                         continue;
                     }
                 };
@@ -180,6 +235,7 @@ fn drain(api: &mut Api, store: &Store, cfg: &Config) -> Result<PushStats> {
                     Err(e) => {
                         eprintln!("  envoi différé ('{name}') : {e}");
                         s.pending += 1;
+                        auth_down = is_auth_down(&e);
                     }
                 }
             }
