@@ -146,6 +146,16 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
                     {
                         eprintln!("[docproxy] office sync : {e}");
                     }
+                    // Office sub-modules (spreadsheets/presentations/diagrams/
+                    // boards): pull delta → _ingest, then replay the local outbox.
+                    let id = state.id.clone();
+                    if let Ok(Err(e)) = tauri::async_runtime::spawn_blocking(move || {
+                        crate::office_entities::cycle(&id)
+                    })
+                    .await
+                    {
+                        eprintln!("[docproxy] office entities : {e}");
+                    }
                 }
                 if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) {
                     // Full local-first cycle: PULL (reconcile) + PUSH (replay the

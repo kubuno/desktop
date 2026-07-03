@@ -43,11 +43,25 @@ pub struct Summary {
     pub cursor:       i64,
 }
 
-/// Authenticate against a server and register it as a new instance. Returns the
-/// freshly generated instance id. Multiple instances (even to the same server)
-/// can coexist, each with its own credentials, sync folder and local state.
+/// Authenticate against a server and register it as an instance. Returns the
+/// instance id. Multiple instances (even to the same server) can coexist, each
+/// with its own credentials, sync folder and local state.
+///
+/// Re-login to the SAME server + sync folder is a session renewal (e.g. after a
+/// revocation): the existing instance's credentials are refreshed instead of
+/// minting a duplicate — which would orphan its local stores (offline documents,
+/// drive data, sync cursors) and leave a zombie entry pointing at a dead session.
 pub fn login(server: &str, login: &str, password: &str, folder: &str) -> Result<String> {
     let creds = api::Api::login(server, login, password)?;
+    let norm = |s: &str| s.trim_end_matches('/').to_string();
+    if let Ok(existing) = Config::list() {
+        if let Some(cfg) = existing.into_iter().find(|c| {
+            norm(&c.server_url) == norm(server) && c.sync_root == std::path::Path::new(folder)
+        }) {
+            creds.save(&cfg.id)?;
+            return Ok(cfg.id);
+        }
+    }
     let id = config::new_instance_id(server);
     creds.save(&id)?;
     let cfg = Config {
