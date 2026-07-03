@@ -171,6 +171,15 @@
       transition: border-color .15s, box-shadow .15s;
     }
     .field input::placeholder { color: var(--text-tertiary); }
+    /* "Browse…" companion button for path fields (native folder/file picker). */
+    .btn-browse {
+      height: 38px; padding: 0 14px; flex: 0 0 auto;
+      border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--surface); color: var(--text);
+      font-size: 13px; font-family: inherit; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-browse:hover { background: var(--surface-1); border-color: var(--border-strong, var(--border)); }
     .field input:focus {
       outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 2px rgba(26,115,232,.35);
@@ -791,7 +800,10 @@
     </div>
     <div class="field">
       <label>Dossier local</label>
-      <input id="f-folder" type="text" placeholder="C:\Users\vous\Kubuno" />
+      <div style="display:flex;gap:8px">
+        <input id="f-folder" type="text" placeholder="C:\Users\vous\Kubuno" style="flex:1;min-width:0" />
+        <button type="button" class="btn-browse" id="f-folder-browse" title="Choisir le dossier local de synchronisation">Parcourir…</button>
+      </div>
     </div>
     <button class="btn-primary" id="btn-login">Se connecter</button>
     <div id="login-error" class="login-error hidden"></div>
@@ -2164,6 +2176,13 @@
   btnLogin.addEventListener('click', doLogin);
   ['f-server', 'f-login', 'f-password', 'f-folder'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+  // Native folder picker for the local sync folder (no hand-typed paths).
+  document.getElementById('f-folder-browse').addEventListener('click', async () => {
+    try {
+      const dir = await invoke('pick_folder');
+      if (dir) document.getElementById('f-folder').value = dir;
+    } catch (_) {}
   });
 
   // ── App bootstrap ──────────────────────────────────────────────────────────
