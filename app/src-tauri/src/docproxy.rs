@@ -263,57 +263,36 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
         .await
         .unwrap_or_default();
 
-    // Local-first: the office DOCUMENTS sub-namespace is offered to the embedded
-    // WASM backend (offline-capable) when its artifact is present. The module
-    // returns the reserved `status == 0` for requests it doesn't own yet (e.g. a
-    // document that only exists on the server) → we fall through to the core
-    // proxy below. Everything else under /api/v1/office (fonts, recipients, other
-    // sub-modules) goes straight to the core. Keeps the daemon route-agnostic.
-    let office_doc = path.starts_with("/api/v1/office/documents");
-    if crate::wasmoffice::enabled() && office_doc {
-        let id = st.id.clone();
-        let m = method.as_str().to_string();
-        let p = pq.clone();
-        let b = body_bytes.to_vec();
-        let res = tokio::task::spawn_blocking(move || crate::wasmoffice::handle(&id, &m, &p, &b)).await;
-        if let Ok(Some((status, ctype, out))) = res {
-            if status != 0 {
-                let mut headers = HeaderMap::new();
-                if let Ok(v) = HeaderValue::from_str(&ctype) {
-                    headers.insert(header::CONTENT_TYPE, v);
+    // Local-first, claims-driven: each installed WASM backend serves the route
+    // prefixes it CLAIMS in the core's component manifest (documents-core →
+    // /api/v1/office/documents…, drive-core → /api/v1/drive, tomorrow any
+    // <module>-core.wasm — no hardcoded routes here, see `components`). A claimed
+    // request returns the reserved `status == 0` for what the wasm doesn't own
+    // (server-only rows, downloads, thumbnails, /sync/*…) → falls through to the
+    // core proxy. Mutations are only routed on PUSHABLE prefixes (a replay loop
+    // syncs the local outbox back to the core); other claims stay GET-only so an
+    // offline edit can't get trapped locally.
+    if let Some((spec, pushable)) = crate::components::route_for(&st.id, &path) {
+        if pushable || method == Method::GET {
+            let id = st.id.clone();
+            let m = method.as_str().to_string();
+            let p = pq.clone();
+            let b = body_bytes.to_vec();
+            let res = tokio::task::spawn_blocking(move || {
+                crate::wasmoffice::handle_for(spec, &id, &m, &p, &b)
+            })
+            .await;
+            if let Ok(Some((status, ctype, out))) = res {
+                if status != 0 {
+                    let mut headers = HeaderMap::new();
+                    if let Ok(v) = HeaderValue::from_str(&ctype) {
+                        headers.insert(header::CONTENT_TYPE, v);
+                    }
+                    let code =
+                        StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+                    return build_response(code, headers, out);
                 }
-                let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-                return build_response(code, headers, out);
-            }
-            // status == 0 → passthrough: fall through to the core proxy.
-        }
-    }
-
-    // Local-first Drive: the embedded drive-core WASM owns the read listings
-    // (folders, files, breadcrumb, file metadata) AND the mutation routes it claims
-    // (create/rename/move/star/color/trash/restore/delete). Reads are served from
-    // its local store; mutations are applied locally + journaled in an outbox and
-    // replayed to the core by `drive_push::cycle`. drive-core returns `status == 0`
-    // for everything it doesn't own (downloads, thumbnails, upload/content, /sync/*,
-    // global views) → those fall through to the core proxy.
-    let drive_req = path.starts_with("/api/v1/drive");
-    if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) && drive_req {
-        let id = st.id.clone();
-        let m = method.as_str().to_string();
-        let p = pq.clone();
-        let b = body_bytes.to_vec();
-        let res = tokio::task::spawn_blocking(move || {
-            crate::wasmoffice::handle_for(crate::wasmoffice::DRIVE, &id, &m, &p, &b)
-        })
-        .await;
-        if let Ok(Some((status, ctype, out))) = res {
-            if status != 0 {
-                let mut headers = HeaderMap::new();
-                if let Ok(v) = HeaderValue::from_str(&ctype) {
-                    headers.insert(header::CONTENT_TYPE, v);
-                }
-                let code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-                return build_response(code, headers, out);
+                // status == 0 → passthrough: fall through to the core proxy.
             }
         }
     }

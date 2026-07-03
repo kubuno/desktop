@@ -20,6 +20,8 @@ mod wasmoffice;
 #[cfg(desktop)]
 mod office_sync;
 #[cfg(desktop)]
+mod components;
+#[cfg(desktop)]
 mod drive_sync;
 #[cfg(desktop)]
 mod drive_push;
@@ -246,6 +248,9 @@ fn download_components(instance_id: &str, want: &[String]) -> Result<String, Str
     let manifest: serde_json::Value = get("/api/v1/desktop/wasm")?
         .into_json()
         .map_err(|e| format!("manifest illisible : {e}"))?;
+    // Keep the local claims map (module + claimed route prefixes) in sync.
+    #[cfg(desktop)]
+    crate::components::persist_manifest(&manifest);
     let components = manifest["components"].as_array().ok_or("manifest invalide")?;
 
     let mut count = 0u32;
@@ -359,6 +364,9 @@ fn component_updates(instance_id: &str) -> Result<Vec<ComponentUpdate>, String> 
     }
     let manifest: serde_json::Value =
         serde_json::from_str(&body).map_err(|e| format!("manifest illisible : {e}"))?;
+    // Keep the local claims map (module + claimed route prefixes) in sync.
+    #[cfg(desktop)]
+    components::persist_manifest(&manifest);
     let components = manifest["components"].as_array().ok_or("manifest invalide")?;
 
     let mut updates = Vec::new();

@@ -1817,17 +1817,26 @@
       }
       await refreshInstalledComps();
       renderWasmUpdates(); // fire-and-forget: check for backend updates (consent-gated)
-      c.innerHTML = groups.map(g => `
-        <div class="apps-group">
-          <div class="apps-group-label">${escapeHtml(g.label)}</div>
-          <div class="apps-grid">
-            ${g.items.map(it => `
+      // Single-app modules don't warrant a one-tile group each: gather their apps
+      // into one alphabetical "Apps" group; multi-app modules keep their group.
+      const multi = groups.filter(g => (g.items || []).length > 1);
+      const singles = groups
+        .filter(g => (g.items || []).length === 1)
+        .map(g => ({ module_id: g.module_id, item: g.items[0] }))
+        .sort((a, b) => (a.item.label || '').localeCompare(b.item.label || '', 'fr', { sensitivity: 'base' }));
+      const tile = (moduleId, it) => `
               <div class="app-tile" tabindex="0" data-route="${escapeHtml(it.path)}" data-label="${escapeHtml(it.label)}">
-                <div class="app-icon">${appIcon(g.module_id, it.icon, it.path)}${tileBadge(it.path)}</div>
+                <div class="app-icon">${appIcon(moduleId, it.icon, it.path)}${tileBadge(it.path)}</div>
                 <div class="app-label">${escapeHtml(it.label)}</div>
-              </div>`).join('')}
-          </div>
-        </div>`).join('');
+              </div>`;
+      const groupHtml = (label, inner) => `
+        <div class="apps-group">
+          <div class="apps-group-label">${escapeHtml(label)}</div>
+          <div class="apps-grid">${inner}</div>
+        </div>`;
+      c.innerHTML =
+        (singles.length ? groupHtml('Apps', singles.map(s => tile(s.module_id, s.item)).join('')) : '')
+        + multi.map(g => groupHtml(g.label, g.items.map(it => tile(g.module_id, it)).join(''))).join('');
     } catch (_) {
       c.innerHTML = '<div class="apps-empty">Impossible de charger les applications.</div>';
     } finally {

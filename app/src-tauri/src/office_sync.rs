@@ -328,6 +328,17 @@ fn detect(instance_id: &str, db: &Connection) -> Result<()> {
         }
     }
     set_meta(db, "last_seq", &max_seq.to_string())?;
+    // Everything up to max_seq is now in OUR durable outbox → tell the wasm to
+    // prune its local `_changes` journal (unbounded growth otherwise). Available
+    // since documents-core v1.5; best-effort (a 404 from an older wasm is fine).
+    if max_seq > last_seq {
+        let _ = local_call(
+            instance_id,
+            "POST",
+            "/api/v1/office/documents/_ack",
+            serde_json::json!({ "upto": max_seq }).to_string().as_bytes(),
+        );
+    }
     Ok(())
 }
 
