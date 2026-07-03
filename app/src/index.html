@@ -564,6 +564,7 @@
     .app-badge.on  { background: #1a7f37; color: #fff; }            /* installed (offline-ready) */
     .app-badge.off { background: var(--muted); color: #fff; }       /* available to download */
     .app-badge.upd { background: #d97706; color: #fff; }            /* installed, update available */
+    .app-badge.prep { background: var(--accent); color: #fff; }     /* installed, initial sync pending */
     .app-badge.busy { background: var(--accent); color: #fff; animation: kbn-pulse 1s ease-in-out infinite; }
     @keyframes kbn-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
 
@@ -1644,25 +1645,58 @@
   }
 
   // ── Local-first WASM badges + per-tile download (right-click menu) ───────────
-  const WASM_DOC = 'documents-core.wasm', WASM_DRIVE = 'drive-core.wasm';
-  // Per-route spec: components NEEDED (for the badge), to INSTALL, and to UNINSTALL.
-  // Uninstall cascades the shared drive-core: removing it disables documents too.
-  function tileSpec(route) {
-    const r = (route || '').replace(/^\//, '');
-    if (r === 'office/documents' || r.startsWith('office/documents/'))
-      return { needs: [WASM_DOC, WASM_DRIVE], install: [WASM_DOC, WASM_DRIVE], uninstall: [WASM_DOC] };
-    if (r === 'drive' || r.startsWith('drive/'))
-      return { needs: [WASM_DRIVE], install: [WASM_DRIVE], uninstall: [WASM_DRIVE, WASM_DOC] };
-    return null;
-  }
+  // Claims-driven: the core manifest declares, per component, its module and the
+  // route prefixes it serves locally. Tiles map to components dynamically — a new
+  // <module>-core.wasm published by the core shows up here with zero UI change.
+  // componentStatus: [{name, module, installed, claims:[{prefix, primed, pushable}]}]
+  let componentStatus = [];
   let installedComps = [];
   async function refreshInstalledComps() {
-    try { installedComps = (await invoke('installed_components')) || []; } catch (_) { installedComps = []; }
+    try {
+      componentStatus = (await invoke('component_status', { instanceId: activeId })) || [];
+    } catch (_) { componentStatus = []; }
+    installedComps = componentStatus.filter(c => c.installed).map(c => c.name);
+  }
+  // Office windows need the drive backend too (file browser/dialogs → Drive API).
+  const COMPANION = { office: ['drive-core.wasm'] };
+
+  // The component + claim serving a tile's route (longest prefix wins). A claim
+  // matches downward (documents claim ← documents/x route) or upward (whiteboard
+  // tile → whiteboard/boards claim) — but never onto a bare module-root tile,
+  // whose SPA is far broader than the claimed sub-namespaces.
+  function routeInfo(route) {
+    const api = '/api/v1/' + (route || '').replace(/^\//, '').replace(/\/$/, '');
+    let best = null;
+    for (const c of componentStatus) {
+      const isModuleRoot = api === '/api/v1/' + c.module;
+      for (const cl of (c.claims || [])) {
+        const p = cl.prefix;
+        const down = api === p || api.startsWith(p + '/');
+        const up = !isModuleRoot && p.startsWith(api + '/');
+        if ((down || up) && (!best || p.length > best.claim.prefix.length)) best = { comp: c, claim: cl };
+      }
+    }
+    return best;
+  }
+
+  // Per-route spec: components NEEDED (badge), to INSTALL, and to UNINSTALL
+  // (uninstalling a companion cascades onto its dependents), + primed state.
+  function tileSpec(route) {
+    const info = routeInfo(route);
+    if (!info) return null;
+    const comp = info.comp;
+    const companions = (COMPANION[comp.module] || []).filter(n => componentStatus.some(c => c.name === n));
+    const needs = [comp.name, ...companions.filter(n => n !== comp.name)];
+    const dependents = componentStatus
+      .filter(c => c.name !== comp.name && (COMPANION[c.module] || []).includes(comp.name))
+      .map(c => c.name);
+    return { needs, install: needs, uninstall: [comp.name, ...dependents], primed: !!info.claim.primed };
   }
   const tileInstalled = spec => !!spec && spec.needs.every(c => installedComps.includes(c));
   const BADGE_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const BADGE_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7 11 12 16 17 11"/></svg>';
   const BADGE_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="6"/><polyline points="6 12 12 6 18 12"/></svg>';
+  const BADGE_SYNC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
   // Components (installed) that have a pending update — drives the on-tile indicator.
   let updatableComps = new Set();
   function tileBadge(route) {
@@ -1672,6 +1706,11 @@
     // Installed + a newer WASM is available for one of its backends → update badge.
     if (on && spec.needs.some(c => updatableComps.has(c))) {
       return '<span class="app-badge upd" title="Mise à jour hors-ligne disponible">' + BADGE_UP + '</span>';
+    }
+    // Installed but the initial data sync hasn't primed this prefix yet: the
+    // backend covers it, offline readiness is pending.
+    if (on && !spec.primed) {
+      return '<span class="app-badge prep" title="Backend hors-ligne installé — synchronisation initiale à venir">' + BADGE_SYNC + '</span>';
     }
     return '<span class="app-badge ' + (on ? 'on' : 'off') + '" title="'
       + (on ? 'Hors-ligne installé' : 'Disponible hors-ligne — clic droit pour télécharger') + '">'

@@ -398,6 +398,22 @@ fn component_updates(instance_id: &str) -> Result<Vec<ComponentUpdate>, String> 
     Ok(updates)
 }
 
+/// Component status for the launcher: per WASM component, installed state and
+/// per-claim primed/pushable flags (drives tile badges + context menus, claims-
+/// driven — no hardcoded route map in the frontend).
+#[tauri::command]
+fn component_status(instance_id: String) -> Vec<serde_json::Value> {
+    #[cfg(desktop)]
+    {
+        return components::status(&instance_id);
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = instance_id;
+        Vec::new()
+    }
+}
+
 /// Disconnect an instance (drops creds + local sync state; keeps the files).
 #[tauri::command]
 fn remove_instance(id: String) -> Result<(), String> {
@@ -603,15 +619,28 @@ if(document.readyState!=='loading'){tick();}else{document.addEventListener('DOMC
 /// backend. When false, the route is opened in the user's web browser instead.
 #[cfg(desktop)]
 fn has_local_backend(route: &str) -> bool {
-    let r = route.trim_start_matches('/');
-    if r == "office/documents" || r.starts_with("office/documents/") {
-        // The documents browser lists files via the Drive API, so it needs both.
-        wasmoffice::enabled() && wasmoffice::enabled_for(wasmoffice::DRIVE)
-    } else if r == "drive" || r.starts_with("drive/") {
-        wasmoffice::enabled_for(wasmoffice::DRIVE)
-    } else {
-        false
-    }
+    // Claims-driven: a route can open natively when an INSTALLED component claims
+    // it (per the persisted core manifest). Office windows additionally need the
+    // drive backend — their file browser/dialogs list files via the Drive API.
+    // A route matches a claim in either direction: the claim covers the route
+    // (documents claim ← documents/x), or the claim sits deeper under it
+    // (whiteboard route → whiteboard/boards claim) — but a bare MODULE-ROOT
+    // route never matches upward: its SPA is far broader than the claimed
+    // sub-namespaces (mirrors the launcher's routeInfo()).
+    let api = format!("/api/v1/{}", route.trim_start_matches('/').trim_end_matches('/'));
+    let claimed = components::all().into_iter().find(|c| {
+        let module_root = api == format!("/api/v1/{}", c.module);
+        c.claims.iter().any(|p| {
+            api == *p
+                || api.starts_with(&format!("{p}/"))
+                || (!module_root && p.starts_with(&format!("{api}/")))
+        })
+    });
+    let Some(c) = claimed else { return false };
+    let installed = wasmoffice::enabled_for(wasmoffice::spec_for(&c.name, &c.module));
+    let companion_ok =
+        c.module != "office" || wasmoffice::enabled_for(wasmoffice::spec_for("drive-core.wasm", "drive"));
+    installed && companion_ok
 }
 
 /// Open a route of the web app in the user's default browser (the online web
@@ -1120,6 +1149,7 @@ pub fn run() {
             install_local_components,
             uninstall_local_components,
             check_component_updates,
+            component_status,
             get_status,
             get_user,
             sync_now,
