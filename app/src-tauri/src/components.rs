@@ -157,6 +157,30 @@ fn primed(instance_id: &str, spec: Spec, prefix: &str) -> bool {
     primed_marker(instance_id, spec, prefix).is_some_and(|p| p.is_file())
 }
 
+/// Full component status for the launcher UI: per component, whether its
+/// artifact is installed and, per claimed prefix, whether the prefix is primed
+/// (first pull done → truly offline-capable) and pushable (offline mutations
+/// replay to the core).
+pub fn status(instance_id: &str) -> Vec<serde_json::Value> {
+    all()
+        .iter()
+        .map(|c| {
+            let spec = wasmoffice::spec_for(&c.name, &c.module);
+            let installed = wasmoffice::enabled_for(spec);
+            serde_json::json!({
+                "name": c.name,
+                "module": c.module,
+                "installed": installed,
+                "claims": c.claims.iter().map(|p| serde_json::json!({
+                    "prefix": p,
+                    "primed": primed(instance_id, spec, p),
+                    "pushable": PUSHABLE.contains(&p.as_str()),
+                })).collect::<Vec<_>>(),
+            })
+        })
+        .collect()
+}
+
 /// The component serving `path` locally for this instance, if any: longest
 /// installed + primed claim. Returns the wasm spec and whether mutations may be
 /// routed (a push loop exists for the prefix).
