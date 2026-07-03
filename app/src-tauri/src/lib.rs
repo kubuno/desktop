@@ -22,6 +22,8 @@ mod office_sync;
 #[cfg(desktop)]
 mod drive_sync;
 #[cfg(desktop)]
+mod drive_push;
+#[cfg(desktop)]
 use tauri::Manager;
 
 /// App handle stashed at startup so the background sync threads can emit events
@@ -289,6 +291,103 @@ fn uninstall_local_components(components: Vec<String>) -> Result<(), String> {
     #[cfg(desktop)]
     wasmoffice::invalidate();
     Ok(())
+}
+
+/// The request/response frame ABI this app knows how to drive. A manifest entry
+/// declaring a different `abi` is a WASM built for a newer host — we must NOT
+/// hot-swap into it (we couldn't call it), so its update is hidden until the
+/// native app itself is updated. Absent `abi` in the manifest = legacy = ABI 1.
+const SUPPORTED_WASM_ABI: i64 = 1;
+
+/// An available update for a locally-installed WASM backend.
+#[derive(Serialize)]
+struct ComponentUpdate {
+    name:              String,
+    installed_sha:     String,
+    available_sha:     String,
+    available_version: String,
+    /// Optional human note from the manifest, shown in the consent prompt.
+    notes:             String,
+    /// True when the manifest sha differs from the installed file's sha AND the
+    /// manifest's ABI is one we can drive.
+    update_available:  bool,
+    /// True when the newer WASM needs a newer native app (ABI mismatch) — the
+    /// frontend surfaces "update the app" rather than offering a hot-swap.
+    needs_app_update:  bool,
+}
+
+/// Compare each INSTALLED local-first backend to the server manifest and report
+/// which have an update. Opt-in friendly: components the user hasn't installed are
+/// never reported (no nagging). The sha256 is the source of truth (version is only
+/// cosmetic). Pure read — the download/consent happens later via
+/// `install_local_components`.
+#[tauri::command]
+async fn check_component_updates(instance_id: String) -> Result<Vec<ComponentUpdate>, String> {
+    tauri::async_runtime::spawn_blocking(move || component_updates(&instance_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn component_updates(instance_id: &str) -> Result<Vec<ComponentUpdate>, String> {
+    use sha2::{Digest, Sha256};
+
+    let installed = installed_components();
+    if installed.is_empty() {
+        return Ok(Vec::new()); // nothing installed → nothing to check
+    }
+    let server = kubuno_sync::server_url(instance_id).ok_or("instance inconnue")?;
+    let base = server.trim_end_matches('/').to_string();
+    let cfg = kubuno_sync::config::config_dir().map_err(|e| e.to_string())?;
+
+    // GET the manifest with the native session, refreshing once on 401 (the token
+    // may be stale at startup — this runs before any other authenticated call).
+    let url = format!("{base}/api/v1/desktop/wasm");
+    let fetch = |token: &str| -> Result<(u16, String), String> {
+        match ureq::get(&url).set("Authorization", &format!("Bearer {token}")).call() {
+            Ok(r) => Ok((r.status(), r.into_string().unwrap_or_default())),
+            Err(ureq::Error::Status(code, r)) => Ok((code, r.into_string().unwrap_or_default())),
+            Err(e) => Err(e.to_string()),
+        }
+    };
+    let (mut status, mut body) = fetch(&kubuno_sync::access_token(instance_id).unwrap_or_default())?;
+    if status == 401 {
+        let fresh = kubuno_sync::refresh_access(instance_id).map_err(|e| e.to_string())?;
+        (status, body) = fetch(&fresh)?;
+    }
+    if status != 200 {
+        return Err(format!("manifest : HTTP {status}"));
+    }
+    let manifest: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("manifest illisible : {e}"))?;
+    let components = manifest["components"].as_array().ok_or("manifest invalide")?;
+
+    let mut updates = Vec::new();
+    for c in components {
+        let Some(name) = c["name"].as_str() else { continue };
+        if !installed.iter().any(|n| n == name) {
+            continue; // only report on what the user actually installed
+        }
+        let available_sha = c["sha256"].as_str().unwrap_or_default().to_string();
+        // ABI absent in the manifest = legacy ABI 1 (backward compatible).
+        let abi = c["abi"].as_i64().unwrap_or(SUPPORTED_WASM_ABI);
+        let local = match std::fs::read(cfg.join(name)) {
+            Ok(b) => b,
+            Err(_) => continue,
+        };
+        let installed_sha = format!("{:x}", Sha256::digest(&local));
+        let differs = !available_sha.is_empty() && available_sha != installed_sha;
+        let abi_ok = abi == SUPPORTED_WASM_ABI;
+        updates.push(ComponentUpdate {
+            name: name.to_string(),
+            installed_sha,
+            available_sha,
+            available_version: c["version"].as_str().unwrap_or_default().to_string(),
+            notes: c["notes"].as_str().unwrap_or_default().to_string(),
+            update_available: differs && abi_ok,
+            needs_app_update: differs && !abi_ok,
+        });
+    }
+    Ok(updates)
 }
 
 /// Disconnect an instance (drops creds + local sync state; keeps the files).
@@ -1012,6 +1111,7 @@ pub fn run() {
             installed_components,
             install_local_components,
             uninstall_local_components,
+            check_component_updates,
             get_status,
             get_user,
             sync_now,
