@@ -158,6 +158,17 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
                         eprintln!("[docproxy] entity sync : {e}");
                     }
                 }
+                // Blob components (keestore vault): dedicated status/dirty driver.
+                {
+                    let id = state.id.clone();
+                    if let Ok(Err(e)) = tauri::async_runtime::spawn_blocking(move || {
+                        crate::blob_sync::cycle(&id)
+                    })
+                    .await
+                    {
+                        eprintln!("[docproxy] blob sync : {e}");
+                    }
+                }
                 if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) {
                     // Full local-first cycle: PULL (reconcile) + PUSH (replay the
                     // offline-mutation outbox back to the core). No-op while offline.

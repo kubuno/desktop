@@ -24,6 +24,8 @@ mod components;
 #[cfg(desktop)]
 mod entity_sync;
 #[cfg(desktop)]
+mod blob_sync;
+#[cfg(desktop)]
 mod drive_sync;
 #[cfg(desktop)]
 mod drive_push;

@@ -30,8 +30,11 @@ pub struct Component {
     pub name:   String,
     pub module: String,
     pub claims: Vec<String>,
+    /// Sync driver: None/absent = entity sync (delta/_ingest/_changes/_ack);
+    /// "blob" = single-blob sync (keestore: status/dirty/_synced).
+    pub sync_mode: Option<String>,
     /// Prefixes carrying the sync surface (delta/_ingest/_changes/_ack). Equal
-    /// to  unless the manifest declares a finer  list (e.g.
+    /// to `claims` unless the manifest declares a finer `sync` list (e.g.
     /// tasks: one broad routing claim, two sync entities underneath).
     pub sync:   Vec<String>,
 }
@@ -47,12 +50,14 @@ fn builtin() -> Vec<Component> {
     vec![
         Component {
             name:   "documents-core.wasm".into(),
+            sync_mode: None,
             module: "office".into(),
             claims: vec!["/api/v1/office/documents".into()],
             sync:   vec!["/api/v1/office/documents".into()],
         },
         Component {
             name:   "drive-core.wasm".into(),
+            sync_mode: None,
             module: "drive".into(),
             claims: vec!["/api/v1/drive".into()],
             sync:   vec!["/api/v1/drive".into()],
@@ -89,6 +94,9 @@ pub fn persist_manifest(manifest: &serde_json::Value) {
         let mut entry = serde_json::json!({ "name": name, "module": module, "claims": claims });
         if let Some(sync) = c["sync"].as_array() {
             entry["sync"] = serde_json::Value::Array(sync.clone());
+        }
+        if let Some(mode) = c["sync_mode"].as_str() {
+            entry["sync_mode"] = serde_json::Value::String(mode.into());
         }
         out.push(entry);
     }
@@ -139,7 +147,8 @@ fn load_disk() -> Option<Vec<Component>> {
                 .as_array()
                 .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
                 .unwrap_or_else(|| claims.clone());
-            out.push(Component { name: name.into(), module: module.into(), claims, sync });
+            let sync_mode = c["sync_mode"].as_str().map(String::from);
+            out.push(Component { name: name.into(), module: module.into(), claims, sync, sync_mode });
         }
     }
     if out.is_empty() { None } else { Some(out) }

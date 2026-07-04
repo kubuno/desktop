@@ -55,6 +55,10 @@ struct Entity {
 fn entities() -> Vec<Entity> {
     let mut out = Vec::new();
     for c in crate::components::all() {
+        // Non-entity sync drivers (keestore's blob-sync) are handled elsewhere.
+        if c.sync_mode.as_deref() == Some("blob") || c.claims.iter().any(|p| p.ends_with("/kdbx")) {
+            continue;
+        }
         let spec = wasmoffice::spec_for(&c.name, &c.module);
         if !wasmoffice::enabled_for(spec) {
             continue;
