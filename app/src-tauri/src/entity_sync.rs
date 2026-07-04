@@ -47,9 +47,11 @@ struct Entity {
     content: bool,
 }
 
-/// The entities to sync: every claim of every INSTALLED component, minus the
-/// prefixes handled by dedicated loops. Manifest-driven — a new module's wasm
-/// starts syncing with no desktop change.
+/// The entities to sync: every SYNC prefix of every INSTALLED component, minus
+/// the prefixes handled by dedicated loops. The sync surface defaults to the
+/// claims but the manifest can declare it finer (`sync` — e.g. tasks: one broad
+/// routing claim, boards+tasks sync entities). Manifest-driven — a new module's
+/// wasm starts syncing with no desktop change.
 fn entities() -> Vec<Entity> {
     let mut out = Vec::new();
     for c in crate::components::all() {
@@ -57,7 +59,7 @@ fn entities() -> Vec<Entity> {
         if !wasmoffice::enabled_for(spec) {
             continue;
         }
-        for prefix in c.claims {
+        for prefix in c.sync {
             if DEDICATED.contains(&prefix.as_str()) {
                 continue;
             }
