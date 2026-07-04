@@ -643,16 +643,17 @@ fn has_local_backend(route: &str) -> bool {
     // drive backend — their file browser/dialogs list files via the Drive API.
     // A route matches a claim in either direction: the claim covers the route
     // (documents claim ← documents/x), or the claim sits deeper under it
-    // (whiteboard route → whiteboard/boards claim) — but a bare MODULE-ROOT
-    // route never matches upward: its SPA is far broader than the claimed
-    // sub-namespaces (mirrors the launcher's routeInfo()).
+    // (whiteboard route → whiteboard/boards claim; a single-app module's root
+    // tile → its entity claims). The launcher decides WHICH tiles offer a local
+    // launch (it excludes multi-app module roots like /office, whose SPA is far
+    // broader than the claims); here we only gate native vs browser, and a
+    // native window works through the proxy in every claimed case.
     let api = format!("/api/v1/{}", route.trim_start_matches('/').trim_end_matches('/'));
     let claimed = components::all().into_iter().find(|c| {
-        let module_root = api == format!("/api/v1/{}", c.module);
         c.claims.iter().any(|p| {
             api == *p
                 || api.starts_with(&format!("{p}/"))
-                || (!module_root && p.starts_with(&format!("{api}/")))
+                || p.starts_with(&format!("{api}/"))
         })
     });
     let Some(c) = claimed else { return false };
