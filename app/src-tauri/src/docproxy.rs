@@ -151,11 +151,11 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
                     // boards): pull delta → _ingest, then replay the local outbox.
                     let id = state.id.clone();
                     if let Ok(Err(e)) = tauri::async_runtime::spawn_blocking(move || {
-                        crate::office_entities::cycle(&id)
+                        crate::entity_sync::cycle(&id)
                     })
                     .await
                     {
-                        eprintln!("[docproxy] office entities : {e}");
+                        eprintln!("[docproxy] entity sync : {e}");
                     }
                 }
                 if crate::wasmoffice::enabled_for(crate::wasmoffice::DRIVE) {
