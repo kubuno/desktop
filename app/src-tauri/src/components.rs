@@ -12,10 +12,10 @@
 //!   • the prefix is PRIMED for the instance — its local store has been fed by a
 //!     first successful pull. Routing an unprimed prefix would serve empty local
 //!     listings that mask the server data (the trap documented in
-//!     COORDINATION_WASM.md). The push-capable prefixes (documents, drive) are
-//!     primed by design: their sync loops run since v1.
-//!   • mutations only pass for PUSHABLE prefixes (a replay loop exists); other
-//!     claims are GET-only so offline edits can't get trapped in a local outbox.
+//!     COORDINATION_WASM.md). documents and drive are primed by design: their
+//!     sync loops run since v1; every other claim is primed by `entity_sync`.
+//! Every routed prefix is push-capable (a replay loop drains its local outbox:
+//! office_sync, drive_push, or the generic entity_sync), so mutations route too.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -32,17 +32,10 @@ pub struct Component {
     pub claims: Vec<String>,
 }
 
-/// Prefixes whose local mutations are replayed to the core by a push loop
-/// (office_sync for documents, drive_push for drive, office_entities for the
-/// office sub-modules). Everything else is GET-only until its push loop lands.
-const PUSHABLE: [&str; 6] = [
-    "/api/v1/office/documents",
-    "/api/v1/drive",
-    "/api/v1/office/spreadsheets",
-    "/api/v1/office/presentations",
-    "/api/v1/office/diagrams",
-    "/api/v1/office/whiteboard/boards",
-];
+// Every claimed prefix is push-capable: documents and drive have dedicated
+// replay loops (office_sync, drive_push), and every OTHER claim is drained by
+// the generic engine (entity_sync) — including the future module waves. So
+// mutations route to the wasm as soon as a prefix is primed.
 
 /// Builtin fallback for installs that predate the `module`/`claims` manifest
 /// fields (or before the first successful manifest fetch).
@@ -196,7 +189,8 @@ pub fn status(instance_id: &str) -> Vec<serde_json::Value> {
                 "claims": c.claims.iter().map(|p| serde_json::json!({
                     "prefix": p,
                     "primed": primed(instance_id, spec, p),
-                    "pushable": PUSHABLE.contains(&p.as_str()),
+                    // Every claim has a replay loop (dedicated or entity_sync).
+                    "pushable": true,
                 })).collect::<Vec<_>>(),
             })
         })
@@ -204,8 +198,8 @@ pub fn status(instance_id: &str) -> Vec<serde_json::Value> {
 }
 
 /// The component serving `path` locally for this instance, if any: longest
-/// installed + primed claim. Returns the wasm spec and whether mutations may be
-/// routed (a push loop exists for the prefix).
+/// installed + primed claim. All methods may be routed (every claim has a
+/// replay loop — the bool is kept for call-site clarity).
 pub fn route_for(instance_id: &str, path: &str) -> Option<(Spec, bool)> {
     let mut best: Option<(&str, Spec)> = None;
     let comps = all();
@@ -228,5 +222,5 @@ pub fn route_for(instance_id: &str, path: &str) -> Option<(Spec, bool)> {
             best = Some((prefix, spec));
         }
     }
-    best.map(|(prefix, spec)| (spec, PUSHABLE.contains(&prefix)))
+    best.map(|(_prefix, spec)| (spec, true))
 }

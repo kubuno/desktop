@@ -1,45 +1,81 @@
-//! Office sub-modules local-first sync — spreadsheets, presentations, diagrams,
-//! whiteboard boards. One generic engine over a small entity table:
+//! Generic entity local-first sync — one engine for EVERY claimed prefix that
+//! follows the documents-core v2.2 contract (office sub-modules today; the
+//! notes/tasks/keestore/… waves tomorrow, with ZERO desktop change per module).
+//! The entity list is DERIVED from the persisted component manifest (claims);
+//! only documents (`office_sync`, legacy journal contract) and drive
+//! (`drive_sync`/`drive_push`, op-table contract) keep their dedicated loops.
 //!
-//!   PULL  — `GET {core}/api/v1/office/<sm>/delta?cursor&limit(&include=content)`
-//!           → `POST {wasm}/api/v1/office/<sm>/_ingest` (page verbatim; the wasm
-//!           applies transactionally, idempotent by change_seq, and deposits the
-//!           server change_seq for the push conflict guard). After the first
-//!           COMPLETE pull, the prefix is marked primed → the proxy starts
-//!           routing it (components::route_for).
+//!   PULL  — `GET {core}<prefix>/delta?cursor&limit(&include=content)`
+//!           → `POST {wasm}<prefix>/_ingest` (page verbatim; the wasm applies
+//!           transactionally, idempotent by change_seq, and deposits the server
+//!           change_seq for the push conflict guard). After the first COMPLETE
+//!           pull, the prefix is marked primed → the proxy starts routing it
+//!           (components::route_for).
 //!   PUSH  — the wasm journals local mutations as REPLAYABLE REQUESTS
-//!           (`{seq, method, path, target_id, body, base_seq}`, contract v2.1):
-//!           `GET {wasm}/_changes?since=cursor` → replay verbatim to the core
-//!           with `Idempotency-Key: office-<sm>-outbox-<seq>` → `POST _ack`.
-//!           Optimistic conflict guard: the pull captures the server change_seq
-//!           of pending target_ids; base_seq behind → server-wins (op dropped).
+//!           (`{seq, method, path, target_id, body, base_seq}`):
+//!           `GET {wasm}<prefix>/_changes?since=cursor` → replay verbatim to the
+//!           core with a stable `Idempotency-Key` → `POST _ack`. Optimistic
+//!           conflict guard: the pull captures the server change_seq of pending
+//!           target_ids; base_seq behind → server-wins (op dropped).
 //!
-//! Mirrors drive_sync/drive_push, which proved the shape. Requires
-//! documents-core ≥ 2.2 (`_ingest`); older wasm → entity skipped (passthrough).
+//! Mirrors drive_sync/drive_push, which proved the shape. A wasm without
+//! `_ingest`/`_changes` (older artifact) → entity skipped (passthrough).
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::wasmoffice::{self, OFFICE};
+use crate::wasmoffice::{self, Spec};
 
-/// One synced office entity (sub-module).
+/// Prefixes synced by DEDICATED loops — never by this engine.
+const DEDICATED: [&str; 2] = ["/api/v1/office/documents", "/api/v1/drive"];
+
+/// Prefixes whose delta carries no content payload (e.g. whiteboard boards:
+/// the drawing is Yjs, outside the delta).
+const NO_CONTENT: [&str; 1] = ["/api/v1/office/whiteboard/boards"];
+
+/// One synced entity (a claimed prefix of an installed component).
 struct Entity {
-    /// Short key, used in cursor filenames and idempotency keys.
-    key:     &'static str,
+    /// The component's wasm spec (documents-core, notes-core, …).
+    spec:    Spec,
+    /// Filesystem/idempotency-safe key derived from the prefix.
+    key:     String,
     /// API prefix (core + wasm share it), also the delta/_changes/_ack base.
-    prefix:  &'static str,
-    /// Whether the delta supports `include=content` (boards: Yjs, no content).
+    prefix:  String,
+    /// Whether to ask the delta for inline content.
     content: bool,
 }
 
-const ENTITIES: [Entity; 4] = [
-    Entity { key: "spreadsheets", prefix: "/api/v1/office/spreadsheets", content: true },
-    Entity { key: "presentations", prefix: "/api/v1/office/presentations", content: true },
-    Entity { key: "diagrams", prefix: "/api/v1/office/diagrams", content: true },
-    Entity { key: "boards", prefix: "/api/v1/office/whiteboard/boards", content: false },
-];
+/// The entities to sync: every claim of every INSTALLED component, minus the
+/// prefixes handled by dedicated loops. Manifest-driven — a new module's wasm
+/// starts syncing with no desktop change.
+fn entities() -> Vec<Entity> {
+    let mut out = Vec::new();
+    for c in crate::components::all() {
+        let spec = wasmoffice::spec_for(&c.name, &c.module);
+        if !wasmoffice::enabled_for(spec) {
+            continue;
+        }
+        for prefix in c.claims {
+            if DEDICATED.contains(&prefix.as_str()) {
+                continue;
+            }
+            let key: String = prefix
+                .trim_start_matches("/api/v1/")
+                .chars()
+                .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+                .collect();
+            out.push(Entity {
+                spec,
+                key,
+                content: !NO_CONTENT.contains(&prefix.as_str()),
+                prefix,
+            });
+        }
+    }
+    out
+}
 
 #[derive(Default)]
 pub struct Stats {
@@ -50,21 +86,21 @@ pub struct Stats {
 }
 
 /// One full cycle for every entity: push (replay local outbox) interleaved with
-/// pull (reconcile + capture). No-op when offline or wasm absent.
+/// pull (reconcile + capture). No-op when offline.
 pub fn cycle(instance_id: &str) -> Result<Stats, String> {
     let mut stats = Stats::default();
-    if kubuno_sync::is_offline() || !wasmoffice::enabled_for(OFFICE) {
+    if kubuno_sync::is_offline() {
         return Ok(stats);
     }
-    for e in &ENTITIES {
-        match cycle_entity(instance_id, e) {
+    for e in entities() {
+        match cycle_entity(instance_id, &e) {
             Ok((pulled, replayed, conflicts, deferred)) => {
                 stats.pulled += pulled;
                 stats.replayed += replayed;
                 stats.conflicts += conflicts;
                 stats.deferred += deferred;
             }
-            Err(err) => eprintln!("[office_entities] {} : {err}", e.key),
+            Err(err) => eprintln!("[entity_sync] {} : {err}", e.key),
         }
     }
     Ok(stats)
@@ -95,14 +131,16 @@ fn cycle_entity(instance_id: &str, e: &Entity) -> Result<(u32, u32, u32, u32), S
         // Server moved this row past the op's base → server-wins, drop the op.
         if o.base_seq > 0 && bumped.get(&o.target_id).is_some_and(|s| *s > o.base_seq) {
             eprintln!(
-                "[office_entities] conflit (server-wins) : {} {} {} base={} serveur={}",
+                "[entity_sync] conflit (server-wins) : {} {} {} base={} serveur={}",
                 e.key, o.method, o.target_id, o.base_seq, bumped[&o.target_id]
             );
             conflicts += 1;
             ack_upto = o.seq;
             continue;
         }
-        let key = format!("office-{}-outbox-{}", e.key, o.seq);
+        // Stable per-op idempotency key (key = sanitized prefix, e.g.
+        // office_spreadsheets / notes) — a network retry never double-applies.
+        let key = format!("{}-outbox-{}", e.key, o.seq);
         match core_send(instance_id, &o.method, &o.path, o.body.clone(), &key) {
             Ok((status, _)) if (200..300).contains(&status) => {
                 replayed += 1;
@@ -116,18 +154,18 @@ fn cycle_entity(instance_id: &str, e: &Entity) -> Result<(u32, u32, u32, u32), S
             // Permanent rejection: drop it, the pull reconciles the true state.
             Ok((status, body)) if (400..500).contains(&status) => {
                 let detail = snippet(&body);
-                eprintln!("[office_entities] {} {} {} rejeté HTTP {status} : {detail}", e.key, o.method, o.path);
+                eprintln!("[entity_sync] {} {} {} rejeté HTTP {status} : {detail}", e.key, o.method, o.path);
                 conflicts += 1;
                 ack_upto = o.seq;
             }
             // Transient: stop, the unacked tail retries next cycle.
             Ok((status, body)) => {
-                eprintln!("[office_entities] {} {} différé : HTTP {status} — {}", e.key, o.path, snippet(&body));
+                eprintln!("[entity_sync] {} {} différé : HTTP {status} — {}", e.key, o.path, snippet(&body));
                 deferred += 1;
                 break;
             }
             Err(err) => {
-                eprintln!("[office_entities] {} {} différé : {err}", e.key, o.path);
+                eprintln!("[entity_sync] {} {} différé : {err}", e.key, o.path);
                 deferred += 1;
                 break;
             }
@@ -137,9 +175,9 @@ fn cycle_entity(instance_id: &str, e: &Entity) -> Result<(u32, u32, u32, u32), S
     // 4. Ack the drained prefix so the wasm prunes its outbox.
     if ack_upto > cursor {
         let body = serde_json::json!({ "upto": ack_upto }).to_string();
-        match wasm(instance_id, "POST", &format!("{}/_ack", e.prefix), body.as_bytes()) {
+        match wasm(e.spec, instance_id, "POST", &format!("{}/_ack", e.prefix), body.as_bytes()) {
             Some((st, _)) if (200..300).contains(&st) => save_i64(instance_id, &format!("outbox_{}", e.key), ack_upto),
-            other => eprintln!("[office_entities] {} _ack : {:?}", e.key, other.map(|(s, _)| s)),
+            other => eprintln!("[entity_sync] {} _ack : {:?}", e.key, other.map(|(s, _)| s)),
         }
     }
     Ok((pulled, replayed, conflicts, deferred))
@@ -190,7 +228,7 @@ fn pull_entity(
 
         if n > 0 {
             // Page verbatim → transactional, idempotent apply (+ implicit _seq).
-            match wasm(instance_id, "POST", &format!("{}/_ingest", e.prefix), body.as_bytes()) {
+            match wasm(e.spec, instance_id, "POST", &format!("{}/_ingest", e.prefix), body.as_bytes()) {
                 Some((st, _)) if (200..300).contains(&st) => {}
                 Some((0, _)) => return Err("wasm sans _ingest (documents-core < 2.2)".into()),
                 Some((st, out)) => {
@@ -205,7 +243,7 @@ fn pull_entity(
         if !has_more || new_cursor == cursor {
             // First COMPLETE pull done → the proxy may start serving this prefix
             // from the local store (components::route_for checks this marker).
-            crate::components::mark_primed(instance_id, OFFICE, e.prefix);
+            crate::components::mark_primed(instance_id, e.spec, &e.prefix);
             break;
         }
     }
@@ -225,7 +263,7 @@ struct Op {
 
 fn peek_outbox(instance_id: &str, e: &Entity, cursor: i64) -> Result<Vec<Op>, String> {
     let path = format!("{}/_changes?since={cursor}", e.prefix);
-    let (status, body) = match wasm(instance_id, "GET", &path, &[]) {
+    let (status, body) = match wasm(e.spec, instance_id, "GET", &path, &[]) {
         Some(r) => r,
         None => return Err("backend office indisponible".into()),
     };
@@ -258,8 +296,8 @@ fn peek_outbox(instance_id: &str, e: &Entity, cursor: i64) -> Result<Vec<Op>, St
     Ok(ops)
 }
 
-fn wasm(instance_id: &str, method: &str, path: &str, body: &[u8]) -> Option<(u16, Vec<u8>)> {
-    wasmoffice::handle_for(OFFICE, instance_id, method, path, body).map(|(s, _ct, b)| (s, b))
+fn wasm(spec: Spec, instance_id: &str, method: &str, path: &str, body: &[u8]) -> Option<(u16, Vec<u8>)> {
+    wasmoffice::handle_for(spec, instance_id, method, path, body).map(|(s, _ct, b)| (s, b))
 }
 
 // ── Core access (Bearer + refresh on 401) ───────────────────────────────────

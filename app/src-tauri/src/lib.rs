@@ -22,7 +22,7 @@ mod office_sync;
 #[cfg(desktop)]
 mod components;
 #[cfg(desktop)]
-mod office_entities;
+mod entity_sync;
 #[cfg(desktop)]
 mod drive_sync;
 #[cfg(desktop)]
@@ -196,6 +196,21 @@ fn set_offline(offline: bool) -> Result<bool, String> {
     Ok(offline)
 }
 
+/// Basenames of the WASM components the desktop knows (persisted manifest, with
+/// the historical pair as fallback). Manifest-driven: the notes/tasks/… waves
+/// become installable with zero desktop change.
+#[allow(clippy::needless_return)] // the `return` is required by the mobile cfg branch
+fn known_component_names() -> Vec<String> {
+    #[cfg(desktop)]
+    {
+        return components::all().into_iter().map(|c| c.name).collect();
+    }
+    #[cfg(not(desktop))]
+    {
+        vec!["documents-core.wasm".into(), "drive-core.wasm".into()]
+    }
+}
+
 /// The local-first WASM backends currently installed in the config dir (basenames).
 /// Lets the launcher show, per tile, whether its backend is downloaded.
 #[tauri::command]
@@ -203,10 +218,9 @@ fn installed_components() -> Vec<String> {
     let Ok(cfg) = kubuno_sync::config::config_dir() else {
         return Vec::new();
     };
-    ["documents-core.wasm", "drive-core.wasm"]
+    known_component_names()
         .into_iter()
         .filter(|n| cfg.join(n).is_file())
-        .map(|n| n.to_string())
         .collect()
 }
 
@@ -258,8 +272,8 @@ fn download_components(instance_id: &str, want: &[String]) -> Result<String, Str
     let mut count = 0u32;
     for c in components {
         let Some(name) = c["name"].as_str() else { continue };
-        // Only the known backends, stored by basename in the config dir.
-        if name != "documents-core.wasm" && name != "drive-core.wasm" {
+        // Stored by basename in the config dir → refuse anything path-like.
+        if name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..") {
             continue;
         }
         // Respect an explicit selection (empty = all).
@@ -290,9 +304,9 @@ fn download_components(instance_id: &str, want: &[String]) -> Result<String, Str
 #[tauri::command]
 fn uninstall_local_components(components: Vec<String>) -> Result<(), String> {
     let cfg = kubuno_sync::config::config_dir().map_err(|e| e.to_string())?;
-    for n in ["documents-core.wasm", "drive-core.wasm"] {
-        if components.is_empty() || components.iter().any(|c| c == n) {
-            let _ = std::fs::remove_file(cfg.join(n));
+    for n in known_component_names() {
+        if components.is_empty() || components.contains(&n) {
+            let _ = std::fs::remove_file(cfg.join(&n));
         }
     }
     #[cfg(desktop)]
