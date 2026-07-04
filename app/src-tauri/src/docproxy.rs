@@ -126,6 +126,7 @@ pub fn ensure_started(id: &str) -> Result<u16, String> {
         };
         let app = Router::new()
             .route("/api/v1/auth/refresh", post(auth_refresh))
+            .route("/__desktop/open", post(desktop_open))
             .route("/collab/:room/sync", get(collab_ws))
             .fallback(proxy_all)
             .with_state(state.clone());
@@ -256,6 +257,33 @@ async fn auth_refresh(State(st): State<ProxyState>) -> Response {
 fn token_json(token: String) -> Response {
     let body = serde_json::json!({ "access_token": token }).to_string();
     ([(header::CONTENT_TYPE, "application/json")], body).into_response()
+}
+
+/// Pop-out bridge: the web UI in a doc/app window (same origin as this proxy)
+/// asks the desktop to open a route in a real OS window — floating viewers,
+/// editors and tear-off dock panels become native windows. Local-only by
+/// construction (the proxy binds 127.0.0.1); Tauri IPC is not used because app
+/// commands aren't ACL-exposed to remote-origin webviews.
+async fn desktop_open(
+    State(st): State<ProxyState>,
+    axum::extract::Json(body): axum::extract::Json<serde_json::Value>,
+) -> Response {
+    let route = body.get("route").and_then(|x| x.as_str()).unwrap_or("").to_string();
+    if route.is_empty() {
+        return (StatusCode::BAD_REQUEST, "route manquante").into_response();
+    }
+    let label = body
+        .get("label")
+        .and_then(|x| x.as_str())
+        .unwrap_or(route.as_str())
+        .to_string();
+    let Some(app) = crate::APP.get() else {
+        return (StatusCode::SERVICE_UNAVAILABLE, "application indisponible").into_response();
+    };
+    match crate::open_app_window(app.clone(), st.id.clone(), route, label).await {
+        Ok(()) => (StatusCode::OK, "ok").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
 }
 
 // ── Generic caching reverse proxy ───────────────────────────────────────────
