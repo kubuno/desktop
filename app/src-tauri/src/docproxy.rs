@@ -280,7 +280,17 @@ async fn desktop_open(
     let Some(app) = crate::APP.get() else {
         return (StatusCode::SERVICE_UNAVAILABLE, "application indisponible").into_response();
     };
-    match crate::open_app_window(app.clone(), st.id.clone(), route, label).await {
+    // Optional size hint (a mini audio player shouldn't open at editor size).
+    let size = match (
+        body.get("width").and_then(|x| x.as_f64()),
+        body.get("height").and_then(|x| x.as_f64()),
+    ) {
+        (Some(w), Some(h)) => Some((w, h)),
+        _ => None,
+    };
+    // force_native: a pop-out detached from a native window stays native even
+    // when the route has no local backend (served online through this proxy).
+    match crate::open_app_window(app.clone(), st.id.clone(), route, label, size, true).await {
         Ok(()) => (StatusCode::OK, "ok").into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
