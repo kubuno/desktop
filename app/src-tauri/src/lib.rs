@@ -724,9 +724,9 @@ async fn open_document(
 #[cfg(desktop)]
 fn desktop_bridge_js(instance_id: &str) -> String {
     format!(
-        "window.kubunoDesktop = {{ instance: '{id}', openWindow: (route, label) => \
+        "window.kubunoDesktop = {{ instance: '{id}', openWindow: (route, label, opts) => \
          fetch('/__desktop/open', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, \
-         body: JSON.stringify({{ route: route, label: label || route }}) }}).then(r => \
+         body: JSON.stringify(Object.assign({{ route: route, label: label || route }}, opts || {{}})) }}).then(r => \
          {{ if (!r.ok) throw new Error('popout: HTTP ' + r.status); }}) }};",
         id = instance_id
     )
@@ -734,14 +734,21 @@ fn desktop_bridge_js(instance_id: &str) -> String {
 
 /// Core of `open_app`, shared by the Tauri command (launcher) and the local
 /// proxy's `/__desktop/open` pop-out endpoint (doc/app windows, no IPC there).
+/// `size` overrides the default window size (pop-outs like a mini audio player
+/// shouldn't open at full editor size). `force_native` skips the local-backend
+/// gate: a pop-out detached from a native window must STAY a native window even
+/// for routes without a WASM backend (served online through the proxy) — only
+/// the launcher redirects those to the browser.
 #[cfg(desktop)]
 pub(crate) async fn open_app_window(
     app: tauri::AppHandle,
     instance_id: String,
     route: String,
     label: String,
+    size: Option<(f64, f64)>,
+    force_native: bool,
 ) -> Result<(), String> {
-    if !has_local_backend(&route) {
+    if !force_native && !has_local_backend(&route) {
         return launch_in_browser(&app, &instance_id, &route);
     }
     use tauri::{WebviewUrl, WebviewWindowBuilder};
@@ -769,9 +776,10 @@ pub(crate) async fn open_app_window(
     } else {
         format!("Kubuno — {label}")
     };
+    let (w, h) = size.unwrap_or((1200.0, 820.0));
     WebviewWindowBuilder::new(&app, &wlabel, WebviewUrl::External(parsed))
         .title(&title)
-        .inner_size(1200.0, 820.0)
+        .inner_size(w.clamp(320.0, 4096.0), h.clamp(200.0, 4096.0))
         .decorations(false)
         // See open_document: transparent + shadow avoids the black resize flicker.
         .transparent(true)
@@ -796,7 +804,7 @@ async fn open_app(
     route: String,
     label: String,
 ) -> Result<(), String> {
-    open_app_window(app, instance_id, route, label).await
+    open_app_window(app, instance_id, route, label, None, false).await
 }
 
 /// Mobile stubs: native sub-windows served by the local document proxy are a
