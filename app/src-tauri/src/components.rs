@@ -30,6 +30,10 @@ pub struct Component {
     pub name:   String,
     pub module: String,
     pub claims: Vec<String>,
+    /// Prefixes carrying the sync surface (delta/_ingest/_changes/_ack). Equal
+    /// to  unless the manifest declares a finer  list (e.g.
+    /// tasks: one broad routing claim, two sync entities underneath).
+    pub sync:   Vec<String>,
 }
 
 // Every claimed prefix is push-capable: documents and drive have dedicated
@@ -45,11 +49,13 @@ fn builtin() -> Vec<Component> {
             name:   "documents-core.wasm".into(),
             module: "office".into(),
             claims: vec!["/api/v1/office/documents".into()],
+            sync:   vec!["/api/v1/office/documents".into()],
         },
         Component {
             name:   "drive-core.wasm".into(),
             module: "drive".into(),
             claims: vec!["/api/v1/drive".into()],
+            sync:   vec!["/api/v1/drive".into()],
         },
     ]
 }
@@ -80,7 +86,11 @@ pub fn persist_manifest(manifest: &serde_json::Value) {
         if claims.is_empty() {
             continue;
         }
-        out.push(serde_json::json!({ "name": name, "module": module, "claims": claims }));
+        let mut entry = serde_json::json!({ "name": name, "module": module, "claims": claims });
+        if let Some(sync) = c["sync"].as_array() {
+            entry["sync"] = serde_json::Value::Array(sync.clone());
+        }
+        out.push(entry);
     }
     if out.is_empty() {
         return;
@@ -125,7 +135,11 @@ fn load_disk() -> Option<Vec<Component>> {
             .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
             .unwrap_or_default();
         if !claims.is_empty() {
-            out.push(Component { name: name.into(), module: module.into(), claims });
+            let sync: Vec<String> = c["sync"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+                .unwrap_or_else(|| claims.clone());
+            out.push(Component { name: name.into(), module: module.into(), claims, sync });
         }
     }
     if out.is_empty() { None } else { Some(out) }
@@ -154,11 +168,22 @@ fn primed_marker(instance_id: &str, spec: Spec, prefix: &str) -> Option<PathBuf>
 /// keep the store fed from the very first cycle.
 const ALWAYS_PRIMED: [&str; 2] = ["/api/v1/office/documents", "/api/v1/drive"];
 
-fn primed(instance_id: &str, spec: Spec, prefix: &str) -> bool {
-    if ALWAYS_PRIMED.contains(&prefix) {
+fn marker_exists(instance_id: &str, spec: Spec, prefix: &str) -> bool {
+    primed_marker(instance_id, spec, prefix).is_some_and(|p| p.is_file())
+}
+
+/// A claim is primed when its own marker exists, or — for a claim BROADER than
+/// its component's sync surface (e.g. tasks: one routing claim, boards+tasks
+/// sync entities underneath) — when EVERY sync prefix under it is primed.
+fn primed(instance_id: &str, spec: Spec, c: &Component, claim: &str) -> bool {
+    if ALWAYS_PRIMED.contains(&claim) {
         return true;
     }
-    primed_marker(instance_id, spec, prefix).is_some_and(|p| p.is_file())
+    if marker_exists(instance_id, spec, claim) {
+        return true;
+    }
+    let subs: Vec<&String> = c.sync.iter().filter(|s| covers(claim, s)).collect();
+    !subs.is_empty() && subs.iter().all(|s| marker_exists(instance_id, spec, s))
 }
 
 /// Record that a prefix completed its first full pull: from now on the proxy
@@ -188,7 +213,7 @@ pub fn status(instance_id: &str) -> Vec<serde_json::Value> {
                 "installed": installed,
                 "claims": c.claims.iter().map(|p| serde_json::json!({
                     "prefix": p,
-                    "primed": primed(instance_id, spec, p),
+                    "primed": primed(instance_id, spec, c, p),
                     // Every claim has a replay loop (dedicated or entity_sync).
                     "pushable": true,
                 })).collect::<Vec<_>>(),
@@ -218,7 +243,7 @@ pub fn route_for(instance_id: &str, path: &str) -> Option<(Spec, bool)> {
             continue;
         }
         let spec = wasmoffice::spec_for(&c.name, &c.module);
-        if wasmoffice::enabled_for(spec) && primed(instance_id, spec, prefix) {
+        if wasmoffice::enabled_for(spec) && primed(instance_id, spec, c, prefix) {
             best = Some((prefix, spec));
         }
     }
