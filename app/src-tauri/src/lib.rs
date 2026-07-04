@@ -708,17 +708,34 @@ async fn open_document(
         // OS-level drop handler swallows the events and uploads never trigger.
         .disable_drag_drop_handler()
         .initialization_script(TITLEBAR_JS)
+        .initialization_script(desktop_bridge_js(&instance_id))
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
 }
 
-/// Launch a module/app in its own native window, served by the local document
-/// proxy (offline-capable, stable origin). `route` is the web SPA path (e.g.
-/// `/office` or `/drive/recent`). Reuses an existing window for the same route.
+/// JS bridge injected into every native doc/app window. Lets the web UI ask the
+/// desktop to open a route in a REAL OS window — the pop-out affordance for
+/// floating pseudo-windows (viewers, editors, tear-off dock panels). Contract
+/// shared with the core frontend: presence of `window.kubunoDesktop` = running
+/// in the desktop client; `openWindow(route, label?)` opens/focuses the window.
+/// Goes through the local proxy (same origin) rather than Tauri IPC: app
+/// commands aren't ACL-exposed to remote-origin webviews.
 #[cfg(desktop)]
-#[tauri::command]
-async fn open_app(
+fn desktop_bridge_js(instance_id: &str) -> String {
+    format!(
+        "window.kubunoDesktop = {{ instance: '{id}', openWindow: (route, label) => \
+         fetch('/__desktop/open', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, \
+         body: JSON.stringify({{ route: route, label: label || route }}) }}).then(r => \
+         {{ if (!r.ok) throw new Error('popout: HTTP ' + r.status); }}) }};",
+        id = instance_id
+    )
+}
+
+/// Core of `open_app`, shared by the Tauri command (launcher) and the local
+/// proxy's `/__desktop/open` pop-out endpoint (doc/app windows, no IPC there).
+#[cfg(desktop)]
+pub(crate) async fn open_app_window(
     app: tauri::AppHandle,
     instance_id: String,
     route: String,
@@ -762,9 +779,24 @@ async fn open_app(
         // See open_document: let the web module handle HTML5 file drag-and-drop.
         .disable_drag_drop_handler()
         .initialization_script(TITLEBAR_JS)
+        .initialization_script(desktop_bridge_js(&instance_id))
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Launch a module/app in its own native window, served by the local document
+/// proxy (offline-capable, stable origin). `route` is the web SPA path (e.g.
+/// `/office` or `/drive/recent`). Reuses an existing window for the same route.
+#[cfg(desktop)]
+#[tauri::command]
+async fn open_app(
+    app: tauri::AppHandle,
+    instance_id: String,
+    route: String,
+    label: String,
+) -> Result<(), String> {
+    open_app_window(app, instance_id, route, label).await
 }
 
 /// Mobile stubs: native sub-windows served by the local document proxy are a
