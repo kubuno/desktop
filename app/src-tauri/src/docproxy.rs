@@ -371,6 +371,17 @@ async fn proxy_all(State(st): State<ProxyState>, req: Request) -> Response {
                     cache_write(&st.cache_dir, "__shell__", &ct, &bytes);
                 }
             }
+            // Local-first must survive a DEAD SESSION, not just being offline: the
+            // locally-served data (wasm) needs no core session, but the shell's
+            // bootstrap calls (/me, /modules, /config…) would 401 and bounce the
+            // user to a login page. Degrade exactly like offline: serve the cached
+            // copy of cacheable GETs instead of the 401.
+            if status == StatusCode::UNAUTHORIZED && (cacheable || navigation) {
+                let fallback = from_cache(&st.cache_dir, &pq, navigation);
+                if fallback.status() != StatusCode::BAD_GATEWAY {
+                    return fallback;
+                }
+            }
             // Don't let WebView2 cache the shell HTML (it would bypass the proxy
             // and skip the standalone-CSS injection on later loads).
             if ct.contains("text/html") {
