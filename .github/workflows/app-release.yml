@@ -25,6 +25,7 @@ jobs:
           - { os: macos-13,       label: macos-intel, args: '--target x86_64-apple-darwin' }
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # full history: build id needs the commit count
 
       - uses: dtolnay/rust-toolchain@stable
         with:
