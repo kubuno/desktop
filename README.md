@@ -145,7 +145,7 @@ Three sync drivers keep local backends and the core converging:
   with content, granular push, collab-aware) and *drive* files (listings
   served from the local store, outbox replay to the core).
 - A **generic entity engine** for everything else (spreadsheets,
-  presentations, diagrams, whiteboards, notes, tasks, contacts, jarvis…):
+  presentations, diagrams, whiteboards, notes, tasks, contacts, assistant…):
   delta pull → verbatim `_ingest` into the WASM store (idempotent by
   `change_seq`), then replay of a durable local outbox (verbatim
   method/path/body + `Idempotency-Key`, server-wins guard on stale base,
