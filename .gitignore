@@ -2,12 +2,13 @@
 **/*.rs.bk
 Cargo.lock
 
-# Tauri generated files
-/app/src-tauri/gen/
-/app/src-tauri/target/
-
 # Build artifacts (binaries)
 /dist/
-/app/src-tauri/msix/*.exe
-/app/src-tauri/msix/layout/
-/app/src-tauri/msix/*.msix
+/packaging/*.exe
+/packaging/layout/
+/packaging/*.msix
+
+# Claude Code working files (agent instructions & memory) — never published
+CLAUDE.md
+AGENTS.md
+.claude/
