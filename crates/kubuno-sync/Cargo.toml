@@ -28,7 +28,7 @@ tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 
 # ── Packaging Linux (.deb via cargo-deb) ───────────────────────────────────────
 [package.metadata.deb]
-maintainer = "Kubuno <kubuno@toiledev.com>"
+maintainer = "Martinien OLINGA <kubuno@martinienolinga.com>"
 copyright  = "2026, Kubuno — AGPL-3.0-or-later"
 section    = "utils"
 priority   = "optional"
