@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/logo.svg" alt="Kubuno Desktop logo" width="128" height="128">
+</p>
+
 # Kubuno Desktop
 
 Desktop client for [Kubuno](https://github.com/kubuno/core), the self-hosted cloud platform.
