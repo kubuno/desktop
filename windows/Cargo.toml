@@ -31,9 +31,8 @@ members  = [
     "src/chat",
     "src/documents",
     # Drive — the file manager and its crates. It used to be a workspace of its
-    # own; it joined this one so that `drive.exe` loads the same shared
-    # `kubuno_ui.dll` as every other app (a Rust dylib must be built together
-    # with the programs that load it).
+    # own; it joined this one to build with the same framework crates as every
+    # other app.
     "src/drive/crates/drive-shared",
     "src/drive/crates/drive-core-storage",
     "src/drive/crates/drive-app-storage",
@@ -100,5 +99,6 @@ tracing-subscriber = "0.3"
 git2 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
 
 # Drive's former workspace built release with `lto = "thin"` and one codegen
-# unit. Not carried over: LTO cannot be combined with `-C prefer-dynamic`, which
-# the shared `kubuno_ui.dll` requires (see .cargo/config.toml).
+# unit. Not carried over (yet): it was impossible while `kubuno-ui` was a shared
+# DLL. Every program now links statically, so LTO would work again; it is left
+# off to keep release builds short.

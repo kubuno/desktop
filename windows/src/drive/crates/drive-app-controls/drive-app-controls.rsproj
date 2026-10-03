@@ -5,8 +5,8 @@
        to get a fresh default. -->
   <PropertyGroup>
     <CargoPackage>drive-app-controls</CargoPackage>
-    <!-- The workspace shares a Rust dylib between several crates: build the whole workspace, so that the
-         dylib and every program loading it always get the same features (docs/RSPROJ.md, "Cargo workspaces"). -->
+    <!-- The workspace's programs share most of their crates: build the whole workspace in one cargo run,
+         so that a solution build compiles each shared crate once, with one feature set (docs/RSPROJ.md, "Cargo workspaces"). -->
     <CargoBuildScope>Workspace</CargoBuildScope>
   </PropertyGroup>
 

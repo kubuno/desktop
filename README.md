@@ -144,8 +144,11 @@ Windows shell, from `windows/`:
 cargo build --release -p kubuno-desktop     # → target/release/kubuno-desktop.exe
 cargo run   -p kubuno-ui --example gallery  # the component gallery (UI reference)
 cargo build --release -p drive-app          # → target/release/drive.exe
-pwsh ./tools/stage-runtime.ps1 -Profile release   # puts each program's kubuno_ui-<hash>.dll next to it
 ```
+
+Every exe links the UI framework (`kubuno-ui`) and Rust's `std` statically: it runs
+on its own, with no DLL beside it. Kubuno Desktop is a service dependency of the
+other apps (account broker, sync, launcher), never a binary one.
 
 The full guide — per-machine build directory, memory-constrained builds, Microsoft
 Store submission — is in **[`BUILD.md`](BUILD.md)**.

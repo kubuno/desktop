@@ -507,7 +507,7 @@ fn redirect_std_handles() {
 // ── Win32 ────────────────────────────────────────────────────────────────────
 //
 // Declared directly (raw-dylib), like `input.rs`' clipboard, so the crate's `windows` feature
-// set — and with it the `windows` crate every user of `kubuno_ui.dll` compiles — is unchanged.
+// set — and with it the `windows` crate every Kubuno program compiles — is unchanged.
 
 const STD_OUTPUT_HANDLE: u32 = -11i32 as u32;
 const STD_ERROR_HANDLE: u32 = -12i32 as u32;

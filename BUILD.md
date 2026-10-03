@@ -33,56 +33,37 @@ cargo run   -p kubuno-ui --example gallery  # galerie des composants (référenc
 cargo build --release -p drive-app          # → target/release/drive.exe (explorateur Drive)
 ```
 
-### Bibliothèque de composants partagée : `kubuno_ui-<hash>.dll`
+### Static linking: every exe is self-contained
 
-Le design system (`kubuno-ui`, avec l'hôte `kubuno-controls` et la surface de
-peinture `drive-app-controls`) est compilé en **DLL Rust** (`dylib`) chargée par
-toutes les applis du workspace (coque, chat, documents, drive, galerie). Le workspace
-est donc lié avec `-C prefer-dynamic` (`windows/.cargo/config.toml`) : chaque
-exe a besoin, à côté de lui (ou dans le PATH), de **sa** `kubuno_ui-<hash>.dll`
-**et** de la `std-*.dll` de Rust. Après un build, pour lancer un exe par double-clic :
+Every program of the workspace (shell, chat, documents, drive, the gallery, the
+tools) links the design system (`kubuno-ui`, with the host `kubuno-controls` and
+the painting surface `drive-app-controls`) and Rust's `std` **statically**: an
+exe runs from a folder that holds only itself — no `kubuno_ui` DLL, no
+`std-*.dll`, nothing to stage after a build. `kubuno-ui` is an ordinary rlib and
+the workspace sets no `rustflags` (`windows/.cargo/config.toml`).
+
+Why (product decision of 2026-10-03): the apps will be released from their own
+per-module repositories, each on its own schedule, so no Rust DLL may be shared
+between them (a Rust dylib has no stable ABI: it would tie every app to one
+build of it). Kubuno Desktop (the shell) stays mandatory on every PC, but as a
+**service** dependency — the account/token broker over its named pipe, the sync,
+the launcher — never as a binary one.
+
+What this replaced: until 2026-10-02 `kubuno-ui` was a Rust `dylib`
+(`kubuno_ui-<hash>.dll`, one file name per build, with a link shim in its
+`build.rs`), the workspace was linked with `-C prefer-dynamic`, and
+`tools/stage-runtime.ps1` copied the DLLs next to each exe. All of that is gone.
+The global state the framework keeps (input queue, focus ring, floating
+surfaces) still exists exactly once per process, since a program links one copy
+of the crate. Cost: each exe carries its own copy of the framework (see the
+CHANGELOG for sizes).
 
 ```powershell
-pwsh ./tools/build-all.ps1 -Profile release   # toutes les applis + exemples, puis les DLL à côté
+pwsh ./tools/build-all.ps1 -Profile release   # every app and example in one cargo run
 ```
 
-**Un nom de fichier par build.** Une DLL Rust n'a pas d'ABI stable : toute
-recompilation peut renommer ou modifier les symboles exportés. Chaque build de la
-DLL porte donc son propre nom, `kubuno_ui-<16 chiffres hexa>.dll`, et chaque exe
-importe exactement celui avec lequel il a été lié. C'est le script de build de
-`kubuno-ui` (`windows/src/crates/kubuno-ui/build.rs`) qui s'en charge : il fait
-passer l'édition de liens de ce seul paquet par un relais (`link.exe` copié dans
-son `OUT_DIR`) qui renomme la sortie, le hash couvrant toutes les entrées de
-l'édition de liens. `cargo build`, `cargo run`, `cargo test`, les projets `.rsproj`
-de Visual Studio et le concepteur de vues en profitent sans configuration.
-Conséquences :
-
-- deux builds coexistent dans un même dossier ou dans le PATH, chaque exe charge
-  le sien ; un `cargo build -p <appli>` isolé ne casse plus les autres applis (elles
-  gardent leur build, conservé dans `deps` parmi les trois plus récents) mais elles
-  ne voient pas la modification : `build-all.ps1` reste la commande à utiliser après
-  une modification de `kubuno-ui` ;
-- si la DLL d'un exe manque, Windows l'indique sous son nom (« `kubuno_ui-<hash>.dll`
-  introuvable », `0xC0000135`) au lieu d'un « point d'entrée introuvable » ;
-- `kubuno_ui.dll` (sans hash) n'existe plus que comme alias du dernier build, pour
-  Cargo et rustc (métadonnées de la crate) : aucun exe ne l'importe ;
-- `stage-runtime.ps1` copie à côté de chaque exe le build qu'il importe (avec son
-  PDB) et liste les exes dont le build a quitté `deps` ;
-- le code qui doit savoir quel fichier il a chargé appelle
-  `kubuno_ui::library::module_path()`.
-
-Pourquoi ce mécanisme plutôt qu'un autre (noms de Cargo, `-C extra-filename`,
-bibliothèque d'import régénérée, manifeste side-by-side…) : voir
-`vskubuno/docs/DESIGNER.md`, section 16.
-
-(`cargo run` / `cargo test` n'ont besoin d'aucune copie : Cargo met leurs dossiers
-dans le PATH.) La DLL et les applis doivent quand même être compilées **ensemble**,
-par le même compilateur, pour partager une seule instance de la DLL — c'est le
-cas : tout vit dans ce seul workspace (Drive, autrefois workspace à part dans
-`src/drive`, l'a rejoint pour partager la même DLL).
-
 Les exécutables, au-dessus du socle partagé (`windows/src/crates` +
-`windows/src/drive/crates/drive-app-controls`, réunis dans `kubuno_ui-<hash>.dll`) :
+`windows/src/drive/crates/drive-app-controls`, linked statically into each exe) :
 
 | Exécutable | Crate | Rôle |
 |---|---|---|

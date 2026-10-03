@@ -8,7 +8,7 @@
   travels with the crate version whose layouts it describes, and, being in the PDB like the toolchain's natvis, its
   Option/Result entries win over the toolchain's generic `enum2$<*>` view (a natvis loaded from anywhere else is
   looked at after the PDB's and cannot override it). vskubuno ships a copy as a VSIX NativeVisualizer asset for the
-  modules whose PDB does not embed it (kubuno_ui.dll's own frames, applications built against an older kubuno_views):
+  modules whose PDB does not embed it (applications built against an older kubuno_views):
   keep both in sync.
 
   Names are the ones rustc writes into the PDB (`crate::module::Type`, `enum2$<...>` for enums, `ref$<...>` for

@@ -115,14 +115,6 @@ else {
 }
 if (-not (Test-Path $exe)) { Write-Error "$exe not found - build it first"; exit 2 }
 
-# The exe imports the kubuno_ui build it was linked against (`kubuno_ui-<hash>.dll`)
-# and Rust's std DLL: like `cargo run`, put the build's deps folder and the
-# toolchain's libraries on PATH, so a build that was not staged starts too.
-$exeDir = Split-Path -Parent (Resolve-Path $exe).Path
-$profileDir = if ((Split-Path -Leaf $exeDir) -eq 'examples') { Split-Path -Parent $exeDir } else { $exeDir }
-$rustLib = Join-Path ((& rustc --print sysroot) | Out-String).Trim() 'lib\rustlib\x86_64-pc-windows-msvc\lib'
-$env:PATH = (@((Join-Path $profileDir 'deps'), $rustLib) -join ';') + ';' + $env:PATH
-
 if ($Dark) { $env:KUBUNO_UI_DARK = '1' } else { Remove-Item Env:\KUBUNO_UI_DARK -ErrorAction SilentlyContinue }
 if ($Dump) { $env:KUBUNO_UI_DUMP = '1' } else { Remove-Item Env:\KUBUNO_UI_DUMP -ErrorAction SilentlyContinue }
 

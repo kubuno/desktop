@@ -6,25 +6,14 @@ license.workspace    = true
 repository.workspace = true
 description = "Kubuno's desktop design system, built on the WinForms control replicas."
 
-# Shipped as ONE shared library, `kubuno_ui.dll`, that every Kubuno desktop app
-# of this workspace loads — the component families, the host (kubuno-controls)
-# and the painting surface (drive-app-controls) included, so the global state
-# they keep (input queue, focus ring, floating surfaces) exists exactly once per
-# process. A Rust `dylib` has no stable ABI: it and the apps are built together,
-# by the same compiler, with `-C prefer-dynamic` (see `.cargo/config.toml`).
-# `dylib` ONLY: with an `rlib` beside it, Cargo links the package's own
-# examples — the component gallery — statically, and the gallery would stop
-# exercising the very DLL the apps load.
-[lib]
-crate-type = ["dylib"]
-
-# Every build of the DLL gets its own file name, `kubuno_ui-<hash>.dll`, and every program linked
-# against it imports that exact name: `build.rs` routes this package's link through a shim that
-# renames the output (the only point where the name the import library records can change). Two
-# builds then coexist in one folder, and a program never loads a DLL of another build.
-# `find-msvc-tools` is the crate rustc itself uses to find MSVC's `link.exe`.
-[build-dependencies]
-find-msvc-tools = "0.1"
+# A plain Rust library (rlib), linked STATICALLY into every Kubuno desktop app:
+# each exe carries its own copy of the design system and needs no DLL beside it.
+# The global state the crate keeps (input queue, focus ring, floating surfaces)
+# still exists exactly once per process, since a program links one copy of it.
+# Product decision (2026-10-03): no shared Rust DLL, because the apps are
+# released from their own repositories, each on its own schedule; Kubuno
+# Desktop is a service dependency (token broker, sync, launcher), never a
+# binary one.
 
 [dependencies]
 # The replica layer: property surface, defaults, state machines, layout engines.

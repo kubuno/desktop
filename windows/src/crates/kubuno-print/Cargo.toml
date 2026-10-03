@@ -22,8 +22,8 @@ thiserror          = { workspace = true }
 windows-numerics   = { workspace = true }
 
 # Direct2D printing (`ID2D1PrintControl` over an XPS print job) and COM streams. ONLY features the
-# graph of `kubuno_ui.dll` already enables (drive-app-controls, kubuno-controls): a new feature on
-# `windows` would change its metadata for every crate of the workspace, `kubuno_ui.dll` included.
+# graph of `kubuno-ui` already enables (drive-app-controls, kubuno-controls): a new feature on
+# `windows` would change its metadata, and rebuild every crate of the workspace built on it.
 # What `windows` hides behind other features (`IPrintDocumentPackageTargetFactory`,
 # `ID2D1Device::CreatePrintControl`) is declared in `src/xps.rs` with `windows-core`'s `interface`.
 windows = { workspace = true, features = [
@@ -39,7 +39,7 @@ windows = { workspace = true, features = [
 ] }
 windows-core = { workspace = true }
 # The flat printing APIs (winspool: printers, DEVMODE, jobs; gdi32: page metrics; prntvpt: print
-# tickets; comdlg32: the Print and Page Setup dialogs). `windows-sys` is not in `kubuno_ui.dll`'s
+# tickets; comdlg32: the Print and Page Setup dialogs). `windows-sys` is not in `kubuno-ui`'s
 # graph, so its features change nothing there (the reason `kubuno-data` uses it too).
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",

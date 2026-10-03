@@ -2,7 +2,7 @@
 //! the form's collection, events subscribed with closures; a modal dialog built in code, a message
 //! box, a second window, and a control added while the application runs.
 //!
-//! `cargo run -p kubuno --example code_first` (the `kubuno_ui.dll` of the build must be on `PATH`).
+//! `cargo run -p kubuno --example code_first`.
 #![windows_subsystem = "windows"]
 
 use kubuno::prelude::*;

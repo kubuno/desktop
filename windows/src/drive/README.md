@@ -29,12 +29,11 @@ The crates are licensed MIT, like the original project.
 | `crates/drive-shared` | Shared helpers |
 
 `suppa/` vendors the `suppaftp` crate. The binary is `drive.exe`. These crates are
-members of the desktop's Windows workspace (`windows/Cargo.toml`), so Drive loads
-the same shared component library, `kubuno_ui-<hash>.dll` (one file name per build), as the other Kubuno apps.
+members of the desktop's Windows workspace (`windows/Cargo.toml`) and link the same component library,
+`kubuno-ui`, as the other Kubuno apps - statically: `drive.exe` needs no DLL beside it.
 From `windows/`:
 
 ```powershell
 cargo build --release -p drive-app
-pwsh ./tools/stage-runtime.ps1 -Profile release   # its kubuno_ui-<hash>.dll + Rust's std DLL beside the exe
 target\release\drive.exe [folder-to-open]
 ```

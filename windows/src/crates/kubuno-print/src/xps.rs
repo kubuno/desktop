@@ -5,8 +5,8 @@
 //! (paper, orientation, copies, collation, two-sided printing, colour, tray).
 //!
 //! The `windows` crate hides `IPrintDocumentPackageTargetFactory` and `ID2D1Device::CreatePrintControl`
-//! behind features (`Win32_Storage_Xps_Printing`) that are not in `kubuno_ui.dll`'s graph; enabling
-//! them would rebuild that shared library for every application. They are declared here instead.
+//! behind features (`Win32_Storage_Xps_Printing`) that are not in `kubuno-ui`'s graph; enabling
+//! them would rebuild `windows` and every crate built on it. They are declared here instead.
 
 #![allow(non_snake_case)]
 

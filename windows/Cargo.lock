@@ -2082,7 +2082,6 @@ dependencies = [
  "accesskit",
  "accesskit_windows",
  "drive-app-controls",
- "find-msvc-tools",
  "kubuno-controls",
  "serde",
  "serde_json",

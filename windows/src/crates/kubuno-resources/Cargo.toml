@@ -10,6 +10,6 @@ repository.workspace = true
 kubuno-resources-model  = { workspace = true }
 kubuno-resources-macros = { workspace = true }
 # The user's display language (GetUserPreferredUILanguages). Only features the UI crates already enable,
-# so adding this crate does not change the `windows` build `kubuno_ui.dll` is linked with.
+# so adding this crate does not change the `windows` build the UI crates are compiled with.
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization"] }
 tracing = { workspace = true }

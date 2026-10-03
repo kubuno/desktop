@@ -55,7 +55,7 @@ tiberius   = { version = "0.12", optional = true, default-features = false, feat
 tokio-util = { version = "0.7", optional = true, features = ["compat"] }
 
 # `windows-sys` rather than the workspace's `windows`: a new feature on `windows` would change its
-# metadata for every crate of the workspace, `kubuno_ui.dll` included.
+# metadata, and with it every crate of the workspace built on it (a long rebuild).
 windows-sys = { version = "0.61", optional = true, features = ["Win32_Foundation", "Win32_Security_Credentials"] }
 
 [dev-dependencies]

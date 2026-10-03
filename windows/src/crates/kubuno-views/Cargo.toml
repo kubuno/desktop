@@ -94,9 +94,9 @@ all-families = ["family-display", "family-choice", "family-text", "family-contai
 # No dev-dependencies. `examples/view_embed.rs` (the Visual Studio design surface) deliberately uses
 # nothing beyond this crate's own dependency graph - no extra `windows` features, its few OLE/Win32
 # calls are declared by hand: Visual Studio compiles it against the graph of the project a view
-# belongs to, so that it links that project's own `kubuno_ui.dll` (`vskubuno/docs/DESIGNER.md`
-# section 15). An extra feature would also change `windows` for `kubuno-ui` in this workspace's own
-# example build, i.e. rebuild the unhashed `kubuno_ui.dll` with different metadata.
+# belongs to, so that it statically links that project's own `kubuno_ui` build, from the rlibs the
+# project's build produced (`vskubuno/docs/DESIGNER.md` section 15): a crate or feature the project's
+# graph lacks would simply not be there to link.
 
 # `examples/view_embed.rs`'s `#[cfg(kubuno_design_project)]`: set by the Visual Studio design build when
 # it links the project's own crate into the surface (EVT-7b), never by cargo.

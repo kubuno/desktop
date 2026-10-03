@@ -905,6 +905,17 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Changed
 
+- **Every app is a single, self-contained exe: the UI framework is linked statically.** `kubuno-ui` is now an
+  ordinary Rust library linked into each program, together with Rust's standard library, instead of a shared
+  `kubuno_ui-<hash>.dll` loaded next to `std-*.dll`. The shell, Chat, Documents, Drive, the gallery and the tools
+  start from a folder that holds nothing but their own exe. Why: the apps will be released from their own
+  per-module repositories, each on its own schedule, so they must not share a Rust DLL; Kubuno Desktop stays
+  required on every PC as a service (account broker, sync, launcher), never as a binary dependency.
+  Release build of the workspace (`cargo build --workspace --bins --release -j 1`, clean, this machine): 1318 s,
+  was 1368 s. Exe sizes: `kubuno-desktop.exe` 24.3 MB (was 19.9 MB + the 16.0 MB DLL + 0.85 MB `std`),
+  `kubuno-chat.exe` 20.5 MB (was 16.2), `kubuno-documents.exe` 22.3 MB (was 17.9), `drive.exe` 17.6 MB (was 14.6),
+  `kubuno-views-ls.exe` 13.7 MB (was 10.4), `gallery.exe` 6.1 MB (was 1.6); the four apps together weigh about the
+  same as before with the DLLs (84.7 MB, was 85.6 MB).
 - The desktop shell (`shell.json`) and Drive (`settings.json`) keep their preferences with the shared settings
   engine; the existing files are imported once on first start (the old file is kept as `*.migrated`).
 - The shell's header uses the shared `WaffleButton` and `AccountButton`; the launcher and the account panel look
@@ -2501,6 +2512,12 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Removed
 
+- The shared-DLL machinery: `-C prefer-dynamic` (`windows/.cargo/config.toml`), the link shim of `kubuno-ui`'s
+  `build.rs` that named each build `kubuno_ui-<hash>.dll`, `kubuno_ui::library`, the `library_file_name` test,
+  `tools/stage-runtime.ps1`, and the DLL shipping of `packaging/package-msix.ps1` (which now refuses an exe that
+  still imports a Rust DLL). `tools/build-all.ps1` only builds.
+- The Visual Studio design surface (`kubuno-views/examples/view_embed.rs`) no longer reports the DLL it loaded: its
+  `surfaceInfo` handshake is version 2 and carries no DLL path or hash.
 - **Tauri**. The desktop application is now a native Win32 shell (`shell/`,
   binary `kubuno-desktop`) drawn with the Drive components — no web view, no
   WebView2, no bundler. The `app/` crate is gone, and with it the **28 IPC

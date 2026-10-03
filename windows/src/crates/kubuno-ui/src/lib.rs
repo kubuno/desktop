@@ -57,13 +57,7 @@
 //! the same inputs and the pair is compared pixel-for-pixel before any app is
 //! migrated.
 
-// Linking this crate as a DLL makes MSVC's linker announce the import library
-// it writes (« Creating library kubuno_ui.dll.lib… »), which rustc forwards as
-// a warning on every build. It is information, not a problem.
-#![allow(linker_messages)]
-
 pub mod focus; // FocusRing: Tab order, click-to-focus, :focus-visible
-pub mod library; // the file this library was loaded from (`kubuno_ui-<hash>.dll`)
 /// The WinForms-`Graphics`-like drawing API (paths, gradients, pens, text layout, clip,
 /// transforms) and owner-draw (`DrawItem`/`MeasureItem`) — see the module doc.
 pub mod graphics;

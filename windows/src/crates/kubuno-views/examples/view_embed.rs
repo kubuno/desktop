@@ -17,11 +17,12 @@
 //!
 //! Visual Studio compiles this file with `rustc` against the dependency graph
 //! of the project a view belongs to (`vskubuno/docs/DESIGNER.md` section 15),
-//! so that it links - and loads - that project's own `kubuno_ui.dll`. Hence
-//! two rules: it uses nothing but `std` and the three `kubuno_*` crates (its
-//! Win32/OLE calls are declared in [`win32`], no `windows` crate feature is
-//! assumed), and its first stdout line is the `surfaceInfo` ABI handshake
-//! ([`send_surface_info`]) the host checks before trusting it.
+//! so that it statically links that project's own `kubuno_ui` build (and the
+//! project's crate, for its controls). Hence two rules: it uses nothing but
+//! `std` and the three `kubuno_*` crates (its Win32/OLE calls are declared in
+//! [`win32`], no `windows` crate feature is assumed), and its first stdout line
+//! is the `surfaceInfo` handshake ([`send_surface_info`]) the host checks
+//! before trusting it.
 //!
 //! `<file.kbview>` is now OPTIONAL: `kubuno/setText` on stdin (DSG-6) pushes
 //! the buffer's live text directly, exactly `vskubuno/docs/DESIGNER.md` §2's
@@ -474,40 +475,15 @@ fn paint_issue_markers(c: &dyn kubuno_controls::ControlCanvas, theme: &Theme, la
 }
 
 /// Version of the `surfaceInfo` handshake below; the host refuses a surface that does not send it.
-const SURFACE_INFO_VERSION: u32 = 1;
+/// 2: `kubuno_ui` is linked statically (no DLL path or hash to check any more); version 1 surfaces
+/// were linked against a `kubuno_ui-<hash>.dll` and are refused.
+const SURFACE_INFO_VERSION: u32 = 2;
 
-/// A JSON string literal (quotes and escapes) - the handshake is written by hand so that this surface
-/// needs no crate beyond `kubuno_*` (see `win32`).
-fn json_string(value: &str) -> String {
-    let mut out = String::with_capacity(value.len() + 2);
-    out.push('"');
-    for c in value.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
-        }
-    }
-    out.push('"');
-    out
-}
-
-/// The ABI handshake (vskubuno docs/DESIGNER.md section 15), the first line on stdout: the path of
-/// the `kubuno_ui` DLL this process actually loaded (`kubuno_ui-<hash>.dll`, named after its
-/// build), and the SHA-256 of the one it was linked against - embedded at compile time by the
-/// Visual Studio design build through the `KUBUNO_DESIGN_UI_DLL_SHA256` environment variable,
-/// `null` for a surface built any other way. A Rust dylib has no stable ABI: the host hashes the
-/// loaded file and kills a surface whose DLL does not match, instead of letting it run on
-/// mismatched code.
+/// The handshake (vskubuno docs/DESIGNER.md section 15), the first line on stdout. The surface links
+/// `kubuno_ui` statically, from the very rlibs the project's own build produced, so there is no DLL to
+/// mismatch: the line only tells the host that this surface speaks the current protocol.
 fn send_surface_info() {
-    let dll = kubuno_ui::library::module_path().map(|path| path.display().to_string());
-    let line = format!(
-        "{{\"type\":\"surfaceInfo\",\"version\":{},\"uiDll\":{},\"uiDllSha256\":{}}}",
-        SURFACE_INFO_VERSION,
-        dll.as_deref().map_or_else(|| "null".to_string(), json_string),
-        option_env!("KUBUNO_DESIGN_UI_DLL_SHA256").map_or_else(|| "null".to_string(), json_string),
-    );
+    let line = format!("{{\"type\":\"surfaceInfo\",\"version\":{SURFACE_INFO_VERSION}}}");
     eprintln!("[embed] proto {line}");
     let mut out = std::io::stdout();
     let _ = writeln!(out, "{line}");

@@ -3,9 +3,8 @@
 //! trybuild builds the cases in its own package (`<target>/tests/trybuild/kubuno-data`), where sqlx
 //! looks for the offline cache (`CARGO_MANIFEST_DIR/.sqlx`, then the workspace root's — sqlx 0.8
 //! reads `SQLX_OFFLINE_DIR` only from a `.env` file, not from the environment): the committed
-//! fixture cache `kubuno-data/.sqlx` is copied there first. trybuild also replaces the workspace's
-//! rustflags with its own, so `-C prefer-dynamic` (needed to link `kubuno_ui.dll`) is passed through
-//! `CARGO_ENCODED_RUSTFLAGS`, which cargo ranks above any configured rustflags.
+//! fixture cache `kubuno-data/.sqlx` is copied there first. The cases need `--cfg trybuild`, passed
+//! through `CARGO_ENCODED_RUSTFLAGS`, which cargo ranks above any configured rustflags.
 //!
 //! Two phases, one after the other (they set process-wide environment variables): offline (the
 //! pass case and the errors found without a database), then online against a temporary SQLite
@@ -35,8 +34,8 @@ fn install_cache() {
 }
 
 fn set_rustflags() {
-    // The workspace's `.cargo/config.toml` rustflags (trybuild overrides them).
-    std::env::set_var("CARGO_ENCODED_RUSTFLAGS", ["-C", "prefer-dynamic", "--cfg", "trybuild", "-A", "dead_code"].join("\u{1f}"));
+    // Flags of the compiled cases only (the workspace configures no rustflags).
+    std::env::set_var("CARGO_ENCODED_RUSTFLAGS", ["--cfg", "trybuild", "-A", "dead_code"].join("\u{1f}"));
 }
 
 #[test]

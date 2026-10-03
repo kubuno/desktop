@@ -12,15 +12,9 @@
 # or in %USERPROFILE%\.cargo\config.toml. Everywhere else, the default local
 # `target/` just works.
 
-# ── Shared UI library ────────────────────────────────────────────────────────
-# `kubuno-ui` is a Rust `dylib` (`kubuno_ui.dll`) shared by every app of this
-# workspace. Linking against a Rust dylib requires the standard library to be
-# dynamic as well — otherwise the exe and the DLL would each carry their own
-# `std` and rustc refuses to link — hence `prefer-dynamic` for the whole
-# workspace. At run time an exe therefore needs its `kubuno_ui-<hash>.dll` (each
-# build of the DLL is named after itself and every exe imports the build it was
-# linked against: `src/crates/kubuno-ui/build.rs`) and Rust's `std-*.dll` beside
-# it: `tools/stage-runtime.ps1` copies them after a build, and
-# `packaging/package-msix.ps1` ships them.
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "prefer-dynamic"]
+# ── Linking ──────────────────────────────────────────────────────────────────
+# No rustflags: every program links `kubuno-ui` (an ordinary rlib) and Rust's
+# `std` statically, so an exe runs from a folder that holds only itself — no
+# `kubuno_ui` or `std-*.dll` beside it (BUILD.md, "Liaison statique"). Never add
+# `-C prefer-dynamic` back: the apps are released one module at a time, from
+# their own repositories, and must not share a Rust DLL.
