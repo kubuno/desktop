@@ -1,0 +1,11 @@
+<Project Sdk="Kubuno.Rust.Sdk/1.1.1">
+
+  <!-- The web target's .kbview compiler (vskubuno docs/WEB-VIEWS.md, WV-2). -->
+  <PropertyGroup>
+    <CargoPackage>kubuno-web-views-compiler-core</CargoPackage>
+    <!-- The workspace's programs share most of their crates: build the whole workspace in one cargo run,
+         so that a solution build compiles each shared crate once, with one feature set (docs/RSPROJ.md, "Cargo workspaces"). -->
+    <CargoBuildScope>Workspace</CargoBuildScope>
+  </PropertyGroup>
+
+</Project>

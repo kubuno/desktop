@@ -3,7 +3,7 @@
 //! back with [`LoginPage::fields`], shows the attempt with [`LoginPage::set_busy`] /
 //! [`LoginPage::set_error`], and a picked folder with [`LoginPage::set_folder`].
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::events::CommandEventArgs;
 use crate::Resources;
@@ -168,7 +168,7 @@ impl LoginPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl LoginPage {
     fn login_page_load(&mut self) {
         if self.server.is_empty() {

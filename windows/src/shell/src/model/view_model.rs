@@ -6,7 +6,7 @@
 
 use std::time::Instant;
 
-use kubuno::prelude::{Row, Rows, Value};
+use kubuno_desktop::prelude::{Row, Rows, Value};
 
 use crate::services::apps::{AppEntry, Conn, Identity};
 use crate::views::shell_window::Page;
@@ -30,7 +30,7 @@ pub struct ShellState {
     /// The configured instances, the current one, and who is signed in on each (fetched).
     pub accounts: Vec<AccountInfo>,
     /// The labels page.
-    pub labels: Vec<kubuno_sync::Label>,
+    pub labels: Vec<kubuno_desktop_sync::Label>,
     pub labels_loading: bool,
     pub labels_error: String,
     /// The sign-in page, while it is up.
@@ -242,7 +242,7 @@ pub fn launcher(s: &ShellState) -> Launcher {
 }
 
 /// The summary of a manual sync cycle.
-pub fn sync_summary(s: &kubuno_sync::Summary) -> String {
+pub fn sync_summary(s: &kubuno_desktop_sync::Summary) -> String {
     Resources::sync_summary()
         .replace("{0}", &s.uploaded.to_string())
         .replace("{1}", &s.modified.to_string())
@@ -283,11 +283,11 @@ pub fn account_name(a: &AccountInfo) -> String {
 
 /// The account panel's other accounts: every instance but the current one, by its name, over its
 /// server (where the web shows the address).
-pub fn other_accounts(accounts: &[AccountInfo]) -> Vec<kubuno_shell_controls::AccountEntry> {
+pub fn other_accounts(accounts: &[AccountInfo]) -> Vec<kubuno_desktop_shell_controls::AccountEntry> {
     accounts
         .iter()
         .filter(|a| !a.active)
-        .map(|a| kubuno_shell_controls::AccountEntry {
+        .map(|a| kubuno_desktop_shell_controls::AccountEntry {
             id: a.id.clone(),
             name: account_name(a),
             email: String::new(),
@@ -301,22 +301,22 @@ pub fn other_accounts(accounts: &[AccountInfo]) -> Vec<kubuno_shell_controls::Ac
         .collect()
 }
 
-/// The account panel's data (`kubuno_shell_controls::AccountMenu`, in the header's avatar flyout): the
+/// The account panel's data (`kubuno_desktop_shell_controls::AccountMenu`, in the header's avatar flyout): the
 /// signed-in user, the other accounts and whether the console is listed, as the window holds them
 /// when the panel opens.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AccountPanel {
-    pub user: kubuno_shell_controls::AccountUser,
-    pub others: Vec<kubuno_shell_controls::AccountEntry>,
+    pub user: kubuno_desktop_shell_controls::AccountUser,
+    pub others: Vec<kubuno_desktop_shell_controls::AccountEntry>,
     pub admin: bool,
 }
 
-impl kubuno_shell_controls::AccountService for AccountPanel {
-    fn user(&self) -> kubuno_shell_controls::AccountUser {
+impl kubuno_desktop_shell_controls::AccountService for AccountPanel {
+    fn user(&self) -> kubuno_desktop_shell_controls::AccountUser {
         self.user.clone()
     }
 
-    fn accounts(&self) -> Vec<kubuno_shell_controls::AccountEntry> {
+    fn accounts(&self) -> Vec<kubuno_desktop_shell_controls::AccountEntry> {
         self.others.clone()
     }
 
@@ -353,7 +353,7 @@ pub fn activity_rows(events: &[crate::services::activity::Event], now: Instant) 
 pub const PALETTE: [&str; 8] = ["#1e8e3e", "#1a73e8", "#9334e6", "#ec4899", "#d93025", "#f59e0b", "#14b8a6", "#5f6368"];
 
 /// The labels page's rows.
-pub fn label_rows(labels: &[kubuno_sync::Label]) -> Rows {
+pub fn label_rows(labels: &[kubuno_desktop_sync::Label]) -> Rows {
     labels
         .iter()
         .map(|l| {
@@ -384,7 +384,7 @@ mod tests {
     use super::*;
 
     fn fr() {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
     }
 
     /// Sizes read exactly as on the web: base 1024, two decimals for Go.
@@ -453,7 +453,7 @@ mod tests {
     #[test]
     fn labels_say_who_shared_them_and_take_the_next_colour() {
         fr();
-        let labels: Vec<kubuno_sync::Label> = serde_json::from_value(serde_json::json!([
+        let labels: Vec<kubuno_desktop_sync::Label> = serde_json::from_value(serde_json::json!([
             { "id": "1", "name": "Mine", "color": "#1a73e8", "link_count": 3, "is_owner": true, "can_manage": true },
             { "id": "2", "name": "Theirs", "is_owner": false, "owner_name": "Alex" }
         ]))

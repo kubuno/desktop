@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn ages_read_like_a_person_says_them() {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         assert_eq!(age(Duration::from_secs(10)), "à l'instant");
         assert_eq!(age(Duration::from_secs(600)), "il y a 10 min");
         assert_eq!(age(Duration::from_secs(7200)), "il y a 2 h");

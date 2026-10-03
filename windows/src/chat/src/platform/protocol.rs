@@ -111,7 +111,7 @@ pub fn register() {
         Ok(())
     })();
     if let Err(e) = result {
-        kubuno::tracing::warn!("[protocol] registering kubuno:// failed: {e}");
+        kubuno_desktop::tracing::warn!("[protocol] registering kubuno:// failed: {e}");
     }
 }
 

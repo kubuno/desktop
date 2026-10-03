@@ -1,8 +1,8 @@
 //! Code-behind of the link dialog (`link_dialog.kbview`): the address for the selection's link.
 
-use kubuno::prelude::*;
+use kubuno_desktop::prelude::*;
 
-#[kubuno::view("link_dialog.kbview")]
+#[kubuno_desktop::view("link_dialog.kbview")]
 pub struct LinkDialog {
     #[bind]
     url: String,

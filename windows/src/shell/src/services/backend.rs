@@ -1,7 +1,7 @@
-//! The shell's door to the sync engine (`kubuno_sync`), with an offline sample behind it.
+//! The shell's door to the sync engine (`kubuno_desktop_sync`), with an offline sample behind it.
 //!
 //! Every call the views' data comes from goes through here, under the engine's own names. Normally
-//! each one simply forwards to `kubuno_sync`. Under the offline sample (`--sample`,
+//! each one simply forwards to `kubuno_desktop_sync`. Under the offline sample (`--sample`,
 //! [`set_sample`]) they serve a fixed account instead — a launcher, labels, an activity log and an
 //! administration console — so that every page can be shown with deterministic data
 //! (screenshots, demos, tests) without a server, without reading or writing the user's
@@ -33,7 +33,7 @@ struct SampleState {
     offline: bool,
     proxy: Option<String>,
     favorites: Option<Vec<String>>,
-    labels: Option<Vec<kubuno_sync::Label>>,
+    labels: Option<Vec<kubuno_desktop_sync::Label>>,
     removed: Vec<String>,
     /// The main account's three unsent changes were « sent » (`sign_out` with « Envoyer d'abord »).
     sent_unsent: bool,
@@ -60,16 +60,16 @@ fn with_state<R>(f: impl FnOnce(&mut SampleState) -> R) -> R {
 const MAIN: &str = "sample-cloud";
 const SECOND: &str = "sample-asso";
 
-fn config(id: &str, server: &str, root: &str, label: Option<&str>) -> Result<kubuno_sync::Config> {
+fn config(id: &str, server: &str, root: &str, label: Option<&str>) -> Result<kubuno_desktop_sync::Config> {
     // Built through serde: the engine's type has no public constructor.
     Ok(serde_json::from_value(json!({ "id": id, "server_url": server, "sync_root": root, "label": label }))?)
 }
 
 // ── Accounts ─────────────────────────────────────────────────────────────────────────────────
 
-pub fn list_instances() -> Vec<kubuno_sync::Config> {
+pub fn list_instances() -> Vec<kubuno_desktop_sync::Config> {
     if !is_sample() {
-        return kubuno_sync::list_instances();
+        return kubuno_desktop_sync::list_instances();
     }
     let removed = with_state(|s| s.removed.clone());
     [
@@ -86,7 +86,7 @@ pub fn is_offline() -> bool {
     if is_sample() {
         with_state(|s| s.offline)
     } else {
-        kubuno_sync::is_offline()
+        kubuno_desktop_sync::is_offline()
     }
 }
 
@@ -95,14 +95,14 @@ pub fn set_offline(offline: bool) -> Result<()> {
         with_state(|s| s.offline = offline);
         return Ok(());
     }
-    kubuno_sync::set_offline(offline)
+    kubuno_desktop_sync::set_offline(offline)
 }
 
 pub fn get_proxy() -> Option<String> {
     if is_sample() {
         with_state(|s| s.proxy.clone())
     } else {
-        kubuno_sync::get_proxy()
+        kubuno_desktop_sync::get_proxy()
     }
 }
 
@@ -111,12 +111,12 @@ pub fn set_proxy(url: Option<String>) -> Result<()> {
         with_state(|s| s.proxy = url);
         return Ok(());
     }
-    kubuno_sync::set_proxy(url)
+    kubuno_desktop_sync::set_proxy(url)
 }
 
-pub fn current_user(id: &str) -> Result<(kubuno_sync::api::User, kubuno_sync::Privileges)> {
+pub fn current_user(id: &str) -> Result<(kubuno_desktop_sync::api::User, kubuno_desktop_sync::Privileges)> {
     if !is_sample() {
-        return kubuno_sync::current_user(id);
+        return kubuno_desktop_sync::current_user(id);
     }
     let favorites = with_state(|s| s.favorites.clone())
         .unwrap_or_else(|| ["drive", "mail", "calendar", "chat", "office-documents", "notes"].iter().map(|s| s.to_string()).collect());
@@ -141,7 +141,7 @@ pub fn set_waffle_favorites(id: &str, favorites: &[String]) -> Result<()> {
         with_state(|s| s.favorites = Some(favorites.to_vec()));
         return Ok(());
     }
-    kubuno_sync::set_waffle_favorites(id, favorites)
+    kubuno_desktop_sync::set_waffle_favorites(id, favorites)
 }
 
 /// How many changes of account `id` are not sent yet (asked before a sign-out). The sample's main account has
@@ -173,7 +173,7 @@ pub fn move_instance_folder(id: &str, new_path: &str) -> Result<()> {
     if is_sample() {
         anyhow::bail!("the sample's folders cannot be moved");
     }
-    kubuno_sync::move_instance_folder(id, new_path)
+    kubuno_desktop_sync::move_instance_folder(id, new_path)
 }
 
 /// Signs in to `server` (the sample refuses: there is no server behind it). The answer may ask for the
@@ -194,17 +194,17 @@ pub fn login_code(server: &str, totp_session: &str, code: &str, folder: &str) ->
 }
 
 /// One push+pull cycle (the sample has nothing to synchronise).
-pub fn sync_once(id: &str) -> Result<kubuno_sync::Summary> {
+pub fn sync_once(id: &str) -> Result<kubuno_desktop_sync::Summary> {
     if is_sample() {
-        return Ok(kubuno_sync::Summary::default());
+        return Ok(kubuno_desktop_sync::Summary::default());
     }
-    kubuno_sync::sync_once(id)
+    kubuno_desktop_sync::sync_once(id)
 }
 
 /// The launcher's modules, in the shape of `/api/v1/modules`.
 pub fn modules_for(id: &str) -> Result<serde_json::Value> {
     if !is_sample() {
-        return kubuno_sync::modules_for(id);
+        return kubuno_desktop_sync::modules_for(id);
     }
     // The shape the core answers with, ids, glyphs and `logo_url`s included (`<id>-logo.png`, the
     // host's files): the sample has no network, so its logos are the web's files embedded at build
@@ -242,12 +242,12 @@ pub fn fetch_bytes(id: &str, path: &str) -> Result<Vec<u8>> {
     if is_sample() {
         anyhow::bail!("no network in the sample");
     }
-    kubuno_sync::fetch_bytes(id, path)
+    kubuno_desktop_sync::fetch_bytes(id, path)
 }
 
 // ── Labels ───────────────────────────────────────────────────────────────────────────────────
 
-fn sample_labels() -> Result<Vec<kubuno_sync::Label>> {
+fn sample_labels() -> Result<Vec<kubuno_desktop_sync::Label>> {
     let label = |id: &str, name: &str, color: &str, count: i64, owner: Option<&str>| {
         json!({ "id": id, "name": name, "color": color, "link_count": count, "is_owner": owner.is_none(), "can_manage": owner.is_none(), "owner_name": owner })
     };
@@ -260,9 +260,9 @@ fn sample_labels() -> Result<Vec<kubuno_sync::Label>> {
     ]))?)
 }
 
-pub fn labels(id: &str) -> Result<Vec<kubuno_sync::Label>> {
+pub fn labels(id: &str) -> Result<Vec<kubuno_desktop_sync::Label>> {
     if !is_sample() {
-        return kubuno_sync::labels(id);
+        return kubuno_desktop_sync::labels(id);
     }
     match with_state(|s| s.labels.clone()) {
         Some(list) => Ok(list),
@@ -271,7 +271,7 @@ pub fn labels(id: &str) -> Result<Vec<kubuno_sync::Label>> {
 }
 
 /// Runs `f` on the sample's labels (seeded on first use).
-fn edit_sample_labels(f: impl FnOnce(&mut Vec<kubuno_sync::Label>)) -> Result<()> {
+fn edit_sample_labels(f: impl FnOnce(&mut Vec<kubuno_desktop_sync::Label>)) -> Result<()> {
     let mut list = labels(MAIN)?;
     f(&mut list);
     with_state(|s| s.labels = Some(list));
@@ -280,15 +280,15 @@ fn edit_sample_labels(f: impl FnOnce(&mut Vec<kubuno_sync::Label>)) -> Result<()
 
 pub fn create_label(id: &str, name: &str, color: &str) -> Result<()> {
     if !is_sample() {
-        return kubuno_sync::create_label(id, name, color);
+        return kubuno_desktop_sync::create_label(id, name, color);
     }
-    let label: kubuno_sync::Label = serde_json::from_value(json!({ "id": format!("new-{name}"), "name": name, "color": color, "is_owner": true, "can_manage": true }))?;
+    let label: kubuno_desktop_sync::Label = serde_json::from_value(json!({ "id": format!("new-{name}"), "name": name, "color": color, "is_owner": true, "can_manage": true }))?;
     edit_sample_labels(|list| list.push(label))
 }
 
 pub fn update_label(id: &str, label: &str, name: Option<&str>, color: Option<&str>) -> Result<()> {
     if !is_sample() {
-        return kubuno_sync::update_label(id, label, name, color);
+        return kubuno_desktop_sync::update_label(id, label, name, color);
     }
     edit_sample_labels(|list| {
         if let Some(l) = list.iter_mut().find(|l| l.id == label) {
@@ -304,7 +304,7 @@ pub fn update_label(id: &str, label: &str, name: Option<&str>, color: Option<&st
 
 pub fn delete_label(id: &str, label: &str) -> Result<()> {
     if !is_sample() {
-        return kubuno_sync::delete_label(id, label);
+        return kubuno_desktop_sync::delete_label(id, label);
     }
     edit_sample_labels(|list| list.retain(|l| l.id != label))
 }
@@ -324,7 +324,7 @@ pub fn sample_activity() -> &'static [(&'static str, &'static str, &'static str)
 
 pub fn admin_stats(id: &str) -> Result<serde_json::Value> {
     if !is_sample() {
-        return kubuno_sync::admin_stats(id);
+        return kubuno_desktop_sync::admin_stats(id);
     }
     let daily = |values: &[i64]| values.iter().map(|c| json!({ "count": c })).collect::<Vec<_>>();
     Ok(json!({
@@ -368,9 +368,9 @@ fn all_users() -> Vec<serde_json::Value> {
         .collect()
 }
 
-pub fn admin_users(id: &str, offset: u32, limit: u32, query: &str) -> Result<kubuno_sync::AdminUsers> {
+pub fn admin_users(id: &str, offset: u32, limit: u32, query: &str) -> Result<kubuno_desktop_sync::AdminUsers> {
     if !is_sample() {
-        return kubuno_sync::admin_users(id, offset, limit, query);
+        return kubuno_desktop_sync::admin_users(id, offset, limit, query);
     }
     let all = all_users();
     let page: Vec<_> = all.iter().skip(offset as usize).take(limit as usize).cloned().collect();
@@ -387,24 +387,24 @@ fn units() -> serde_json::Value {
     ])
 }
 
-pub fn admin_org_units(id: &str) -> Result<Vec<kubuno_sync::OrgUnit>> {
+pub fn admin_org_units(id: &str) -> Result<Vec<kubuno_desktop_sync::OrgUnit>> {
     if !is_sample() {
-        return kubuno_sync::admin_org_units(id);
+        return kubuno_desktop_sync::admin_org_units(id);
     }
     Ok(serde_json::from_value(units())?)
 }
 
-pub fn admin_org_units_with_counts(id: &str) -> Result<(Vec<kubuno_sync::OrgUnit>, HashMap<String, i64>)> {
+pub fn admin_org_units_with_counts(id: &str) -> Result<(Vec<kubuno_desktop_sync::OrgUnit>, HashMap<String, i64>)> {
     if !is_sample() {
-        return kubuno_sync::admin_org_units_with_counts(id);
+        return kubuno_desktop_sync::admin_org_units_with_counts(id);
     }
     let counts = [("ou-direction", 8), ("ou-rh", 14), ("ou-it", 42), ("ou-support", 61), ("ou-sales", 101)];
     Ok((serde_json::from_value(units())?, counts.iter().map(|(k, v)| (k.to_string(), *v)).collect()))
 }
 
-pub fn admin_groups(id: &str) -> Result<Vec<kubuno_sync::AdminGroup>> {
+pub fn admin_groups(id: &str) -> Result<Vec<kubuno_desktop_sync::AdminGroup>> {
     if !is_sample() {
-        return kubuno_sync::admin_groups(id);
+        return kubuno_desktop_sync::admin_groups(id);
     }
     Ok(serde_json::from_value(json!([
         { "id": "g-admins", "name": "Administrateurs", "description": "Accès complet à la console", "permissions": ["admin.*"], "is_system": true, "member_count": 3, "created_at": "2025-11-02T09:00:00Z" },
@@ -415,9 +415,9 @@ pub fn admin_groups(id: &str) -> Result<Vec<kubuno_sync::AdminGroup>> {
     ]))?)
 }
 
-pub fn admin_audiences(id: &str) -> Result<Vec<kubuno_sync::Audience>> {
+pub fn admin_audiences(id: &str) -> Result<Vec<kubuno_desktop_sync::Audience>> {
     if !is_sample() {
-        return kubuno_sync::admin_audiences(id);
+        return kubuno_desktop_sync::admin_audiences(id);
     }
     Ok(serde_json::from_value(json!([
         { "id": "a-all", "name": "Tout le monde", "description": "Chaque compte actif de l'instance", "is_everyone": true, "reach": 231, "applied_to": 9 },
@@ -427,9 +427,9 @@ pub fn admin_audiences(id: &str) -> Result<Vec<kubuno_sync::Audience>> {
     ]))?)
 }
 
-pub fn admin_modules_and_default(id: &str) -> Result<(Vec<kubuno_sync::AdminModule>, Option<String>)> {
+pub fn admin_modules_and_default(id: &str) -> Result<(Vec<kubuno_desktop_sync::AdminModule>, Option<String>)> {
     if !is_sample() {
-        return kubuno_sync::admin_modules_and_default(id);
+        return kubuno_desktop_sync::admin_modules_and_default(id);
     }
     let (disabled, enabled) = with_state(|s| (s.disabled_modules.clone(), s.enabled_modules.clone()));
     let m = |id: &str, name: &str, description: &str, icon: &str, on: bool, version: &str| {
@@ -455,7 +455,7 @@ pub fn admin_modules_and_default(id: &str) -> Result<(Vec<kubuno_sync::AdminModu
 
 pub fn set_module_enabled(id: &str, module: &str, enabled: bool) -> Result<()> {
     if !is_sample() {
-        return kubuno_sync::set_module_enabled(id, module, enabled);
+        return kubuno_desktop_sync::set_module_enabled(id, module, enabled);
     }
     with_state(|s| {
         s.disabled_modules.retain(|m| m != module);
@@ -469,9 +469,9 @@ pub fn set_module_enabled(id: &str, module: &str, enabled: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn admin_settings(id: &str) -> Result<Vec<kubuno_sync::AdminSetting>> {
+pub fn admin_settings(id: &str) -> Result<Vec<kubuno_desktop_sync::AdminSetting>> {
     if !is_sample() {
-        return kubuno_sync::admin_settings(id);
+        return kubuno_desktop_sync::admin_settings(id);
     }
     let s = |key: &str, label: &str, description: &str, category: &str, value: serde_json::Value| {
         json!({ "key": key, "label": label, "description": description, "category": category, "value": value })
@@ -489,15 +489,15 @@ pub fn admin_settings(id: &str) -> Result<Vec<kubuno_sync::AdminSetting>> {
     ]))?)
 }
 
-pub fn admin_storage(id: &str) -> Result<kubuno_sync::StorageOverview> {
+pub fn admin_storage(id: &str) -> Result<kubuno_desktop_sync::StorageOverview> {
     if !is_sample() {
-        return kubuno_sync::admin_storage(id);
+        return kubuno_desktop_sync::admin_storage(id);
     }
     sample_storage()
 }
 
 /// The sample instance's storage overview (also the designer's data).
-pub fn sample_storage() -> Result<kubuno_sync::StorageOverview> {
+pub fn sample_storage() -> Result<kubuno_desktop_sync::StorageOverview> {
     const GB: u64 = 1_073_741_824;
     let cat = |id: &str, used: u64, objects: i64, billable: bool| {
         json!({ "category": id, "used_bytes": used, "object_count": objects, "accounts": 231, "billable": billable, "held": true })

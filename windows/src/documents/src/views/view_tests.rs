@@ -3,8 +3,8 @@
 //! embedded, no command is an unnamed icon, the tabs follow the web's order, the clipboard group
 //! comes first; plus the view compiles and every `{Res}` it names exists in both languages.
 
-use kubuno::views::ast::{AstNode, Document, Element};
-use kubuno::views::syntax::parse;
+use kubuno_desktop::views::ast::{AstNode, Document, Element};
+use kubuno_desktop::views::syntax::parse;
 
 const WINDOW: &str = include_str!("document_window.kbview");
 const BACKSTAGE: &str = include_str!("../pages/backstage_info.kbcontrol");
@@ -28,7 +28,7 @@ fn commands() -> Vec<Element> {
 
 /// Every icon name embedded in the shared asset files.
 fn embedded_icon_names() -> Vec<String> {
-    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../drive/crates/drive-app-controls/assets/");
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../drive/crates/kubuno-drive-desktop-app-controls/assets/");
     let mut names = Vec::new();
     for file in ["lucide-icons.txt", "themed-icons.txt", "module-logos.txt"] {
         let path = format!("{root}{file}");
@@ -48,7 +48,7 @@ fn resource_keys(text: &str) -> Vec<String> {
 fn the_window_view_compiles() {
     // The view's own controls register when the library is linked (this test binary).
     let _ = (crate::PageCanvas::default(), crate::HorizontalRuler::default());
-    let mut rt = kubuno::views::runtime::Runtime::new();
+    let mut rt = kubuno_desktop::views::runtime::Runtime::new();
     let ok = rt.reload_from_text(WINDOW);
     assert!(ok, "{:#?}", rt.diagnostics());
 }

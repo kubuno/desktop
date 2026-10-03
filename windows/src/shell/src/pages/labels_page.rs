@@ -3,8 +3,8 @@
 //! ([`LabelsPage::show`]); the page raises `LabelCommand` (`create` with the name, `delete` and
 //! `colour` with the label's id and the palette colour).
 
-use kubuno::prelude::Rows;
-use kubuno::views::prelude::*;
+use kubuno_desktop::prelude::Rows;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::events::ItemCommandEventArgs;
 use crate::pages::label_row::ColourEventArgs;
@@ -87,7 +87,7 @@ impl LabelsPage {
     }
 
     fn current_id() -> Option<String> {
-        kubuno::views::binding::current_item().map(|item| item.row.text("Id"))
+        kubuno_desktop::views::binding::current_item().map(|item| item.row.text("Id"))
     }
 
     fn command(&mut self, command: &str, id: &str, value: &str) {
@@ -95,7 +95,7 @@ impl LabelsPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl LabelsPage {
     fn new_name_text_changed(&mut self) {
         self.can_create = !self.new_name.trim().is_empty();
@@ -131,7 +131,7 @@ impl LabelsPage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kubuno::prelude::Row;
+    use kubuno_desktop::prelude::Row;
 
     #[test]
     fn the_selected_label_opens_its_palette() {

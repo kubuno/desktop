@@ -1,44 +1,44 @@
 [workspace]
 resolver = "2"
 members  = [
-    "src/crates/kubuno-controls",
-    "src/crates/kubuno-ui",
-    "src/crates/kubuno-views",
-    "src/crates/kubuno-views-macros",
-    "src/crates/kubuno-views-meta",
-    "src/crates/kubuno-views-ls",
-    "src/crates/kubuno-views-syntax",
-    "src/crates/kubuno-views-model",
-    "src/crates/kubuno-views-web",
-    "src/crates/kubuno-data",
-    "src/crates/kubuno-data-model",
-    "src/crates/kubuno-data-macros",
-    "src/crates/kubuno-data-tool",
-    "src/crates/kubuno-print",
-    # The storage components (<Settings>, <SecretStore>, <RegistryKey>) over desktop/common's kubuno-app-storage
+    "src/crates/kubuno-desktop-controls",
+    "src/crates/kubuno-desktop-ui",
+    "src/crates/kubuno-desktop-views",
+    "src/crates/kubuno-desktop-views-macros",
+    "src/crates/kubuno-desktop-views-meta",
+    "src/crates/kubuno-desktop-views-ls",
+    "src/crates/kubuno-desktop-views-syntax",
+    "src/crates/kubuno-desktop-views-model",
+    "src/crates/kubuno-web-views-compiler-core",
+    "src/crates/kubuno-desktop-data",
+    "src/crates/kubuno-desktop-data-model",
+    "src/crates/kubuno-desktop-data-macros",
+    "src/crates/kubuno-desktop-data-tool",
+    "src/crates/kubuno-desktop-print",
+    # The storage components (<Settings>, <SecretStore>, <RegistryKey>) over desktop/common's kubuno-desktop-app-storage
     # (vskubuno docs/STORAGE-COMPONENTS.md).
-    "src/crates/kubuno-app-storage-components",
-    "src/crates/kubuno-resources-model",
-    "src/crates/kubuno-resources",
-    "src/crates/kubuno-resources-macros",
-    "src/crates/kubuno-resources-tool",
-    "src/crates/kubuno",
+    "src/crates/kubuno-desktop-app-storage-components",
+    "src/crates/kubuno-desktop-resources-model",
+    "src/crates/kubuno-desktop-resources",
+    "src/crates/kubuno-desktop-resources-macros",
+    "src/crates/kubuno-desktop-resources-tool",
+    "src/crates/kubuno-desktop",
     # The header menus (WaffleMenu, AccountMenu) every desktop app can place in its header.
-    "src/crates/kubuno-shell-controls",
+    "src/crates/kubuno-desktop-shell-controls",
     # The header's data for the apps other than the shell, through the shell's token broker.
-    "src/crates/kubuno-header-data",
+    "src/crates/kubuno-desktop-header-data",
     "src/shell",
     "src/chat",
     "src/documents",
     # Drive — the file manager and its crates. It used to be a workspace of its
     # own; it joined this one to build with the same framework crates as every
     # other app.
-    "src/drive/crates/drive-shared",
-    "src/drive/crates/drive-core-storage",
-    "src/drive/crates/drive-app-storage",
-    "src/drive/crates/drive-app-controls",
-    "src/drive/crates/drive-app",
-    "src/drive/crates/drive-localization",
+    "src/drive/crates/kubuno-drive-desktop-shared",
+    "src/drive/crates/kubuno-drive-desktop-core-storage",
+    "src/drive/crates/kubuno-drive-desktop-app-storage",
+    "src/drive/crates/kubuno-drive-desktop-app-controls",
+    "src/drive/crates/kubuno-drive-desktop",
+    "src/drive/crates/kubuno-drive-desktop-localization",
 ]
 
 [workspace.package]
@@ -51,30 +51,30 @@ repository = "https://github.com/kubuno/desktop"
 # (carried over from Drive's former workspace). The Drive crates keep their own
 # version and licence in their manifests rather than inherit this workspace's.
 [workspace.dependencies]
-drive-shared       = { path = "src/drive/crates/drive-shared" }
-drive-core-storage = { path = "src/drive/crates/drive-core-storage" }
-drive-app-storage  = { path = "src/drive/crates/drive-app-storage" }
-drive-app-controls = { path = "src/drive/crates/drive-app-controls" }
-drive-localization = { path = "src/drive/crates/drive-localization" }
-kubuno-ui          = { path = "src/crates/kubuno-ui" }
-kubuno-controls    = { path = "src/crates/kubuno-controls" }
-kubuno-views       = { path = "src/crates/kubuno-views" }
-kubuno-views-macros = { path = "src/crates/kubuno-views-macros" }
-kubuno-views-meta   = { path = "src/crates/kubuno-views-meta" }
-kubuno-views-syntax = { path = "src/crates/kubuno-views-syntax" }
-kubuno-views-model  = { path = "src/crates/kubuno-views-model" }
-kubuno-views-web    = { path = "src/crates/kubuno-views-web" }
-kubuno-data         = { path = "src/crates/kubuno-data" }
-kubuno-data-model   = { path = "src/crates/kubuno-data-model" }
-kubuno-data-macros  = { path = "src/crates/kubuno-data-macros" }
-kubuno-print        = { path = "src/crates/kubuno-print" }
-kubuno-app-storage-components = { path = "src/crates/kubuno-app-storage-components" }
-kubuno-resources-model  = { path = "src/crates/kubuno-resources-model" }
-kubuno-resources        = { path = "src/crates/kubuno-resources" }
-kubuno-resources-macros = { path = "src/crates/kubuno-resources-macros" }
-kubuno              = { path = "src/crates/kubuno" }
-kubuno-shell-controls     = { path = "src/crates/kubuno-shell-controls" }
-kubuno-header-data        = { path = "src/crates/kubuno-header-data" }
+kubuno-drive-desktop-shared       = { path = "src/drive/crates/kubuno-drive-desktop-shared" }
+kubuno-drive-desktop-core-storage = { path = "src/drive/crates/kubuno-drive-desktop-core-storage" }
+kubuno-drive-desktop-app-storage  = { path = "src/drive/crates/kubuno-drive-desktop-app-storage" }
+kubuno-drive-desktop-app-controls = { path = "src/drive/crates/kubuno-drive-desktop-app-controls" }
+kubuno-drive-desktop-localization = { path = "src/drive/crates/kubuno-drive-desktop-localization" }
+kubuno-desktop-ui          = { path = "src/crates/kubuno-desktop-ui" }
+kubuno-desktop-controls    = { path = "src/crates/kubuno-desktop-controls" }
+kubuno-desktop-views       = { path = "src/crates/kubuno-desktop-views" }
+kubuno-desktop-views-macros = { path = "src/crates/kubuno-desktop-views-macros" }
+kubuno-desktop-views-meta   = { path = "src/crates/kubuno-desktop-views-meta" }
+kubuno-desktop-views-syntax = { path = "src/crates/kubuno-desktop-views-syntax" }
+kubuno-desktop-views-model  = { path = "src/crates/kubuno-desktop-views-model" }
+kubuno-web-views-compiler-core    = { path = "src/crates/kubuno-web-views-compiler-core" }
+kubuno-desktop-data         = { path = "src/crates/kubuno-desktop-data" }
+kubuno-desktop-data-model   = { path = "src/crates/kubuno-desktop-data-model" }
+kubuno-desktop-data-macros  = { path = "src/crates/kubuno-desktop-data-macros" }
+kubuno-desktop-print        = { path = "src/crates/kubuno-desktop-print" }
+kubuno-desktop-app-storage-components = { path = "src/crates/kubuno-desktop-app-storage-components" }
+kubuno-desktop-resources-model  = { path = "src/crates/kubuno-desktop-resources-model" }
+kubuno-desktop-resources        = { path = "src/crates/kubuno-desktop-resources" }
+kubuno-desktop-resources-macros = { path = "src/crates/kubuno-desktop-resources-macros" }
+kubuno-desktop              = { path = "src/crates/kubuno-desktop" }
+kubuno-desktop-shell-controls     = { path = "src/crates/kubuno-desktop-shell-controls" }
+kubuno-desktop-header-data        = { path = "src/crates/kubuno-desktop-header-data" }
 
 windows          = { version = "0.62" }
 windows-core     = { version = "0.62" }
@@ -99,6 +99,6 @@ tracing-subscriber = "0.3"
 git2 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
 
 # Drive's former workspace built release with `lto = "thin"` and one codegen
-# unit. Not carried over (yet): it was impossible while `kubuno-ui` was a shared
+# unit. Not carried over (yet): it was impossible while `kubuno-desktop-ui` was a shared
 # DLL. Every program now links statically, so LTO would work again; it is left
 # off to keep release builds short.

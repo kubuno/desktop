@@ -2,7 +2,7 @@
 //! keeps no logic of its own: the window computes what it shows (`view_model::launcher`) and
 //! hands it over with [`LauncherPage::show`]; the page raises what the user asks for as `Command`.
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::events::CommandEventArgs;
 use crate::model::view_model::Launcher;
@@ -71,7 +71,7 @@ impl LauncherPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl LauncherPage {
     fn launcher_page_load(&mut self) {
         if self.design_mode() {

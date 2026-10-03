@@ -2,7 +2,7 @@
 # The layout-panel parity cases — declared ONCE, read by BOTH probes.
 #
 #   tools/winforms-ref/parity/panels-winforms/   → real WinForms   → panels-winforms.json
-#   crates/kubuno-controls/examples/parity_panels.rs → the port    → panels-port.json
+#   crates/kubuno-desktop-controls/examples/parity_panels.rs → the port    → panels-port.json
 #   tools/winforms-ref/parity/compare-panels.ps1 → diffs the two
 #
 # Neither probe may carry a case of its own: if this file does not say it, it is

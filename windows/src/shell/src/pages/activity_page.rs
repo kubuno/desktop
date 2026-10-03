@@ -1,8 +1,8 @@
 //! Code-behind of the user control `ActivityPage` (`activity_page.kbcontrol`): the activity log. The
 //! window gives it the rows (`view_model::activity_rows`) whenever the log or the clock moves.
 
-use kubuno::prelude::Rows;
-use kubuno::views::prelude::*;
+use kubuno_desktop::prelude::Rows;
+use kubuno_desktop::views::prelude::*;
 
 /// The activity page (see the module doc).
 #[derive(UserControl, Default)]

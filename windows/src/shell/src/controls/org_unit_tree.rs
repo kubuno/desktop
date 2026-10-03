@@ -7,13 +7,13 @@
 //! `Repeater` item cannot move its controls by depth. What is drawn is the design system's
 //! (`IconButton`s, the `Separator`, the theme's row hover).
 
-use kubuno::controls::host::access::AccessRole;
-use kubuno::ui::buttons::IconButton;
-use kubuno::ui::display::Separator;
-use kubuno::ui::metrics::{radius, space};
-use kubuno::ui::{Canvas, Rect, Size, Widget, WidgetState};
-use kubuno::views::component::{AccessiblePart, Component as _, Control, ControlCore, EventCx, PaintEventCx, Shared};
-use kubuno::views::events::{EmptyEventArgs, Event, MouseEventArgs};
+use kubuno_desktop::controls::host::access::AccessRole;
+use kubuno_desktop::ui::buttons::IconButton;
+use kubuno_desktop::ui::display::Separator;
+use kubuno_desktop::ui::metrics::{radius, space};
+use kubuno_desktop::ui::{Canvas, Rect, Size, Widget, WidgetState};
+use kubuno_desktop::views::component::{AccessiblePart, Component as _, Control, ControlCore, EventCx, PaintEventCx, Shared};
+use kubuno_desktop::views::events::{EmptyEventArgs, Event, MouseEventArgs};
 
 use crate::Resources;
 
@@ -94,13 +94,13 @@ fn edit_rect(row: Rect) -> Rect {
 }
 
 /// Raised by « + » and the pencil: the unit.
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct UnitEventArgs {
     pub id: String,
 }
 
 /// The organisational units (see the module doc).
-#[derive(kubuno::views::component::Component, Default)]
+#[derive(kubuno_desktop::views::component::Component, Default)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Kubuno")]
 #[toolbox(icon = "building-2")]

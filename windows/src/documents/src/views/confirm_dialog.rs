@@ -1,9 +1,9 @@
 //! Code-behind of the confirmation dialog (`confirm_dialog.kbview`): a title, a message and two
 //! answers. Never a system message box: the document's questions look like the rest of Kubuno.
 
-use kubuno::prelude::*;
+use kubuno_desktop::prelude::*;
 
-#[kubuno::view("confirm_dialog.kbview")]
+#[kubuno_desktop::view("confirm_dialog.kbview")]
 pub struct ConfirmDialog {}
 
 impl ConfirmDialog {

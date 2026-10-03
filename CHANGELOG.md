@@ -905,6 +905,24 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Changed
 
+- **Crates and Visual Studio projects renamed after the product they belong to** (`kubuno-<product>-<component>`, VS
+  project `Kubuno.<Product>.<Component>`). The framework is now `kubuno-desktop` (the facade: applications write
+  `use kubuno_desktop::prelude::*` and `#[kubuno_desktop::view]`), `kubuno-desktop-ui`, `kubuno-desktop-controls`,
+  `kubuno-desktop-views*`, `kubuno-desktop-data*`, `kubuno-desktop-print`, `kubuno-desktop-resources*`,
+  `kubuno-desktop-app-storage-components`, `kubuno-desktop-shell-controls` and `kubuno-desktop-header-data`; the
+  cross-OS crates are `kubuno-desktop-account`, `-secrets`, `-sync`, `-sync-engine`, `-api-client`, `-app-storage`, and
+  the word processor's engine is `kubuno-office-docs-core`. The web `.kbview` compiler is `kubuno-web-views-compiler-core`.
+  The apps' packages are `kubuno-desktop-shell`, `kubuno-chat-desktop`, `kubuno-office-desktop` and
+  `kubuno-drive-desktop` (with `kubuno-drive-desktop-app-controls`, `-app-storage`, `-core-storage`, `-shared` and
+  `-localization`, the crates ported from Files). Folders follow the crate names.
+- **Nothing changes for users**: the programs keep their names (`kubuno-desktop.exe`, `kubuno-chat.exe`,
+  `kubuno-documents.exe`, `drive.exe`, `kubuno-sync`, and the tools `kubuno-views-ls.exe`, `kubuno-data-tool.exe`,
+  `kubuno-resources-tool.exe`), the shell's settings stay in their `kubuno-desktop` folder, and the credentials,
+  token broker, Run key, AppUserModelID and Linux package name (`kubuno-sync`) are unchanged.
+- **One Visual Studio solution for the repository**, `Kubuno.Desktop.slnx` at its root, with the folders Applications,
+  Framework, Shared controls, Common (multi-OS), Drive engine, Tools and Web; it replaces `windows/Kubuno.Core.Desktop.slnx`.
+  The solution's SDK feed (`NuGet.Config`, `.kubuno/sdk-feed`) moved to the root with it.
+
 - **Every app is a single, self-contained exe: the UI framework is linked statically.** `kubuno-ui` is now an
   ordinary Rust library linked into each program, together with Rust's standard library, instead of a shared
   `kubuno_ui-<hash>.dll` loaded next to `std-*.dll`. The shell, Chat, Documents, Drive, the gallery and the tools

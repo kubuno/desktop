@@ -4,7 +4,7 @@
 //! `localStorage`, which no longer exists. Only what the native UI actually
 //! reads lives here.
 //!
-//! They are typed settings of `kubuno::storage` declared in `shell.kbsettings` (vskubuno
+//! They are typed settings of `kubuno_desktop::storage` declared in `shell.kbsettings` (vskubuno
 //! docs/STORAGE-COMPONENTS.md, lot ST-2); the older `kubuno-desktop/shell.json` is imported once and kept as
 //! `shell.json.migrated`. Under the offline sample (`--sample`, [`crate::services::backend::is_sample`]) the
 //! preferences live in memory only: the user's files and `Run` key are never read or written. A sandboxed
@@ -12,7 +12,7 @@
 
 use std::path::PathBuf;
 
-use kubuno::ui::Theme;
+use kubuno_desktop::ui::Theme;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -77,9 +77,9 @@ pub const INTERVAL_MIN: u32 = 1;
 pub const INTERVAL_MAX: u32 = 120;
 
 // The shell's settings (vskubuno docs/STORAGE-COMPONENTS.md, lot ST-2): declared in `shell.kbsettings`, stored by
-// `kubuno::storage` (`%APPDATA%\Kubuno\kubuno-desktop\shell.settings.json`, the machine-local ones in
+// `kubuno_desktop::storage` (`%APPDATA%\Kubuno\kubuno-desktop\shell.settings.json`, the machine-local ones in
 // `%LOCALAPPDATA%`), sandbox-aware. Replaces `kubuno-desktop\shell.json`, imported once (see `store`).
-kubuno::settings!(pub(crate) ShellSettings, "shell.kbsettings");
+kubuno_desktop::settings!(pub(crate) ShellSettings, "shell.kbsettings");
 
 /// A theme the command line forces (`--light` / `--dark`), whatever the preference says.
 static FORCED_THEME: std::sync::OnceLock<ThemeSetting> = std::sync::OnceLock::new();
@@ -89,24 +89,24 @@ pub fn force_theme(theme: ThemeSetting) {
     let _ = FORCED_THEME.set(theme);
 }
 
-/// The file the shell kept its preferences in before `kubuno::storage` (`%APPDATA%\kubuno-desktop\shell.json`).
+/// The file the shell kept its preferences in before `kubuno_desktop::storage` (`%APPDATA%\kubuno-desktop\shell.json`).
 fn legacy_path() -> Option<PathBuf> {
-    kubuno_sync::config::config_dir().ok().map(|d| d.join("shell.json"))
+    kubuno_desktop_sync::config::config_dir().ok().map(|d| d.join("shell.json"))
 }
 
 /// The settings behind [`get`] and [`update`]: in memory under the offline sample (the user's files are never
 /// read or written), else the typed class's, after a one-time import of the older `shell.json`.
-fn store() -> kubuno::storage::engine::Settings {
-    use kubuno::storage::engine::backend::BackendKind;
+fn store() -> kubuno_desktop::storage::engine::Settings {
+    use kubuno_desktop::storage::engine::backend::BackendKind;
     if crate::services::backend::is_sample() {
-        return kubuno::storage::engine::Settings::shared_or_memory(&ShellSettings::app(), &ShellSettings::schema(), BackendKind::Memory);
+        return kubuno_desktop::storage::engine::Settings::shared_or_memory(&ShellSettings::app(), &ShellSettings::schema(), BackendKind::Memory);
     }
     let store = ShellSettings::store();
     static IMPORTED: std::sync::Once = std::sync::Once::new();
     IMPORTED.call_once(|| {
         if let Some(legacy) = legacy_path() {
-            if let Err(e) = kubuno::storage::settings::migrate::import_legacy_json(&store, &legacy, legacy_values) {
-                kubuno::tracing::warn!("the older shell.json was not imported: {e}");
+            if let Err(e) = kubuno_desktop::storage::settings::migrate::import_legacy_json(&store, &legacy, legacy_values) {
+                kubuno_desktop::tracing::warn!("the older shell.json was not imported: {e}");
             }
         }
     });
@@ -114,8 +114,8 @@ fn store() -> kubuno::storage::engine::Settings {
 }
 
 /// The older `shell.json` (the serde form of [`Settings`]) as settings.
-fn legacy_values(o: &serde_json::Map<String, serde_json::Value>) -> Vec<(String, kubuno::storage::SettingValue)> {
-    use kubuno::storage::SettingValue as V;
+fn legacy_values(o: &serde_json::Map<String, serde_json::Value>) -> Vec<(String, kubuno_desktop::storage::SettingValue)> {
+    use kubuno_desktop::storage::SettingValue as V;
     let mut out = Vec::new();
     if let Some(t) = o.get("theme").and_then(serde_json::Value::as_str) {
         out.push(("Theme".to_string(), V::from(ThemeSetting::from_key(t).key())));
@@ -154,9 +154,9 @@ pub fn update(f: impl FnOnce(&mut Settings)) {
     let mut after = before.clone();
     f(&mut after);
     let s = store();
-    let set = |name: &str, v: kubuno::storage::SettingValue| {
+    let set = |name: &str, v: kubuno_desktop::storage::SettingValue| {
         if let Err(e) = s.set(name, v) {
-            kubuno::tracing::warn!(setting = name, "the preference was not changed: {e}");
+            kubuno_desktop::tracing::warn!(setting = name, "the preference was not changed: {e}");
         }
     };
     if after.theme != before.theme {
@@ -178,7 +178,7 @@ pub fn update(f: impl FnOnce(&mut Settings)) {
         set("ActiveInstance", after.active_instance.clone().into());
     }
     if let Err(e) = s.save() {
-        kubuno::tracing::warn!("the preferences were not saved: {e}");
+        kubuno_desktop::tracing::warn!("the preferences were not saved: {e}");
     }
 }
 
@@ -198,7 +198,7 @@ pub fn theme() -> Theme {
 
 /// Whether the windows are dark (the flyouts tint their panel after it).
 pub fn is_dark() -> bool {
-    theme().mode == kubuno::ui::ThemeMode::Dark
+    theme().mode == kubuno_desktop::ui::ThemeMode::Dark
 }
 
 pub fn font_override() -> Option<String> {
@@ -213,7 +213,7 @@ pub fn notifications_enabled() -> bool {
 /// Start with Windows, through the per-user `Run` key — no admin rights, and
 /// nothing left behind when it is turned off.
 pub fn autostart_enabled() -> bool {
-    if crate::services::backend::is_sample() || !kubuno_account::paths::system_integration_allowed() {
+    if crate::services::backend::is_sample() || !kubuno_desktop_account::paths::system_integration_allowed() {
         return get().autostart;
     }
     let Ok(exe) = std::env::current_exe() else { return false };
@@ -225,7 +225,7 @@ pub fn autostart_enabled() -> bool {
 }
 
 pub fn set_autostart(enabled: bool) -> std::io::Result<()> {
-    if crate::services::backend::is_sample() || !kubuno_account::paths::system_integration_allowed() {
+    if crate::services::backend::is_sample() || !kubuno_desktop_account::paths::system_integration_allowed() {
         update(|s| s.autostart = enabled);
         return Ok(());
     }
@@ -250,7 +250,7 @@ fn autostart_command(exe: &std::path::Path) -> String {
 /// Rewrites a `Run` entry of this shell written before it carried the logon flag (it would start
 /// the shell in front of the user, splash screen and all, at every logon).
 pub fn refresh_autostart_command() {
-    if crate::services::backend::is_sample() || !kubuno_account::paths::system_integration_allowed() {
+    if crate::services::backend::is_sample() || !kubuno_desktop_account::paths::system_integration_allowed() {
         return;
     }
     let Ok(exe) = std::env::current_exe() else { return };

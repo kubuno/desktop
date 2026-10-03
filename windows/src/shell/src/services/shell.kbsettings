@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Settings Version="1">
+<Settings Version="1" App="kubuno-desktop">
   <Setting Name="Theme" Type="String" Default="System" Values="System|Light|Dark" Description="The colour theme of the shell's windows."/>
   <Setting Name="SyncIntervalMinutes" Type="Int" Default="5" Description="Minutes between two automatic sync cycles (1 to 120)."/>
   <Setting Name="Notifications" Type="Bool" Default="true" Description="Show a Windows toast when a sync finishes or fails."/>

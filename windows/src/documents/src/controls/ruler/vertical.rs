@@ -8,16 +8,16 @@
 //! Drag the top or bottom margin edge (no handle is drawn, as in Word): a dashed guide crosses the
 //! page and a tooltip gives the margin in centimetres; the change is raised as `MarginsChanged`.
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::{Brush, Graphics, StringAlignment, StringFormat, StringFormatFlags};
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
-use kubuno::views::events::{EmptyEventArgs, Event};
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::{Brush, Graphics, StringAlignment, StringFormat, StringFormatFlags};
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
+use kubuno_desktop::views::events::{EmptyEventArgs, Event};
 
 use super::{cm_text, number_font, rule, ticks, RulerGuideEventArgs, RulerMarginsEventArgs, RulerColors, VerticalGeometry, VerticalPart, RULER_SZ};
 
 /// The ruler left of the page (see the module doc).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Documents")]
 #[toolbox(icon = "ruler")]
@@ -184,8 +184,8 @@ impl Control for VerticalRuler {
         e.raise(self, "OnPaint");
     }
 
-    fn cursor_at(&self, _x: f32, y: f32) -> Option<kubuno::controls::host::Cursor> {
-        (self.drag.is_some() || self.geometry().hit(y).is_some()).then_some(kubuno::controls::host::Cursor::ResizeNS)
+    fn cursor_at(&self, _x: f32, y: f32) -> Option<kubuno_desktop::controls::host::Cursor> {
+        (self.drag.is_some() || self.geometry().hit(y).is_some()).then_some(kubuno_desktop::controls::host::Cursor::ResizeNS)
     }
 
     fn tool_tip_at(&self, _x: f32, _y: f32) -> Option<String> {

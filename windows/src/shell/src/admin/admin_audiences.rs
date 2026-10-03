@@ -2,12 +2,12 @@
 //! directory's target audiences. [`load`] reads them (`GET /api/v1/admin/audiences`, off the UI
 //! thread); the search filters them here (a handful of entries).
 
-use kubuno::ui::buttons::IconButton;
-use kubuno::ui::{Canvas, Rect, Widget, WidgetState};
-use kubuno::views::component::Shared;
-use kubuno::views::events::{CellEventArgs, DrawItemEventArgs, TextChangedEventArgs};
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::ui::buttons::IconButton;
+use kubuno_desktop::ui::{Canvas, Rect, Widget, WidgetState};
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::events::{CellEventArgs, DrawItemEventArgs, TextChangedEventArgs};
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 use windows::Win32::Graphics::DirectWrite::DWRITE_TEXT_ALIGNMENT_TRAILING;
 
 use crate::admin::SectionState;
@@ -149,7 +149,7 @@ impl AudiencesSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl AudiencesSection {
     fn audiences_section_load(&mut self) {
         if self.design_mode() && self.audiences.is_empty() {

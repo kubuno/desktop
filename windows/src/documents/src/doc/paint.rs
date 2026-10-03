@@ -11,11 +11,11 @@
 //! borders resolved per edge, then the selection over everything (translucent, the union filled
 //! once: `rgba(87,133,253,0.5)` focused, `rgba(179,179,179,0.5)` not), then the caret.
 
-use drive_app_controls::geometry::Rect;
-use kubuno_docs_core::layout::tables::{self, BorderStyle, CellFill};
-use kubuno_docs_core::layout::{LayoutLine, LayoutParagraph, LayoutSpan, LayoutTable, PageLayout, SelectionRect, SpanKind};
-use kubuno_docs_core::marks::{Script, TextMark, PT_PX};
-use kubuno_docs_core::measure::Measure;
+use kubuno_drive_desktop_app_controls::geometry::Rect;
+use kubuno_office_docs_core::layout::tables::{self, BorderStyle, CellFill};
+use kubuno_office_docs_core::layout::{LayoutLine, LayoutParagraph, LayoutSpan, LayoutTable, PageLayout, SelectionRect, SpanKind};
+use kubuno_office_docs_core::marks::{Script, TextMark, PT_PX};
+use kubuno_office_docs_core::measure::Measure;
 use windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F;
 use windows_numerics::Matrix3x2;
 

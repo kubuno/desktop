@@ -14,11 +14,11 @@
 //! paragraph's indents or the band for the page setup. Every change is raised as an event; the
 //! form applies it to the document and binds the result back.
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::{Brush, Graphics, StringAlignment, StringFormat, StringFormatFlags};
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
-use kubuno::views::events::{EmptyEventArgs, Event};
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::{Brush, Graphics, StringAlignment, StringFormat, StringFormatFlags};
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
+use kubuno_desktop::views::events::{EmptyEventArgs, Event};
 
 use super::{
     cm_text, format_tab_stops, number_font, paint_indent_markers, parse_tab_stops, rule, ticks, HorizontalGeometry, HorizontalPart, Indents, RulerGuideEventArgs,
@@ -26,7 +26,7 @@ use super::{
 };
 
 /// The ruler above the page (see the module doc).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Documents")]
 #[toolbox(icon = "ruler")]
@@ -231,7 +231,7 @@ impl HorizontalRuler {
             // The current paragraph's indent markers, over the band and below it.
             paint_indent_markers(g, &col, &geo);
             // Its tab stops, at the bottom of the band.
-            let tab_font = kubuno::ui::graphics::Font::with_dip("Arial", 11.0, kubuno::ui::graphics::FontStyle::REGULAR);
+            let tab_font = kubuno_desktop::ui::graphics::Font::with_dip("Arial", 11.0, kubuno_desktop::ui::graphics::FontStyle::REGULAR);
             let bottom = centred.with_line_alignment(StringAlignment::Far);
             for t in self.stops() {
                 let x = ml + t.pos * geo.zoom;
@@ -269,9 +269,9 @@ impl Control for HorizontalRuler {
         e.raise(self, "OnPaint");
     }
 
-    fn cursor_at(&self, x: f32, y: f32) -> Option<kubuno::controls::host::Cursor> {
+    fn cursor_at(&self, x: f32, y: f32) -> Option<kubuno_desktop::controls::host::Cursor> {
         if self.drag.is_some() || self.geometry().hit(x, y).is_some() {
-            return Some(kubuno::controls::host::Cursor::ResizeEW);
+            return Some(kubuno_desktop::controls::host::Cursor::ResizeEW);
         }
         None
     }

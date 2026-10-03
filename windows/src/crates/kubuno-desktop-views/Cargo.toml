@@ -1,0 +1,104 @@
+[package]
+name        = "kubuno-desktop-views"
+description = "Declarative XML views for kubuno_desktop_ui: the runtime interpreter, the component registry and validator, rendering and design mode on Windows. Re-exports the platform-neutral grammar (kubuno-desktop-views-syntax) and registry model (kubuno-desktop-views-model)."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+# The lossless green/red syntax tree (rust-analyzer's own foundation). Chosen
+# over `quick-xml`/`roxmltree` per `vskubuno/docs/XML_VIEWS.md` §6: this crate
+# needs a tree that can be *edited* and *re-serialised byte-identically*, not
+# just parsed. `quick-xml` is also the crate whose quadratic-parsing /
+# unbounded-namespace-allocation advisories (RUSTSEC-2026-0194/0195) this
+# workspace already worked around once (see `src/shell/Cargo.toml`'s
+# `tauri-winrt-notification` pin) — reason enough not to reach for it again.
+rowan = "0.16"
+
+# The component families this crate declares metadata for (Button, Switch,
+# TextField, Card, Stack). `kubuno-desktop-views` depends on `kubuno-desktop-ui`, never the
+# reverse — the registry is a sibling crate, not a change to the design system
+# itself (nothing in `kubuno-desktop-ui` is touched to adopt XML views).
+kubuno-desktop-ui = { workspace = true }
+# Only for `Stack::direction`'s type (`FlowDirection`): `kubuno-desktop-ui` imports it
+# privately, so naming it from here means depending on the crate that
+# actually declares it, same as any other external consumer would.
+kubuno-desktop-controls = { workspace = true }
+# The real embedded Lucide icon set (`kubuno_drive_desktop_app_controls::icon_name`), reused
+# by `crate::icon` instead of a hand-written per-family glyph-name table.
+# `kubuno-desktop-ui` itself already depends on this crate directly (its own
+# `Cargo.toml`'s comment: "kubuno-desktop-controls, kubuno-drive-desktop-app-controls, windows-numerics
+# and windows"), so this is not a new layering edge, just the same one used one
+# crate further out.
+kubuno-drive-desktop-app-controls = { workspace = true }
+
+# `registry::export` (`vskubuno/docs/DESIGNER.md` §5/§8, work package DSG-1):
+# serializes the component registry to the JSON `kubuno-desktop-views-ls` answers
+# `kubuno/registry` with, and that the VS-side `ComponentRegistry.FromJson`
+# (`vskubuno/src/Kubuno.VisualStudio.Designer/Registry/`) deserializes. Same
+# pinned major version `kubuno-desktop-views-ls` already uses for the same job.
+serde      = { workspace = true }
+serde_json = { workspace = true }
+
+# `GetLocalTime` — `crate::clock::today()`'s only caller: `<MonthCalendar>`/
+# `<DatePicker>` have no owned clock (same as `kubuno_desktop_ui` itself; see that
+# module's doc) and nothing else in this workspace computes the real local
+# date either, so this crate reads it directly rather than inventing a
+# second date library. Same pinned workspace version every other crate here
+# already uses.
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Com", "Win32_Graphics_Direct2D_Common"] }
+
+# The typed event system (`crate::events`, `vskubuno/docs/EVENTS.md` EVT-1):
+# `#[derive(EventArgs)]` lives in its own small proc-macro crate, and
+# `tracing` reports skipped re-entrant handlers and the raise-depth cap instead
+# of panicking (same pinned workspace version the other crates use).
+kubuno-desktop-views-macros = { workspace = true }
+# Visual inheritance (`x:Inherits`): the dependency-free merge the macros embed, applied again on a hot reload or a
+# designer edit (`crate::compile`).
+kubuno-desktop-views-meta   = { workspace = true }
+# The platform-neutral halves (`vskubuno/docs/WEB-VIEWS.md` WV-1): the grammar (parser, AST, edits,
+# binding/resource grammars, validator core) and the registry model (metadata types, JSON schema and
+# loader). This crate re-exports both under their historical paths.
+kubuno-desktop-views-syntax = { workspace = true }
+kubuno-desktop-views-model  = { workspace = true }
+# `{Res key}` resource references and the UI culture (vskubuno docs/RESOURCES.md).
+kubuno-desktop-resources    = { workspace = true }
+tracing             = { workspace = true }
+
+[features]
+# Component families beyond the five phase-2a examples (see
+# `src/registry/families/mod.rs`). Each can be built alone while it is being
+# written; `all-families` turns every one on, and is the default now that
+# every family is integrated.
+default = ["all-families"]
+family-display = []
+family-choice = []
+family-text = []
+family-containers = []
+family-data = []
+# The dock and the workspace chrome (`registry/families/docking.rs`).
+family-docking = []
+# `<Repeater>`: a list whose items are views.
+family-items = []
+# `<Sidebar>` and `<StatusBar>`.
+family-navigation = []
+# `<Avatar>` and `<PictureBox>`.
+family-media = []
+# `<Popover>`.
+family-overlays = []
+# `<TableLayoutPanel>`.
+family-layout = []
+all-families = ["family-display", "family-choice", "family-text", "family-containers", "family-data", "family-docking", "family-items", "family-navigation", "family-media", "family-overlays", "family-layout"]
+
+# No dev-dependencies. `examples/view_embed.rs` (the Visual Studio design surface) deliberately uses
+# nothing beyond this crate's own dependency graph - no extra `windows` features, its few OLE/Win32
+# calls are declared by hand: Visual Studio compiles it against the graph of the project a view
+# belongs to, so that it statically links that project's own `kubuno_desktop_ui` build, from the rlibs the
+# project's build produced (`vskubuno/docs/DESIGNER.md` section 15): a crate or feature the project's
+# graph lacks would simply not be there to link.
+
+# `examples/view_embed.rs`'s `#[cfg(kubuno_design_project)]`: set by the Visual Studio design build when
+# it links the project's own crate into the surface (EVT-7b), never by cargo.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kubuno_design_project)"] }

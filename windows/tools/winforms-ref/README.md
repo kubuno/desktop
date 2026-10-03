@@ -1,6 +1,6 @@
 # WinForms reference — how the control library knows what to reproduce
 
-`kubuno-controls` reproduces the WinForms control surface. Its reference is not
+`kubuno-desktop-controls` reproduces the WinForms control surface. Its reference is not
 prose and not a screenshot found on the web: it is the **shipping
 `System.Windows.Forms` assembly**, read two ways.
 
@@ -102,7 +102,7 @@ read by both probes, so the two cannot silently drift apart in what they test.
 
 ```powershell
 cd parity\layout-winforms ; dotnet run          # then, from the repo root:
-cargo run -p kubuno-controls --example parity_layout -j 1
+cargo run -p kubuno-desktop-controls --example parity_layout -j 1
 cd parity ; .\compare-layout.ps1                # exit 1 on any delta > 0.5 DIP
 ```
 

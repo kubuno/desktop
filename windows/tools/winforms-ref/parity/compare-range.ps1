@@ -1,7 +1,7 @@
 ﻿# Numeric parity report for the RANGE family.
 #
 # Diffs `range-winforms.json` (the real toolkit) against `range-port.json` (the
-# `kubuno-controls` reproduction), case by case, and exits NON-ZERO on any
+# `kubuno-desktop-controls` reproduction), case by case, and exits NON-ZERO on any
 # mismatch. What it compares:
 #
 #   * the OUTCOME of every step — `ok` or `err`. WinForms throws
@@ -21,7 +21,7 @@
 #
 #   cd tools\winforms-ref\parity\range-winforms ; dotnet run
 #   cd ..\..\..\.. ; $env:CARGO_TARGET_DIR='C:\kubuno-build\desktop-target'
-#   cargo run -p kubuno-controls --example parity_range -j 1
+#   cargo run -p kubuno-desktop-controls --example parity_range -j 1
 #
 # Then:
 #

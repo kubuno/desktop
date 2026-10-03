@@ -2,7 +2,7 @@
 //! of the list, the item template of `ConversationListPane`'s Repeater. Everything it shows comes
 //! from the fields of its item's row (`view_model::conversation_row`), so it has no state of its own.
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// One conversation of the list: avatar, name, time, last message and unread badge.
 #[derive(UserControl, Default)]

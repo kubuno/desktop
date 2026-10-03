@@ -2,8 +2,8 @@
 //! directory's organisational units. [`load`] reads them with their accounts (off the UI thread);
 //! the `OrgUnitTree` shows them.
 
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
 
 use crate::admin::SectionState;
 use crate::model::events::ItemCommandEventArgs;
@@ -73,7 +73,7 @@ impl OrgUnitsSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl OrgUnitsSection {
     fn org_units_section_load(&mut self) {
         if self.design_mode() && self.units.is_empty() {

@@ -9,7 +9,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use kubuno::prelude::*;
+use kubuno_desktop::prelude::*;
 
 use crate::services::api::{self, ChatEvent, Sink};
 use crate::pages::conversation_list_pane::ConversationListPane;
@@ -35,12 +35,12 @@ impl Options {
     /// `--live` says otherwise (the shell's rule: a debugging session never reaches the real profile).
     pub fn from_args() -> Self {
         let args: Vec<String> = std::env::args().collect();
-        Self { sample: kubuno_header_data::sample_requested(&args), link: protocol::from_args() }
+        Self { sample: kubuno_desktop_header_data::sample_requested(&args), link: protocol::from_args() }
     }
 }
 
 /// Kubuno Chat's main window.
-#[kubuno::view("chat_window.kbview")]
+#[kubuno_desktop::view("chat_window.kbview")]
 pub struct ChatWindow {
     /// The conversation list, typed (`Custom<T>`: its methods through `with`).
     #[control]
@@ -94,11 +94,11 @@ impl ChatWindow {
         };
         // The title bar's waffle and avatar: the account's apps, favourites and other accounts, through the
         // shell's broker (the sample: the controls' design data).
-        let mut header = kubuno_header_data::FeedConfig::new("kubuno-chat");
+        let mut header = kubuno_desktop_header_data::FeedConfig::new("kubuno-chat");
         if !self.options.sample {
-            header.proxy = kubuno_sync::get_proxy();
+            header.proxy = kubuno_desktop_sync::get_proxy();
         }
-        kubuno_header_data::start(kubuno_header_data::HeaderOptions::for_app(&["chat"]), header, self.options.sample, Some(dispatcher.clone()));
+        kubuno_desktop_header_data::start(kubuno_desktop_header_data::HeaderOptions::for_app(&["chat"]), header, self.options.sample, Some(dispatcher.clone()));
         let post = dispatcher.clone();
         let sink: Sink = Arc::new(move |event: ChatEvent| {
             drop(post.begin_invoke(move |w: &mut ChatWindow| w.on_chat_event(event)));
@@ -137,10 +137,10 @@ impl ChatWindow {
 
     /// The settings and profile menus' checks and texts.
     fn sync_menus(&mut self) {
-        let dark = kubuno::Application::theme().mode == kubuno::ui::ThemeMode::Dark;
+        let dark = kubuno_desktop::Application::theme().mode == kubuno_desktop::ui::ThemeMode::Dark;
         self.light_theme = !dark;
         self.dark_theme = dark;
-        let french = kubuno::resources::culture().starts_with("fr");
+        let french = kubuno_desktop::resources::culture().starts_with("fr");
         self.french = french;
         self.english = !french;
         self.account_text = match (&self.state.instance, self.state.live) {
@@ -197,8 +197,8 @@ impl ChatWindow {
     /// Acts on a `kubuno://` hand-off: raises the window and opens the target conversation, or
     /// holds the link until the list arrives.
     pub fn open_deep_link(&mut self, link: DeepLink) {
-        kubuno::tracing::info!("[protocol] hand-off {} -> {}", if link.is_meeting() { "meeting" } else { "conversation" }, link.conversation_id());
-        kubuno::controls::host::restore_and_focus();
+        kubuno_desktop::tracing::info!("[protocol] hand-off {} -> {}", if link.is_meeting() { "meeting" } else { "conversation" }, link.conversation_id());
+        kubuno_desktop::controls::host::restore_and_focus();
         if link.is_meeting() {
             self.state.section = Section::Meetings;
             self.section = Section::Meetings.key().to_string();
@@ -246,10 +246,10 @@ impl ChatWindow {
         match (e.command.as_str(), active) {
             ("copy_link", Some(c)) if !c.id.is_empty() => {
                 let link = if c.meeting { DeepLink::Meet(c.id) } else { DeepLink::Chat(c.id) };
-                kubuno::controls::host::set_clipboard_text(&link.to_url());
+                kubuno_desktop::controls::host::set_clipboard_text(&link.to_url());
             }
             ("copy_id", Some(c)) if !c.id.is_empty() => {
-                kubuno::controls::host::set_clipboard_text(&c.id);
+                kubuno_desktop::controls::host::set_clipboard_text(&c.id);
             }
             ("mark_read", Some(_)) => {
                 if let (Some((conv_id, last)), Some(instance)) = (self.state.mark_active_read(), self.state.instance.clone()) {
@@ -264,12 +264,12 @@ impl ChatWindow {
 
     fn conversation_message_activated(&mut self, e: &MessageActivatedEventArgs) {
         // A double-click copies the message, like the web's "Copy" action.
-        kubuno::controls::host::set_clipboard_text(&e.text);
+        kubuno_desktop::controls::host::set_clipboard_text(&e.text);
     }
 
     fn conversation_reached_top(&mut self) {
         // The API serves the 50 newest messages only (`fetch_messages`): nothing older to load yet.
-        kubuno::tracing::debug!("thread scrolled to its top");
+        kubuno_desktop::tracing::debug!("thread scrolled to its top");
     }
 
     fn typing_timer_tick(&mut self) {
@@ -279,32 +279,32 @@ impl ChatWindow {
     }
 
     fn theme_light_click(&mut self) {
-        kubuno::Application::set_theme(kubuno::ui::Theme::light());
+        kubuno_desktop::Application::set_theme(kubuno_desktop::ui::Theme::light());
         self.sync_menus();
     }
 
     fn theme_dark_click(&mut self) {
-        kubuno::Application::set_theme(kubuno::ui::Theme::dark());
+        kubuno_desktop::Application::set_theme(kubuno_desktop::ui::Theme::dark());
         self.sync_menus();
     }
 
     fn language_fr_click(&mut self) {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         self.sync_menus();
         self.refresh();
     }
 
     fn language_en_click(&mut self) {
-        kubuno::resources::set_culture("en");
+        kubuno_desktop::resources::set_culture("en");
         self.sync_menus();
         self.refresh();
     }
 
     fn quit_click(&mut self) {
-        kubuno::Application::exit();
+        kubuno_desktop::Application::exit();
     }
 }
 
 fn tracing_warn(message: &str) {
-    kubuno::tracing::warn!("[chat] {message}");
+    kubuno_desktop::tracing::warn!("[chat] {message}");
 }

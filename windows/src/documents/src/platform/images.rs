@@ -1,6 +1,6 @@
 //! Images through WIC: decoding the document's `data:` images into Direct2D bitmaps (cached), and
 //! preparing an image for insertion — decoded, shrunk to the core's insert plan
-//! (`kubuno_docs_core::layout::images::plan_insert`: 1600 px long edge, PNG when the source has
+//! (`kubuno_office_docs_core::layout::images::plan_insert`: 1600 px long edge, PNG when the source has
 //! transparency, JPEG otherwise) and re-encoded as a `data:` URI, refused past the per-image
 //! budget (the whole document must stay under the server's 2 MiB PATCH limit).
 //!
@@ -10,8 +10,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use kubuno_docs_core::base64;
-use kubuno_docs_core::layout::images::{fits_insert_budget, plan_insert, Encoding};
+use kubuno_office_docs_core::base64;
+use kubuno_office_docs_core::layout::images::{fits_insert_budget, plan_insert, Encoding};
 use windows::core::{Interface, GUID};
 use windows::Win32::Graphics::Direct2D::{ID2D1Bitmap1, ID2D1DeviceContext};
 use windows::Win32::Graphics::Imaging::*;

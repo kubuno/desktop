@@ -1,7 +1,7 @@
 {
   "//": "SHARED case list for the layout parity harness. Read at RUNTIME by both",
   "//1": "probes: tools/winforms-ref/parity/layout-winforms (real WinForms) and",
-  "//2": "crates/kubuno-controls/examples/parity_layout.rs (the port). Neither owns",
+  "//2": "crates/kubuno-desktop-controls/examples/parity_layout.rs (the port). Neither owns",
   "//3": "a copy, so the two can never silently drift apart in what they test.",
   "//4": "",
   "//5": "Units are DIP == pixels: the C# probe runs DpiUnaware and the port never",

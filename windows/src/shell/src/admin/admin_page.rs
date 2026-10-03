@@ -2,8 +2,8 @@
 //! administration console. The window opens a section ([`AdminPage::open`]) and hands it its state as it
 //! loads ([`AdminPage::set_dashboard`]…); what a section asks for comes back as `Command`.
 
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
 
 use crate::admin::{self, SectionState};
 use crate::admin::admin_dashboard::DashboardData;
@@ -160,7 +160,7 @@ impl AdminPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl AdminPage {
     fn admin_page_load(&mut self) {
         if self.section.is_empty() {

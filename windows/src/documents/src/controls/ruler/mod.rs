@@ -17,8 +17,8 @@ pub use corner::RulerCorner;
 pub use horizontal::HorizontalRuler;
 pub use vertical::VerticalRuler;
 
-use kubuno::ui::graphics::{Brush, Color, Graphics, GraphicsPath, Pen, PointF};
-use kubuno::ui::Rect;
+use kubuno_desktop::ui::graphics::{Brush, Color, Graphics, GraphicsPath, Pen, PointF};
+use kubuno_desktop::ui::Rect;
 
 // ── The web's metrics (DocumentEditorPage.tsx) ──────────────────────────────────────────────
 
@@ -69,8 +69,8 @@ pub struct RulerColors {
 }
 
 impl RulerColors {
-    pub fn of(t: &kubuno::ui::Theme) -> Self {
-        let dark = t.mode == kubuno::ui::ThemeMode::Dark;
+    pub fn of(t: &kubuno_desktop::ui::Theme) -> Self {
+        let dark = t.mode == kubuno_desktop::ui::ThemeMode::Dark;
         let c = |v: windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F| Color::from(v);
         let (band, column) = if dark { (c(t.card_background), c(t.surface_2)) } else { (c(t.surface_2), c(t.layer_background)) };
         Self {
@@ -88,8 +88,8 @@ impl RulerColors {
 }
 
 /// The number font of the graduations (`9px Arial`).
-pub fn number_font() -> kubuno::ui::graphics::Font {
-    kubuno::ui::graphics::Font::with_dip("Arial", 9.0, kubuno::ui::graphics::FontStyle::REGULAR)
+pub fn number_font() -> kubuno_desktop::ui::graphics::Font {
+    kubuno_desktop::ui::graphics::Font::with_dip("Arial", 9.0, kubuno_desktop::ui::graphics::FontStyle::REGULAR)
 }
 
 // ── Tab stops ───────────────────────────────────────────────────────────────────────────────
@@ -519,7 +519,7 @@ pub fn rule(g: &Graphics<'_>, color: Color, rect: Rect) {
 
 /// `MarginsChanged`: a margin edge was dragged. `start`/`end` are the left/right margins (the
 /// horizontal ruler) or the top/bottom ones (the vertical ruler), in document pixels.
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct RulerMarginsEventArgs {
     pub start: f32,
     pub end: f32,
@@ -528,7 +528,7 @@ pub struct RulerMarginsEventArgs {
 }
 
 /// `IndentsChanged`: an indent marker was dragged (document pixels).
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct RulerIndentsEventArgs {
     pub left: f32,
     pub first_line: f32,
@@ -538,14 +538,14 @@ pub struct RulerIndentsEventArgs {
 }
 
 /// `TabStopsChanged`: a click added or removed a tab stop (`TabStops`' text form).
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct RulerTabStopsEventArgs {
     pub tab_stops: String,
 }
 
 /// `DragGuideChanged`: where the dashed guide line goes over the page while a margin or an indent
 /// is dragged, and the value to show beside it.
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct RulerGuideEventArgs {
     /// A guide is shown (`false`: the drag ended, remove it).
     pub visible: bool,

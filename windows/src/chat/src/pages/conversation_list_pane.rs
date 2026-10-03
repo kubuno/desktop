@@ -2,8 +2,8 @@
 //! heading, the search field and the conversations. It keeps no chat logic: the window computes the
 //! rows (`view_model::list_rows`) and gives them to it, and it reports what the user does.
 
-use kubuno::prelude::Rows;
-use kubuno::views::prelude::*;
+use kubuno_desktop::prelude::Rows;
+use kubuno_desktop::views::prelude::*;
 
 /// The conversation list (see the module doc).
 #[derive(UserControl, Default)]
@@ -53,7 +53,7 @@ impl ConversationListPane {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl ConversationListPane {
     fn list_item_click(&mut self, e: &ItemEventArgs) {
         self.raise_conversation_selected(ItemEventArgs { index: e.index });

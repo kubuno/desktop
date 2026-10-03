@@ -1,6 +1,6 @@
 //! The chat's talk to the server, through the core gateway.
 //!
-//! Every call goes through `kubuno_sync` as the account the shell shows: the
+//! Every call goes through `kubuno_desktop_sync` as the account the shell shows: the
 //! access token is borrowed from the shell's token broker (the shell is the only
 //! refresh-token owner; it is started in the background when it is not running,
 //! and the broker's server is verified to be the installed shell). The chat
@@ -15,7 +15,7 @@
 //! Forms' `BeginInvoke`) — the closure runs on the UI thread at the next frame.
 
 use base64::Engine;
-use kubuno::tracing;
+use kubuno_desktop::tracing;
 use serde_json::Value;
 
 use crate::model::{Conversation, Message, Status};
@@ -93,7 +93,7 @@ pub fn start_mark_read(instance: String, conv_id: String, up_to_message_id: Stri
 /// failed read receipt must never break opening the conversation.
 pub fn mark_read(id: &str, conv_id: &str, up_to_message_id: &str) -> anyhow::Result<()> {
     let path = format!("/api/v1/chat/conversations/{conv_id}/read");
-    kubuno_sync::account_post_json(&account(id)?, &path, serde_json::json!({ "up_to_message_id": up_to_message_id }))?;
+    kubuno_desktop_sync::account_post_json(&account(id)?, &path, serde_json::json!({ "up_to_message_id": up_to_message_id }))?;
     Ok(())
 }
 
@@ -133,7 +133,7 @@ fn run_ws(sink: &Sink, instance: &str, me: Option<&str>) -> anyhow::Result<()> {
     let account = account(instance)?;
     // A current access token borrowed from the shell's broker: the WS URL carries it and the gateway converts
     // it to the module's internal auth.
-    let token = kubuno_sync::account_access_token(&account)?;
+    let token = kubuno_desktop_sync::account_access_token(&account)?;
     let (mut socket, _resp) = tungstenite::connect(ws_url(&account.server_url, &token))?;
     loop {
         match socket.read()? {
@@ -192,24 +192,24 @@ fn ws_url(server_url: &str, token: &str) -> String {
 }
 
 /// The account the chat was last resolved for (its key, server and user id: no secret).
-static ACCOUNT: std::sync::Mutex<Option<kubuno_sync::AccountRef>> = std::sync::Mutex::new(None);
+static ACCOUNT: std::sync::Mutex<Option<kubuno_desktop_sync::AccountRef>> = std::sync::Mutex::new(None);
 
 /// The account the chat runs as: the one the shell shows (its current account, else
 /// the first active one), asked of the shell's broker. Returns its key, which the
 /// window keeps as its `instance`.
 pub fn active_instance() -> anyhow::Result<Option<String>> {
-    let Some(account) = kubuno_sync::current_account()? else { return Ok(None) };
+    let Some(account) = kubuno_desktop_sync::current_account()? else { return Ok(None) };
     let key = account.key.clone();
     *ACCOUNT.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(account);
     Ok(Some(key))
 }
 
 /// The account of key `key` (cached, else asked of the broker again).
-fn account(key: &str) -> anyhow::Result<kubuno_sync::AccountRef> {
+fn account(key: &str) -> anyhow::Result<kubuno_desktop_sync::AccountRef> {
     if let Some(a) = ACCOUNT.lock().unwrap_or_else(std::sync::PoisonError::into_inner).as_ref().filter(|a| a.key == key) {
         return Ok(a.clone());
     }
-    kubuno_sync::tokens::accounts()?.into_iter().find(|a| a.key == key).ok_or_else(|| anyhow::anyhow!("ce compte n'est plus connecté"))
+    kubuno_desktop_sync::tokens::accounts()?.into_iter().find(|a| a.key == key).ok_or_else(|| anyhow::anyhow!("ce compte n'est plus connecté"))
 }
 
 /// The server the account talks to, for the profile menu.
@@ -226,7 +226,7 @@ pub fn me(id: &str) -> Option<String> {
 /// The conversation list: `GET /api/v1/chat/conversations`. `me` prefixes our
 /// own last message with "Vous : " in the snippet, as the web does.
 pub fn fetch_conversations(id: &str, me: Option<&str>) -> anyhow::Result<Vec<Conversation>> {
-    let v = kubuno_sync::account_get_json(&account(id)?, "/api/v1/chat/conversations")?;
+    let v = kubuno_desktop_sync::account_get_json(&account(id)?, "/api/v1/chat/conversations")?;
     let rows = v.get("conversations").and_then(|x| x.as_array()).or_else(|| v.as_array()).cloned().unwrap_or_default();
     let today = days_from_civil_now();
     Ok(rows.iter().filter_map(|r| summary_to_conv(r, me, today)).collect())
@@ -236,7 +236,7 @@ pub fn fetch_conversations(id: &str, me: Option<&str>) -> anyhow::Result<Vec<Con
 /// newest-first; we reverse to chronological for top-to-bottom display.
 pub fn fetch_messages(id: &str, conv_id: &str, me: Option<&str>) -> anyhow::Result<Vec<Message>> {
     let path = format!("/api/v1/chat/conversations/{conv_id}/messages?limit=50");
-    let v = kubuno_sync::account_get_json(&account(id)?, &path)?;
+    let v = kubuno_desktop_sync::account_get_json(&account(id)?, &path)?;
     let mut rows = v.get("messages").and_then(|x| x.as_array()).or_else(|| v.as_array()).cloned().unwrap_or_default();
     rows.reverse();
     Ok(rows.iter().filter_map(|m| message_from(m, me)).collect())
@@ -252,7 +252,7 @@ pub fn send_text(id: &str, conv_id: &str, text: &str, me: Option<&str>) -> anyho
         "message_type": "text",
     });
     let path = format!("/api/v1/chat/conversations/{conv_id}/messages");
-    let v = kubuno_sync::account_post_json(&account(id)?, &path, body)?;
+    let v = kubuno_desktop_sync::account_post_json(&account(id)?, &path, body)?;
     // The server echoes the stored message (possibly wrapped); fall back to a
     // local echo so the bubble appears even if the reply shape surprises us.
     let stored = v.get("message").unwrap_or(&v);
@@ -469,7 +469,7 @@ mod tests {
         assert_eq!(days_from_civil(1970, 1, 1), 0);
         let today = days_from_civil(2026, 10, 1);
         assert_eq!(weekday(today), 3, "2026-10-01 is a Thursday");
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         assert_eq!(list_time("2026-10-01T14:32:07Z", today), "14:32");
         assert_eq!(list_time("2026-09-30T08:00:00Z", today), "Hier");
         assert_eq!(list_time("2026-09-28T08:00:00Z", today), "lun.");

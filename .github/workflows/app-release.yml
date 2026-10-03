@@ -26,11 +26,11 @@ jobs:
 
       - name: Test
         working-directory: windows
-        run: cargo test -p kubuno-desktop
+        run: cargo test -p kubuno-desktop-shell
 
       - name: Build
         working-directory: windows
-        run: cargo build --release -p kubuno-desktop
+        run: cargo build --release -p kubuno-desktop-shell
 
       # The MSIX wraps the exe; MakeAppx ships with the Windows SDK, which the
       # runner already has.

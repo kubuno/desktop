@@ -1,6 +1,6 @@
 # Architecture — correspondance avec `Files.App` (C#)
 
-L'arborescence de `crates/drive-app/src/` recopie celle de
+L'arborescence de `crates/kubuno-drive-desktop/src/` recopie celle de
 `Files-main/src/Files.App/` pour permettre la comparaison fichier à fichier :
 réviser un module Rust, c'est ouvrir son homologue C# à côté.
 
@@ -8,10 +8,10 @@ réviser un module Rust, c'est ouvrir son homologue C# à côté.
 
 | Rust | C# |
 |---|---|
-| `crates/drive-app` | `src/Files.App` |
-| `crates/drive-app-storage` | `src/Files.App.Storage` |
-| `crates/drive-localization` | `src/Files.App/Strings` + `AppLocalizationService` |
-| `crates/drive-shared` | `src/Files.Shared` |
+| `crates/kubuno-drive-desktop` | `src/Files.App` |
+| `crates/kubuno-drive-desktop-app-storage` | `src/Files.App.Storage` |
+| `crates/kubuno-drive-desktop-localization` | `src/Files.App/Strings` + `AppLocalizationService` |
+| `crates/kubuno-drive-desktop-shared` | `src/Files.Shared` |
 
 ## Modules ↔ dossiers
 

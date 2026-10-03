@@ -1,6 +1,6 @@
 //! The Direct2D drawing surface for Kubuno Documents.
 //!
-//! It implements [`drive_app_controls::Canvas`], the contract every shared
+//! It implements [`kubuno_drive_desktop_app_controls::Canvas`], the contract every shared
 //! control paints through — so the window chrome (ribbon, backstage, status bar,
 //! dialogs) gets the whole design system without knowing how it draws.
 //!
@@ -17,8 +17,8 @@
 
 use std::cell::Cell;
 
-use drive_app_controls::geometry::Rect;
-use drive_app_controls::{Canvas, Renderer, TextFormats, Theme};
+use kubuno_drive_desktop_app_controls::geometry::Rect;
+use kubuno_drive_desktop_app_controls::{Canvas, Renderer, TextFormats, Theme};
 use windows::core::Result;
 use windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F;
 use windows::Win32::Graphics::Direct2D::{
@@ -39,7 +39,7 @@ use windows_numerics::Matrix3x2;
 /// NOT `f32::MAX`: DirectWrite computes intermediate values from the layout box,
 /// and at `f32::MAX` those overflow to infinity and the returned metrics come
 /// back as NaN for some fonts. Drive hit this and fixed it to the same constant
-/// (`drive/crates/drive-app/src/ui/painter.rs:727-730`); chat's copy still
+/// (`drive/crates/kubuno-drive-desktop/src/ui/painter.rs:727-730`); chat's copy still
 /// carries the bug, which is why this line is not a verbatim copy.
 const UNBOUNDED: f32 = 65536.0;
 
@@ -188,7 +188,7 @@ impl<'a> Painter<'a> {
         name: &'static str,
         rect: &Rect,
         size: f32,
-        pick: &dyn Fn(&drive_app_controls::IconLayer) -> D2D1_COLOR_F,
+        pick: &dyn Fn(&kubuno_drive_desktop_app_controls::IconLayer) -> D2D1_COLOR_F,
     ) {
         use windows::core::Interface;
         let Ok(factory) = self
@@ -385,7 +385,7 @@ impl Canvas for Painter<'_> {
         fg: &D2D1_COLOR_F,
         accent: &D2D1_COLOR_F,
     ) {
-        use drive_app_controls::LayerRole;
+        use kubuno_drive_desktop_app_controls::LayerRole;
         let (fg, accent) = (*fg, *accent);
         let contrast = D2D1_COLOR_F { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         self.vector(name, rect, size, &move |layer| {
@@ -418,8 +418,8 @@ impl Canvas for Painter<'_> {
         self.draw_layered_shadow(
             rect,
             radius,
-            &drive_app_controls::themes::shape::SHADOW_MENU,
-            drive_app_controls::themes::shape::SHADOW_GREY,
+            &kubuno_drive_desktop_app_controls::themes::shape::SHADOW_MENU,
+            kubuno_drive_desktop_app_controls::themes::shape::SHADOW_GREY,
         );
     }
 
@@ -427,7 +427,7 @@ impl Canvas for Painter<'_> {
         &self,
         rect: &Rect,
         radius: f32,
-        layers: &[drive_app_controls::themes::shape::ShadowLayer],
+        layers: &[kubuno_drive_desktop_app_controls::themes::shape::ShadowLayer],
         colour: (f32, f32, f32),
     ) {
         self.draw_layered_shadow(rect, radius, layers, colour);
@@ -647,7 +647,7 @@ impl Painter<'_> {
         &self,
         rect: &Rect,
         radius: f32,
-        layers: &[drive_app_controls::themes::shape::ShadowLayer],
+        layers: &[kubuno_drive_desktop_app_controls::themes::shape::ShadowLayer],
         colour: (f32, f32, f32),
     ) {
         let (sr, sg, sb) = colour;

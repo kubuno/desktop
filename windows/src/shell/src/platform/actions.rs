@@ -15,10 +15,10 @@ pub fn open_path(target: &str) {
     use windows::core::HSTRING;
     use windows::Win32::UI::Shell::ShellExecuteW;
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
-    if target.is_empty() || crate::services::backend::is_sample() || !kubuno_account::paths::system_integration_allowed() {
+    if target.is_empty() || crate::services::backend::is_sample() || !kubuno_desktop_account::paths::system_integration_allowed() {
         // The sample opens nothing: its server and folders do not exist. Nor does a sandboxed run
         // (`KUBUNO_SANDBOX_DIR`: tests, captures), which must never reach the user's browser.
-        kubuno::tracing::info!("[shell] open {target}");
+        kubuno_desktop::tracing::info!("[shell] open {target}");
         return;
     }
     let verb = HSTRING::from("open");

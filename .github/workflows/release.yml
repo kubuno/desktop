@@ -33,7 +33,7 @@ jobs:
 
       - name: Build
         working-directory: common
-        run: cargo build --release --locked --target ${{ matrix.target }} -p kubuno-sync
+        run: cargo build --release --locked --target ${{ matrix.target }} -p kubuno-desktop-sync
 
       # ── Linux: .deb + .rpm ──────────────────────────────────────────────────
       - name: Package Linux (deb + rpm)
@@ -41,8 +41,8 @@ jobs:
         working-directory: common
         run: |
           cargo install cargo-deb cargo-generate-rpm --locked
-          cargo deb -p kubuno-sync --target ${{ matrix.target }} --no-build
-          cargo generate-rpm -p kubuno-sync --target ${{ matrix.target }}
+          cargo deb -p kubuno-desktop-sync --target ${{ matrix.target }} --no-build
+          cargo generate-rpm -p kubuno-desktop-sync --target ${{ matrix.target }}
           mkdir -p dist
           cp target/${{ matrix.target }}/debian/*.deb dist/
           cp target/${{ matrix.target }}/generate-rpm/*.rpm dist/

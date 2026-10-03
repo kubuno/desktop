@@ -8,13 +8,13 @@ Source de référence : `C:\Users\martinien\projects\Files-main`.
 
 | Projet C# | Crate Rust | Statut |
 |---|---|---|
-| Files.Shared | `drive-shared` | porté (12 tests) |
-| Files.Core.Storage (+ modèle OwlCore.Storage) | `drive-core-storage` | porté (traits) |
-| Files.App.Storage | `drive-app-storage` | porté (23 tests) : IShellItem, IFileOperation+sink, helpers Shell, icônes/thumbnails, watcher SHChangeNotify, STA, HomeFolder, FTP (feature) |
-| Files.App.Controls | `drive-app-controls` (contrôles Direct2D custom) | à faire |
-| Files.App | `drive-app` | fonctionnel : fenêtre custom frame + Mica + bande accent, onglets style navigateur, navigation complète (historique, breadcrumb cliquable), vue détails, vraies icônes Shell (IconCache), menu contextuel Shell natif, assets originaux (Home/Star/Folder png), opérations fichiers (Ctrl+C/X/V presse-papiers CF_HDROP compatible Explorateur, Suppr → corbeille, Ctrl+Maj+N, F5, Alt+←/→, Ctrl+T/W) via IFileOperation, argument ligne de commande = dossier à ouvrir, DPI per-monitor V2, page Paramètres (thème système/clair/sombre appliqué en direct, éléments masqués, extensions — persistés dans %LOCALAPPDATA%\FilesRust\settings.json) |
+| Files.Shared | `kubuno-drive-desktop-shared` | porté (12 tests) |
+| Files.Core.Storage (+ modèle OwlCore.Storage) | `kubuno-drive-desktop-core-storage` | porté (traits) |
+| Files.App.Storage | `kubuno-drive-desktop-app-storage` | porté (23 tests) : IShellItem, IFileOperation+sink, helpers Shell, icônes/thumbnails, watcher SHChangeNotify, STA, HomeFolder, FTP (feature) |
+| Files.App.Controls | `kubuno-drive-desktop-app-controls` (contrôles Direct2D custom) | à faire |
+| Files.App | `kubuno-drive-desktop` | fonctionnel : fenêtre custom frame + Mica + bande accent, onglets style navigateur, navigation complète (historique, breadcrumb cliquable), vue détails, vraies icônes Shell (IconCache), menu contextuel Shell natif, assets originaux (Home/Star/Folder png), opérations fichiers (Ctrl+C/X/V presse-papiers CF_HDROP compatible Explorateur, Suppr → corbeille, Ctrl+Maj+N, F5, Alt+←/→, Ctrl+T/W) via IFileOperation, argument ligne de commande = dossier à ouvrir, DPI per-monitor V2, page Paramètres (thème système/clair/sombre appliqué en direct, éléments masqués, extensions — persistés dans %LOCALAPPDATA%\FilesRust\settings.json) |
 | Files.App.CsWin32 | remplacé par le crate `windows` (features par module) | n/a |
-| Files.Core.SourceGenerator | macros proc + `build.rs` (voir Codegen) | localisation faite (drive-localization) |
+| Files.Core.SourceGenerator | macros proc + `build.rs` (voir Codegen) | localisation faite (kubuno-drive-desktop-localization) |
 | Files.App.Server | binaire serveur COM out-of-proc (plus tard) | à faire |
 | Files.App.Launcher | binaire shim protocole (plus tard) | à faire |
 | Files.App.OpenDialog / SaveDialog | DLL COM in-proc (plus tard, très risqué : IFileDialogPrivate) | à faire |
@@ -64,10 +64,10 @@ Source de référence : `C:\Users\martinien\projects\Files-main`.
 
 ## Ordre de portage
 
-1. `drive-shared` (feuille, aucune dépendance) ✦ en cours
-2. `drive-core-storage` : traits Storable/File/Folder/ModifiableFolder (modèle
+1. `kubuno-drive-desktop-shared` (feuille, aucune dépendance) ✦ en cours
+2. `kubuno-drive-desktop-core-storage` : traits Storable/File/Folder/ModifiableFolder (modèle
    OwlCore) + IStorageService, watchers, StorableKind, extensions
-3. `drive-app-storage` : WindowsStorable/WindowsFile/WindowsFolder (IShellItem),
+3. `kubuno-drive-desktop-app-storage` : WindowsStorable/WindowsFile/WindowsFolder (IShellItem),
    WindowsBulkOperations (IFileOperation + sink), watchers Shell
    (SHChangeNotifyRegister), helpers (icônes GDI+/thumbnails, context menus,
    quick access), FTP (crate suppaftp), corbeille
@@ -96,9 +96,9 @@ Thème (dropdown), Arrière-plan (Mica/Mica Alt/Acrylique), Couleurs du fond
 Paramètres ». Onglets : drag & drop implémenté (réordonnancement en direct).
 
 ## Session 2 (2026-07-13, suite)
-- `drive-localization` : 49 cultures × ~1444 clés portées depuis les .resw
+- `kubuno-drive-desktop-localization` : 49 cultures × ~1444 clés portées depuis les .resw
   originaux ; en-US statique (build.rs) + autres cultures parsées paresseusement ;
-  API tr()/set_culture/detect_system_culture ; 10 tests. Intégré dans drive-app
+  API tr()/set_culture/detect_system_culture ; 10 tests. Intégré dans kubuno-drive-desktop
   (tous les libellés UI passent par tr(), culture système détectée au démarrage).
 - Page Paramètres complète : navigation interne (9 sections, libellés resw),
   Apparence avec dropdowns natifs Thème + Arrière-plan (Mica/Mica Alt/Acrylique
@@ -981,7 +981,7 @@ Deux pièges :
 * **Le libellé des `ToggleSwitch` vient des commandes**
   (`ToggleShowHiddenItemsAction.Label` → `Strings.HiddenItems`), et le texte
   On/Off vient de **WinUI**, pas de Files : il n'est donc dans aucun .resw porté
-  (`drive_localization::toggle_on_off`).
+  (`kubuno_drive_desktop_localization::toggle_on_off`).
 
 
 ### 12. `GetIconSize` n'est pas la taille d'affichage
@@ -1080,7 +1080,7 @@ elles lui passent par-dessus dès qu'on défile.
 
 ### 17. L'arborescence Rust recopie celle de `Files.App`
 
-Pour comparer le port à l'original fichier par fichier, `crates/drive-app/src/`
+Pour comparer le port à l'original fichier par fichier, `crates/kubuno-drive-desktop/src/`
 suit désormais le même découpage que `Files-main/src/Files.App/` : `data/` ↔
 `Data/`, `services/` ↔ `Services/`, `helpers/` ↔ `Helpers/`, `utils/` ↔
 `Utils/`, `view_models/` ↔ `ViewModels/`, `user_controls/` ↔ `UserControls/`,

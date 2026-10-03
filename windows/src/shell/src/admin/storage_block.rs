@@ -2,8 +2,8 @@
 //! the console's storage page, an item of its Repeater. Its `Kind` (`overview`, `states`, `units`,
 //! `categories`) picks which of its parts show; the page hands it the figures already worded.
 
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 /// One card of the storage page (see the module doc).
 #[derive(UserControl, Default)]
@@ -102,7 +102,7 @@ impl StorageBlock {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl StorageBlock {
     fn storage_block_load(&mut self) {
         if self.design_mode() && self.kind.is_empty() && self.hero.is_empty() {

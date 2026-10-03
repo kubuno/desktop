@@ -1,5 +1,5 @@
 //! The Windows clipboard, multi-format: what the core's payloads become on it and back
-//! (`kubuno_docs_core::edit::clipboard`).
+//! (`kubuno_office_docs_core::edit::clipboard`).
 //!
 //! Out: our private format (`Kubuno.Documents.Blocks`), `HTML Format` (`CF_HTML`, UTF-8) and
 //! `CF_UNICODETEXT` — in that order, since consumers take the first format they understand.
@@ -40,7 +40,7 @@ impl Guard {
                 std::thread::sleep(std::time::Duration::from_millis(OPEN_RETRY_DELAY_MS));
             }
         }
-        kubuno::tracing::warn!("[documents] clipboard busy: OpenClipboard failed {OPEN_RETRIES} times");
+        kubuno_desktop::tracing::warn!("[documents] clipboard busy: OpenClipboard failed {OPEN_RETRIES} times");
         None
     }
 }
@@ -62,12 +62,12 @@ fn registered(name: &str, cell: &'static OnceLock<u32>) -> u32 {
 
 fn private_format() -> u32 {
     static CELL: OnceLock<u32> = OnceLock::new();
-    registered(kubuno_docs_core::edit::clipboard::PRIVATE_FORMAT, &CELL)
+    registered(kubuno_office_docs_core::edit::clipboard::PRIVATE_FORMAT, &CELL)
 }
 
 fn html_format() -> u32 {
     static CELL: OnceLock<u32> = OnceLock::new();
-    registered(kubuno_docs_core::edit::clipboard::HTML_FORMAT, &CELL)
+    registered(kubuno_office_docs_core::edit::clipboard::HTML_FORMAT, &CELL)
 }
 
 fn png_format() -> u32 {
@@ -142,7 +142,7 @@ pub fn write(owner: HWND, private: &[u8], cf_html: &str, text: &str) -> Result<(
     unsafe { EmptyClipboard() }.map_err(|e| format!("clipboard: EmptyClipboard failed: {e}"))?;
     put(private_format(), private)?;
     put(html_format(), cf_html.as_bytes())?;
-    put(CF_UNICODETEXT, &kubuno_docs_core::edit::clipboard::utf16_le_nul(text))
+    put(CF_UNICODETEXT, &kubuno_office_docs_core::edit::clipboard::utf16_le_nul(text))
 }
 
 /// Everything readable on the clipboard, read in one opening.
@@ -205,7 +205,7 @@ pub fn read(owner: HWND) -> Contents {
     let Some(_guard) = Guard::open(owner) else { return Contents::default() };
     let private = get(private_format()).map(trim_nuls);
     let html = get(html_format()).map(trim_nuls).map(|b| String::from_utf8_lossy(&b).into_owned());
-    let text = get(CF_UNICODETEXT).map(|b| kubuno_docs_core::edit::clipboard::utf16_le_to_string(&b));
+    let text = get(CF_UNICODETEXT).map(|b| kubuno_office_docs_core::edit::clipboard::utf16_le_to_string(&b));
     let image = get(png_format()).or_else(|| get(CF_DIB).and_then(|d| bmp_from_dib(&d))).or_else(copied_image_file);
     Contents { private, html, text, image }
 }

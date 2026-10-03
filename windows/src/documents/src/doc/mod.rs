@@ -2,7 +2,7 @@
 //! `Measure`) and Direct2D painting of the core's pages ([`paint`]).
 //!
 //! The engine itself — parse, line breaking, tables, pagination, caret geometry, editing — is the
-//! platform-neutral `kubuno_docs_core`, a port of the web editor's `canvas-engine.ts`.
+//! platform-neutral `kubuno_office_docs_core`, a port of the web editor's `canvas-engine.ts`.
 
 pub mod fonts;
 pub mod paint;

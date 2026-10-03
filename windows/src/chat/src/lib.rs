@@ -31,4 +31,4 @@ pub use views::chat_window::{ChatWindow, Options};
 
 // `Resources::app_title()`, `Resources::status_online()`… — the strings of `resources/resources.kbres`
 // (neutral English) and `resources/resources.fr.kbres`, in the current UI culture; `{Res key}` in the views.
-kubuno::resources!(pub Resources, "resources/resources.kbres");
+kubuno_desktop::resources!(pub Resources, "resources/resources.kbres");

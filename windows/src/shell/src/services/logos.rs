@@ -9,32 +9,32 @@
 //! rewritten. A small index remembers which file answers which URL, for the next start offline.
 //!
 //! Before the first download (a first start offline, the `--sample`), the fallback is the same web
-//! files again, embedded at BUILD time (by `kubuno-header-data`'s build script) from `core/frontend/public` — never a copy kept
+//! files again, embedded at BUILD time (by `kubuno-desktop-header-data`'s build script) from `core/frontend/public` — never a copy kept
 //! by hand — and written out once to the user's cache directory, because the painters decode from a
 //! path.
 //!
-//! The mechanics (content-addressed files, index, embedded fallback) live in `kubuno_header_data::logos`,
+//! The mechanics (content-addressed files, index, embedded fallback) live in `kubuno_desktop_header_data::logos`,
 //! shared with the other desktop apps; this module only picks the directories and does the download.
 
 use std::path::PathBuf;
 
-use kubuno_header_data::logos::PictureCache;
+use kubuno_desktop_header_data::logos::PictureCache;
 
 use crate::services::backend;
 
 /// The embedded copy of the logo a server serves at `url` (`/drive-logo.png`, or a full URL ending so),
 /// written out under the user's cache directory.
 pub fn builtin_for_url(url: &str) -> Option<PathBuf> {
-    kubuno_header_data::logos::builtin_for_url(&kubuno_header_data::logos::default_builtin_dir()?, url)
+    kubuno_desktop_header_data::logos::builtin_for_url(&kubuno_desktop_header_data::logos::default_builtin_dir()?, url)
 }
 
-/// The embedded web logo of app or module `id` (see `kubuno_header_data::logos::builtin_for_id`).
+/// The embedded web logo of app or module `id` (see `kubuno_desktop_header_data::logos::builtin_for_id`).
 pub fn builtin_for_id(id: &str) -> Option<PathBuf> {
-    kubuno_header_data::logos::builtin_for_id(&kubuno_header_data::logos::default_builtin_dir()?, id)
+    kubuno_desktop_header_data::logos::builtin_for_id(&kubuno_desktop_header_data::logos::default_builtin_dir()?, id)
 }
 
 fn cache_dir(instance: &str) -> Option<PathBuf> {
-    Some(kubuno_sync::config::instance_dir(instance).ok()?.join("launcher-cache"))
+    Some(kubuno_desktop_sync::config::instance_dir(instance).ok()?.join("launcher-cache"))
 }
 
 fn cache(instance: &str) -> Option<PictureCache> {
@@ -68,13 +68,13 @@ fn download(instance: &str, cache: &PictureCache, key: &str, url: &str) -> Optio
     let bytes = match backend::fetch_bytes(instance, &path) {
         Ok(b) => b,
         Err(e) => {
-            kubuno::tracing::debug!("[launcher] {path} : {e}");
+            kubuno_desktop::tracing::debug!("[launcher] {path} : {e}");
             return None;
         }
     };
     let stored = cache.store(key, url, &bytes);
     if stored.is_none() {
-        kubuno::tracing::warn!("[launcher] {path} was not cached ({} bytes): kept the previous one", bytes.len());
+        kubuno_desktop::tracing::warn!("[launcher] {path} was not cached ({} bytes): kept the previous one", bytes.len());
     }
     stored
 }
@@ -95,7 +95,7 @@ pub fn remove_legacy(instance: &str) {
     if backend::is_sample() {
         return;
     }
-    let Ok(dir) = kubuno_sync::config::instance_dir(instance) else { return };
+    let Ok(dir) = kubuno_desktop_sync::config::instance_dir(instance) else { return };
     let Ok(entries) = std::fs::read_dir(&dir) else { return };
     for entry in entries.flatten() {
         let name = entry.file_name();

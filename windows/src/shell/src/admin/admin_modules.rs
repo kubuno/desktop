@@ -3,14 +3,14 @@
 //! (`GET /api/v1/admin/modules`, off the UI thread); the ⋮ asks the window to switch a module's
 //! service (`set-module`), which shows the change at once and confirms it with a reload.
 
-use kubuno::ui::buttons::IconButton;
-use kubuno::ui::display::{Badge, BadgeVariant};
-use kubuno::ui::metrics::space;
-use kubuno::ui::{Canvas, Rect, Widget, WidgetState};
-use kubuno::views::component::Shared;
-use kubuno::views::events::{CellEventArgs, DrawItemEventArgs, TextChangedEventArgs};
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::ui::buttons::IconButton;
+use kubuno_desktop::ui::display::{Badge, BadgeVariant};
+use kubuno_desktop::ui::metrics::space;
+use kubuno_desktop::ui::{Canvas, Rect, Widget, WidgetState};
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::events::{CellEventArgs, DrawItemEventArgs, TextChangedEventArgs};
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 use crate::admin::SectionState;
 use crate::model::events::ItemCommandEventArgs;
@@ -46,8 +46,8 @@ pub struct ModulesData {
 }
 
 /// A module's icon: its coloured brand logo when it ships one, else its glyph — the web launcher's rule.
-fn icon_for(m: &kubuno_sync::AdminModule) -> &'static str {
-    crate::services::apps::logo_for(&m.id).or_else(|| m.icon.as_deref().and_then(kubuno::views::icon::glyph)).unwrap_or("Package")
+fn icon_for(m: &kubuno_desktop_sync::AdminModule) -> &'static str {
+    crate::services::apps::logo_for(&m.id).or_else(|| m.icon.as_deref().and_then(kubuno_desktop::views::icon::glyph)).unwrap_or("Package")
 }
 
 /// Reads the modules of instance `id` (blocking: run it off the UI thread).
@@ -159,7 +159,7 @@ impl ModulesSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl ModulesSection {
     fn modules_section_load(&mut self) {
         if self.design_mode() && self.modules.is_empty() {

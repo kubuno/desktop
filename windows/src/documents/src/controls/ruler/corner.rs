@@ -3,16 +3,16 @@
 //! moves to the next kind. It blends with the rulers: the same grey, a border on its right and
 //! bottom edges, a lighter grey under the pointer.
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::{Brush, StringFormat};
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Control, ControlCore, EventCx, PaintEventCx};
-use kubuno::views::events::{ChangeSource, Event};
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::{Brush, StringFormat};
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Control, ControlCore, EventCx, PaintEventCx};
+use kubuno_desktop::views::events::{ChangeSource, Event};
 
 use super::{rule, RulerColors, TabKind, RULER_SZ};
 
 /// The tab-type selector between the rulers (see the module doc).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Documents")]
 #[toolbox(icon = "square-dashed")]
@@ -52,7 +52,7 @@ impl Control for RulerCorner {
 
     fn on_paint(&mut self, e: &mut PaintEventCx<'_>) {
         let b = e.clip_rectangle;
-        let font = kubuno::ui::graphics::Font::with_dip("Arial", 13.0, kubuno::ui::graphics::FontStyle::REGULAR);
+        let font = kubuno_desktop::ui::graphics::Font::with_dip("Arial", 13.0, kubuno_desktop::ui::graphics::FontStyle::REGULAR);
         let symbol = TabKind::parse(&self.tab_type).symbol();
         let ink = RulerColors::of(&e.graphics.theme_colors()).tab_ink;
         e.graphics.draw_string(symbol, &font, Brush::solid(ink), Rect::new(b.left, b.top, b.right - 1.0, b.bottom - 1.0), &StringFormat::centered());

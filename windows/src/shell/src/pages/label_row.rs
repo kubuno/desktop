@@ -3,7 +3,7 @@
 //! (`view_model::label_rows`); its button and swatches raise its events, which the page handles
 //! knowing the item (`current_item`).
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::view_model::PALETTE;
 
@@ -106,7 +106,7 @@ impl LabelRow {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl LabelRow {
     fn label_row_load(&mut self) {
         if self.design_mode() && self.label_name.is_empty() {

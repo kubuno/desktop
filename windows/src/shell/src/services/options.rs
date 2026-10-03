@@ -40,7 +40,7 @@ pub struct Options {
 impl Options {
     /// Reads the process's command line (the sample by default in a Debug build under a debugger).
     pub fn from_args() -> Self {
-        let debugging = cfg!(debug_assertions) && kubuno::controls::host::diagnostics::is_debugger_attached();
+        let debugging = cfg!(debug_assertions) && kubuno_desktop::controls::host::diagnostics::is_debugger_attached();
         Self::parse_for(std::env::args().skip(1), debugging)
     }
 
@@ -88,7 +88,7 @@ pub fn parse_page(name: &str) -> Option<StartPage> {
         "login" => Page::Login,
         "admin" => return Some(StartPage::Admin("dashboard".to_string())),
         other => {
-            kubuno::tracing::warn!("[shell] unknown --page « {other} », staying on the launcher");
+            kubuno_desktop::tracing::warn!("[shell] unknown --page « {other} », staying on the launcher");
             return None;
         }
     }))

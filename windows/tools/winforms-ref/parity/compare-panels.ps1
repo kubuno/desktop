@@ -1,7 +1,7 @@
 ﻿# Numeric parity diff for the layout-panel family.
 #
 # Reads the two probe outputs — `panels-winforms.json` (the real toolkit) and
-# `panels-port.json` (kubuno-controls) — and prints every place their arithmetic
+# `panels-port.json` (kubuno-desktop-controls) — and prints every place their arithmetic
 # disagrees by more than the tolerance, then exits NON-ZERO if any did.
 #
 # Why numeric and not pixel: the port paints in the Kubuno design system, so a
@@ -25,7 +25,7 @@ $ErrorActionPreference = 'Stop'
 foreach ($p in @($WinForms, $Port)) {
     if (-not (Test-Path $p)) {
         $how = 'run both probes first: `dotnet run --project .\panels-winforms`, then ' +
-               '`cargo run -p kubuno-controls --example parity_panels`'
+               '`cargo run -p kubuno-desktop-controls --example parity_panels`'
         # Write-Host, not Write-Error: $ErrorActionPreference = 'Stop' would make
         # Write-Error terminate before `exit 2` could set the code the caller reads.
         Write-Host ('missing: {0} - {1}' -f $p, $how) -ForegroundColor Red

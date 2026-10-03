@@ -1,0 +1,17 @@
+[package]
+name        = "kubuno-office-docs-core"
+description = "Kubuno Documents' platform-neutral core: the stored document held losslessly, ProseMirror positions, the layout and pagination engine ported from the web editor's canvas-engine.ts, the caret and selection geometry, and the editing operations with exact undo. No UI, no Windows API: shared by the desktop apps of every OS and, later, the web (WASM)."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# Platform-neutral on purpose (vskubuno docs/DOCUMENTS-EDITING.md §1): it must keep building for
+# `wasm32-unknown-unknown`, Linux and macOS. Never add a UI, Windows or C dependency here. Text is
+# measured through the `Measure` trait, which each platform implements (DirectWrite, canvas
+# measureText…).
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# `raw_value` is what makes the round trip lossless: every subtree this crate does not model is
+# carried as the original bytes. `float_roundtrip` keeps the numbers we do parse exact.
+serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }

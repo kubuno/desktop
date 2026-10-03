@@ -5,7 +5,7 @@
 //! The answer travels as a `DialogResult`: `Ok` = « Envoyer d'abord » (the default), `Yes` = « Exporter »,
 //! `Ignore` = « Supprimer quand même », `Cancel` = keep the account.
 
-use kubuno::prelude::*;
+use kubuno_desktop::prelude::*;
 
 use crate::services::session::SignOutChoice;
 use crate::Resources;
@@ -27,7 +27,7 @@ pub fn message(unsent: u32, account: &str, retry: bool) -> String {
 }
 
 /// The sign-out dialog (see the module doc).
-#[kubuno::view("signout_dialog.kbview")]
+#[kubuno_desktop::view("signout_dialog.kbview")]
 pub struct SignOutDialog {}
 
 impl SignOutDialog {
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn the_dialog_says_how_many_changes_wait() {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         let d = SignOutDialog::new(3, "cloud.exemple.fr", false);
         assert_eq!(d.get_text(), "Modifications non envoyées");
         assert!(d.message.get_text().starts_with("3 modification(s) de « cloud.exemple.fr »"));

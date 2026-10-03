@@ -12,8 +12,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use kubuno_docs_core::marks::TextMark;
-use kubuno_docs_core::measure::{Measure, WIDTH_CACHE_MAX};
+use kubuno_office_docs_core::marks::TextMark;
+use kubuno_office_docs_core::measure::{Measure, WIDTH_CACHE_MAX};
 use windows::core::HSTRING;
 use windows::Win32::Graphics::DirectWrite::*;
 
@@ -155,7 +155,7 @@ impl Measure for Fonts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kubuno_docs_core::layout::{paragraph, parity};
+    use kubuno_office_docs_core::layout::{paragraph, parity};
 
     fn fonts() -> Option<Fonts> {
         let factory: IDWriteFactory = unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).ok()? };

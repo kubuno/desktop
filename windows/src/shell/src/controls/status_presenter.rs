@@ -2,11 +2,11 @@
 //! when it has no content yet — loading, nothing here, or that failed.
 //!
 //! Each page used to say these with a line of grey text, each with its own wording, colour and
-//! place. `kubuno-ui` ships a `Spinner`, an `EmptyState` and a `Callout`; this control puts the
+//! place. `kubuno-desktop-ui` ships a `Spinner`, an `EmptyState` and a `Callout`; this control puts the
 //! three shapes in one place: the shell's **editorial** decisions (a failure is a danger callout
 //! rather than red text, an empty section gets a medallion and a sentence, loading turns).
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// Which of the three the presenter shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -110,7 +110,7 @@ impl StatusPresenter {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl StatusPresenter {
     fn status_presenter_load(&mut self) {
         if self.design_mode() && self.mode.is_empty() {

@@ -7,20 +7,20 @@
 // `println!`s and panics go to the debugger's Output window or to %LOCALAPPDATA%\Kubuno\logs.
 #![windows_subsystem = "windows"]
 
-use kubuno::View;
-use kubuno_chat::platform::protocol;
-use kubuno_chat::{ChatWindow, Options, Resources};
+use kubuno_desktop::View;
+use kubuno_chat_desktop::platform::protocol;
+use kubuno_chat_desktop::{ChatWindow, Options, Resources};
 
-fn main() -> kubuno::Result {
-    kubuno::ui::diagnostics::set_display_name("Kubuno Chat");
+fn main() -> kubuno_desktop::Result {
+    kubuno_desktop::ui::diagnostics::set_display_name("Kubuno Chat");
     let args: Vec<String> = std::env::args().collect();
     // `--sample`, or a Debug build under a debugger without `--live`: no broker, no network, no registration.
-    let sample = kubuno_header_data::sample_requested(&args);
+    let sample = kubuno_desktop_header_data::sample_requested(&args);
     // `kubuno://` points at this program, except for the offline sample and a sandboxed profile
     // (`KUBUNO_SANDBOX_DIR`): neither registers anything with the system.
-    let integrate = !sample && kubuno_account::paths::system_integration_allowed();
+    let integrate = !sample && kubuno_desktop_account::paths::system_integration_allowed();
     if let Some(culture) = args.iter().position(|a| a == "--culture").and_then(|i| args.get(i + 1)) {
-        kubuno::resources::set_culture(culture);
+        kubuno_desktop::resources::set_culture(culture);
     }
 
     // Single instance: a launch carrying a meeting link (from the web) forwards it to the running
@@ -37,8 +37,8 @@ fn main() -> kubuno::Result {
 
     // The splash screen: it paints on its own thread while the rest starts, and fades out once
     // the chat window is on screen (`--no-splash` / KUBUNO_NO_SPLASH=1 turn it off).
-    let splash = kubuno::SplashScreen::new()
-        .artwork(kubuno::Artwork::Chat)
+    let splash = kubuno_desktop::SplashScreen::new()
+        .artwork(kubuno_desktop::Artwork::Chat)
         .product("Kubuno Chat")
         .version(env!("CARGO_PKG_VERSION"))
         .license(env!("CARGO_PKG_LICENSE"))
@@ -53,18 +53,18 @@ fn main() -> kubuno::Result {
     // shell, started in the background when it is not running): the chat holds no refresh token. The
     // sample needs none.
     if !sample {
-        match kubuno_sync::tokens::BrokerProvider::for_app("kubuno-chat") {
-            Ok(p) => kubuno_sync::tokens::install(std::sync::Arc::new(p)),
-            Err(e) => kubuno::tracing::error!("[chat] no token broker: {e}"),
+        match kubuno_desktop_sync::tokens::BrokerProvider::for_app("kubuno-chat") {
+            Ok(p) => kubuno_desktop_sync::tokens::install(std::sync::Arc::new(p)),
+            Err(e) => kubuno_desktop::tracing::error!("[chat] no token broker: {e}"),
         }
     }
 
     if args.iter().any(|a| a == "--dark") {
-        kubuno::Application::set_theme(kubuno::ui::Theme::dark());
+        kubuno_desktop::Application::set_theme(kubuno_desktop::ui::Theme::dark());
     }
     splash.step("Préparation de l'affichage…", 0.45);
     let window = ChatWindow::new(Options::from_args());
     splash.step("Chargement des discussions…", 0.85);
     splash.close_when(window.form());
-    kubuno::Application::run(window)
+    kubuno_desktop::Application::run(window)
 }

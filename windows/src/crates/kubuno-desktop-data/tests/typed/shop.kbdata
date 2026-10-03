@@ -1,0 +1,96 @@
+# Typed data source "Shop" (vskubuno docs/DATA.md, DATA-4): the fixture of tests/typed.rs and of the
+# trybuild tests (tests/ui). Its statements are in the offline cache kubuno-desktop-data/.sqlx.
+
+version = 1
+name = "Shop"
+connection = "Shop"
+provider = "sqlite"
+
+[[tables]]
+name = "customers"
+key = ["id"]
+
+[[tables.columns]]
+name = "id"
+db_type = "INTEGER"
+rust_type = "i64"
+auto_increment = true
+
+[[tables.columns]]
+name = "name"
+db_type = "TEXT"
+rust_type = "String"
+max_length = 80
+
+[[tables.columns]]
+name = "email"
+db_type = "TEXT"
+rust_type = "String"
+nullable = true
+
+[[tables.columns]]
+name = "age"
+db_type = "INTEGER"
+rust_type = "i64"
+nullable = true
+
+[[tables.columns]]
+name = "vip"
+db_type = "BOOLEAN"
+rust_type = "bool"
+
+[[tables.columns]]
+name = "birth_date"
+db_type = "DATE"
+rust_type = "chrono::NaiveDate"
+nullable = true
+
+[[tables.columns]]
+name = "balance"
+db_type = "REAL"
+rust_type = "f64"
+nullable = true
+
+[[tables]]
+name = "orders"
+key = ["id"]
+columns = [
+    { name = "id", db_type = "INTEGER", rust_type = "i64", auto_increment = true },
+    { name = "customer_id", db_type = "INTEGER", rust_type = "i64" },
+    { name = "label", db_type = "TEXT", rust_type = "String" },
+    { name = "amount", db_type = "REAL", rust_type = "f64" },
+]
+
+[[tables]]
+name = "vip_customers"
+kind = "view"
+row = "VipCustomer"
+columns = [
+    { name = "id", db_type = "INTEGER", rust_type = "i64" },
+    { name = "name", db_type = "TEXT", rust_type = "String" },
+]
+
+[[queries]]
+name = "customers_older_than"
+sql = "SELECT * FROM customers WHERE age > @min_age ORDER BY age"
+row = "Customer"
+params = [{ name = "min_age", rust_type = "i64" }]
+
+[[queries]]
+name = "order_totals"
+sql = """
+SELECT customer_id, SUM(amount) AS total, COUNT(*) AS orders
+FROM orders
+GROUP BY customer_id
+ORDER BY customer_id
+"""
+columns = [
+    { name = "customer_id", db_type = "INTEGER", rust_type = "i64" },
+    { name = "total", db_type = "REAL", rust_type = "f64" },
+    { name = "orders", db_type = "INTEGER", rust_type = "i64" },
+]
+
+[[queries]]
+name = "set_vip"
+sql = "UPDATE customers SET vip = @vip WHERE id = @id"
+params = [{ name = "vip", rust_type = "bool" }, { name = "id", rust_type = "i64" }]

@@ -50,7 +50,7 @@ pub use views::signout_dialog::SignOutDialog;
 
 // `Resources::app_title()`, `Resources::nav_home()`… — the strings of `resources/resources.kbres`
 // (neutral English) and `resources/resources.fr.kbres`, in the current UI culture; `{Res key}` in the views.
-kubuno::resources!(pub Resources, "resources/resources.kbres");
+kubuno_desktop::resources!(pub Resources, "resources/resources.kbres");
 
 /// The name the Run key and the tray use.
 pub const APP_NAME: &str = "Kubuno";
@@ -84,10 +84,10 @@ pub fn take_summary() -> String {
 
 /// The splash screen of this start (inert when there is none), for the steps that run once the
 /// window exists.
-static SPLASH: std::sync::OnceLock<kubuno::Splash> = std::sync::OnceLock::new();
+static SPLASH: std::sync::OnceLock<kubuno_desktop::Splash> = std::sync::OnceLock::new();
 
 /// Keeps the splash screen for [`splash_step`].
-pub fn set_splash(splash: kubuno::Splash) {
+pub fn set_splash(splash: kubuno_desktop::Splash) {
     let _ = SPLASH.set(splash);
 }
 

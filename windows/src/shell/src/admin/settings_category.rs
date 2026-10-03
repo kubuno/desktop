@@ -1,8 +1,8 @@
 //! Code-behind of the user control `SettingsCategory` (`settings_category.kbcontrol`, see its comment):
 //! one category of the instance's settings, an item of the settings section's Repeater.
 
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 /// A setting row's height.
 pub const ROW_H: f32 = 56.0;
@@ -30,7 +30,7 @@ pub struct SettingsCategory {
     pub settings: Rows,
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl SettingsCategory {
     fn settings_category_load(&mut self) {
         if self.design_mode() && self.category_title.is_empty() && self.settings.is_empty() {

@@ -2,8 +2,8 @@
 //! console's dashboard. [`load`] reads the server's statistics (`GET /api/v1/admin/stats`, off the UI
 //! thread); [`DashboardSection::show`] shows them.
 
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
 
 use crate::admin::SectionState;
 use crate::controls::bar_chart::series_text;
@@ -178,7 +178,7 @@ impl DashboardSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl DashboardSection {
     fn dashboard_section_load(&mut self) {
         if self.design_mode() && !self.has_stats {

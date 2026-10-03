@@ -1,5 +1,5 @@
 [package]
-name        = "kubuno-chat"
+name        = "kubuno-chat-desktop"
 description = "Kubuno desktop chat — Windows Forms-like views (.kbview forms, .kbcontrol user controls), two-pane messaging"
 version.workspace = true
 edition.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 # `MessageThread` custom control, the user controls (`ConversationListPane`, `ConversationRow`,
 # `ConversationPane`) and the main form (`ChatWindow`). The binary is the three-line `Program.cs`.
 [lib]
-name = "kubuno_chat"
+name = "kubuno_chat_desktop"
 path = "src/lib.rs"
 
 [[bin]]
@@ -17,18 +17,18 @@ name = "kubuno-chat"
 path = "src/main.rs"
 
 [dependencies]
-# The Kubuno desktop programming model (Application::run, #[kubuno::view], custom and user
-# controls, resources) — it re-exports kubuno-views, kubuno-controls and kubuno-ui.
-kubuno = { path = "../crates/kubuno" }
+# The Kubuno desktop programming model (Application::run, #[kubuno_desktop::view], custom and user
+# controls, resources) — it re-exports kubuno-desktop-views, kubuno-desktop-controls and kubuno-desktop-ui.
+kubuno-desktop = { path = "../crates/kubuno-desktop" }
 # The title bar's waffle and avatar (`ShowWaffle` / `ShowAccount` place the shared `HeaderActions`), and their
 # data: the account's apps and favourites through the shell's token broker.
-kubuno-shell-controls = { path = "../crates/kubuno-shell-controls" }
-kubuno-header-data    = { path = "../crates/kubuno-header-data" }
+kubuno-desktop-shell-controls = { path = "../crates/kubuno-desktop-shell-controls" }
+kubuno-desktop-header-data    = { path = "../crates/kubuno-desktop-header-data" }
 # The HTTP client to the Kubuno core (`account_get_json`/`account_post_json`, the
 # `/api/v1/chat/*` calls) with access tokens borrowed from the shell's broker.
-kubuno-sync = { path = "../../../common/kubuno-sync" }
+kubuno-desktop-sync = { path = "../../../common/kubuno-desktop-sync" }
 # Where the profile lives and whether this run may register `kubuno://` (not in a sandboxed profile).
-kubuno-account = { path = "../../../common/kubuno-account" }
+kubuno-desktop-account = { path = "../../../common/kubuno-desktop-account" }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
 # Decodes the message envelope (base64url JSON `{text,…}`), the web's format.

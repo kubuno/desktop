@@ -1,0 +1,146 @@
+<!--
+  A tab per component family (`display`/`choice`/`text`/`containers`/`data`),
+  written to exercise every registered component at least once — the
+  orchestrator's visual check for the phase-2 family integration. Opened by
+  `cargo run -p kubuno-desktop-views --example showcase`.
+
+  `Data`'s `DataTable` is bound through `ItemsSource="{Binding Users}"` (the
+  new `crate::binding::Value::List` support) instead of static `<Column>`-only
+  markup, so its rows are what `ShowcaseViewModel::get("Users")` hands back,
+  not literal XML — the other list controls on that tab keep static `<Item>`
+  children to show that shape still works side by side with a bound one.
+
+  Each tab's content is a `<ScrollArea>` around the `<Stack>` (not the
+  `<Stack>` directly): a `<Stack>` has no scrolling of its own — it only
+  reports how tall its content run is (`content_extent`) — so a tab taller
+  than the window (this one is) needs the real wrapper, same as any other
+  overflowing screen in this app.
+-->
+<Tabs xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" SelectedIndex="{Binding ActiveTab, Mode=TwoWay}" x:Name="showcase_tabs">
+
+  <TabItem Header="Display">
+    <ScrollArea>
+      <Stack Direction="TopDown" Gap="12" Padding="16">
+        <Label Text="display family" Role="Title"/>
+        <LinkLabel Text="LinkLabel — click me" OnClick="link_clicked"/>
+        <Badge Text="Badge" Variant="Success" Dot="true"/>
+        <Icon Name="Check" Size="24"/>
+        <Separator/>
+        <Spinner/>
+        <ProgressBar Value="{Binding Progress}" Max="100" ShowValue="true" Label="ProgressBar"/>
+        <Callout Title="Callout" Body="An inline severity banner." Variant="Info" Dismissible="true"/>
+        <EmptyState Icon="Inbox" Title="EmptyState" Description="Nothing here yet." ActionLabel="Action"/>
+      </Stack>
+    </ScrollArea>
+  </TabItem>
+
+  <TabItem Header="Choice">
+    <ScrollArea>
+      <Stack Direction="TopDown" Gap="12" Padding="16">
+        <IconButton Icon="check" Filled="true" OnClick="icon_button_clicked"/>
+        <CheckBox Text="CheckBox" Description="A two-state bindable checkbox." Checked="{Binding Agree, Mode=TwoWay}"/>
+        <RadioButton Group="theme" Value="Light" Text="Light" SelectedValue="{Binding Theme, Mode=TwoWay}"/>
+        <RadioButton Group="theme" Value="Dark" Text="Dark" SelectedValue="{Binding Theme, Mode=TwoWay}"/>
+        <Slider Min="0" Max="100" Value="{Binding SliderValue, Mode=TwoWay}" OnValueChanged="slider_changed"/>
+        <NumericField Min="0" Max="10" Value="{Binding NumberValue, Mode=TwoWay}" OnValueChanged="number_changed"/>
+      </Stack>
+    </ScrollArea>
+  </TabItem>
+
+  <TabItem Header="Text">
+    <ScrollArea>
+      <Stack Direction="TopDown" Gap="12" Padding="16">
+        <TextArea Text="{Binding Notes, Mode=TwoWay}" Placeholder="Notes"/>
+        <SearchField Text="{Binding Query, Mode=TwoWay}" Placeholder="Search…"/>
+        <MaskedField Mask="00/00/0000" Text="{Binding DateText, Mode=TwoWay}"/>
+        <Dropdown SelectedValue="{Binding Lang, Mode=TwoWay}">
+          <Option Value="fr" Label="Français"/>
+          <Option Value="en" Label="English"/>
+        </Dropdown>
+        <ComboBox SelectedValue="{Binding Lang2, Mode=TwoWay}">
+          <Option Value="a" Label="Alpha"/>
+          <Option Value="b" Label="Beta"/>
+        </ComboBox>
+        <DatePicker Date="{Binding PickedDate, Mode=TwoWay}"/>
+        <ColorField Color="{Binding PickedColor, Mode=TwoWay}" OnClick="color_field_clicked" OnValueChanged="color_changed"/>
+        <GradientField Value="{Binding PickedGradient, Mode=TwoWay}" OnValueChanged="gradient_changed"/>
+      </Stack>
+    </ScrollArea>
+  </TabItem>
+
+  <TabItem Header="Containers">
+    <ScrollArea>
+      <Stack Direction="TopDown" Gap="12" Padding="16">
+        <GroupBox Title="GroupBox" Padding="12">
+          <Label Text="One child, framed."/>
+        </GroupBox>
+        <Splitter Orientation="Vertical" Distance="{Binding PaneWidth, Mode=TwoWay}" Height="160" x:Name="showcase_splitter">
+          <Label Dock="Fill" Text="Pane 1 — drag the bar"/>
+          <Label Dock="Fill" Text="Pane 2"/>
+        </Splitter>
+        <Breadcrumb>
+          <BreadcrumbItem Text="Home"/>
+          <BreadcrumbItem Text="Docs"/>
+          <BreadcrumbItem Text="Showcase"/>
+        </Breadcrumb>
+        <Toolbar>
+          <ToolbarItem Text="New" Icon="plus"/>
+          <ToolbarItem Text="Open"/>
+        </Toolbar>
+        <Accordion>
+          <AccordionSection Header="Section A" Open="true">
+            <Label Text="Content A"/>
+          </AccordionSection>
+          <AccordionSection Header="Section B">
+            <Label Text="Content B"/>
+          </AccordionSection>
+        </Accordion>
+        <Stepper CurrentIndex="{Binding CurrentStep, Mode=TwoWay}" AllowForward="true">
+          <Step Label="Compte"/>
+          <Step Label="Profil"/>
+          <Step Label="Confirmation"/>
+        </Stepper>
+      </Stack>
+    </ScrollArea>
+  </TabItem>
+
+  <TabItem Header="Data">
+    <ScrollArea>
+      <Stack Direction="TopDown" Gap="12" Padding="16">
+        <ListBox SelectionMode="One" SelectedIndex="{Binding ListSelIndex, Mode=TwoWay}">
+          <Item Text="Alpha"/>
+          <Item Text="Beta"/>
+          <Item Text="Gamma"/>
+        </ListBox>
+        <CheckedListBox CheckOnClick="true">
+          <Item Text="Option 1"/>
+          <Item Text="Option 2"/>
+        </CheckedListBox>
+        <!-- Per-column static values: `Role` matches the second `<Column>`'s
+             `Binding="{Binding Role}"` bare field name; `Text` is always the
+             first column, the same convention every other list control's
+             `<Item>` uses. -->
+        <ListView MultiSelect="false">
+          <Column Header="Nom" Binding="{Binding Name}" Width="120"/>
+          <Column Header="Rôle" Binding="{Binding Role}" Width="120"/>
+          <Item Text="Alice" Role="Admin"/>
+          <Item Text="Bob" Role="Editor"/>
+        </ListView>
+        <TreeView>
+          <Item Text="Racine">
+            <Item Text="Enfant A"/>
+            <Item Text="Enfant B"/>
+          </Item>
+        </TreeView>
+        <!-- Bound through `ItemsSource`, unlike the static-children controls
+             above — see this file's own top comment. -->
+        <DataTable ItemsSource="{Binding Users}" OnSortChanged="users_sorted">
+          <Column Header="Nom" Binding="{Binding Name}"/>
+          <Column Header="Rôle" Binding="{Binding Role}"/>
+        </DataTable>
+        <MonthCalendar SelectedDate="{Binding SelectedDate, Mode=TwoWay}" OnDateSelected="date_selected"/>
+      </Stack>
+    </ScrollArea>
+  </TabItem>
+
+</Tabs>

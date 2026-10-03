@@ -1,7 +1,7 @@
 # Numeric parity cases for the RANGE family — the single source both probes read.
 #
 # `range-winforms` (a .NET console app driving the REAL System.Windows.Forms
-# controls) and `kubuno-controls`'s `parity_range` example each replay every case
+# controls) and `kubuno-desktop-controls`'s `parity_range` example each replay every case
 # below and write the same JSON shape. Declaring the cases here, once, is what
 # stops the two probes from quietly drifting apart.
 #

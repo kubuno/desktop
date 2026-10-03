@@ -3,7 +3,7 @@
 //! row (`<AccountRow Title="{Binding Title}" …/>`); its two buttons raise its events, which the
 //! page handles knowing the item (`current_item`).
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// One configured account (see the module doc).
 #[derive(UserControl, Default)]
@@ -37,7 +37,7 @@ pub struct AccountRow {
     pub disconnect_requested: Event<EmptyEventArgs>,
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl AccountRow {
     fn account_row_load(&mut self) {
         if self.design_mode() && self.title.is_empty() {

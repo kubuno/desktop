@@ -782,99 +782,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
-name = "drive-app"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "crc32fast",
- "drive-app-controls",
- "drive-app-storage",
- "drive-core-storage",
- "drive-localization",
- "drive-shared",
- "embed-manifest",
- "git2",
- "hex",
- "kubuno-app-storage",
- "kubuno-controls",
- "kubuno-ui",
- "md-5",
- "serde",
- "serde_json",
- "sha1",
- "sha2",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "windows 0.62.2",
- "windows-collections 0.3.2",
- "windows-future 0.3.2",
- "windows-numerics 0.3.1",
- "winresource",
-]
-
-[[package]]
-name = "drive-app-controls"
-version = "0.1.0"
-dependencies = [
- "drive-shared",
- "tracing",
- "windows 0.62.2",
- "windows-numerics 0.3.1",
-]
-
-[[package]]
-name = "drive-app-storage"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "drive-core-storage",
- "drive-shared",
- "futures",
- "suppaftp",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "windows 0.62.2",
- "windows-core 0.62.2",
-]
-
-[[package]]
-name = "drive-core-storage"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bitflags 2.13.0",
- "drive-shared",
- "futures",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "drive-localization"
-version = "0.1.0"
-dependencies = [
- "windows 0.62.2",
-]
-
-[[package]]
-name = "drive-shared"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "crc32fast",
- "hex",
- "md-5",
- "serde",
- "sha1",
- "sha2",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1730,32 +1637,52 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno"
+name = "kubuno-chat-desktop"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-app-storage-components",
- "kubuno-controls",
- "kubuno-data",
- "kubuno-print",
- "kubuno-resources",
- "kubuno-resources-macros",
- "kubuno-ui",
- "kubuno-views",
- "kubuno-views-macros",
- "kubuno-views-meta",
+ "anyhow",
+ "base64",
+ "embed-manifest",
+ "kubuno-desktop",
+ "kubuno-desktop-account",
+ "kubuno-desktop-header-data",
+ "kubuno-desktop-shell-controls",
+ "kubuno-desktop-sync",
+ "serde",
+ "serde_json",
+ "tungstenite",
+ "windows 0.62.2",
+ "winreg",
+ "winresource",
+]
+
+[[package]]
+name = "kubuno-desktop"
+version = "0.1.0-alpha"
+dependencies = [
+ "kubuno-desktop-app-storage-components",
+ "kubuno-desktop-controls",
+ "kubuno-desktop-data",
+ "kubuno-desktop-print",
+ "kubuno-desktop-resources",
+ "kubuno-desktop-resources-macros",
+ "kubuno-desktop-ui",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-macros",
+ "kubuno-desktop-views-meta",
  "serde_json",
  "tracing",
 ]
 
 [[package]]
-name = "kubuno-account"
+name = "kubuno-desktop-account"
 version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
  "hex",
- "kubuno-api-client",
- "kubuno-app-storage",
- "kubuno-secrets",
+ "kubuno-desktop-api-client",
+ "kubuno-desktop-app-storage",
+ "kubuno-desktop-secrets",
  "libc",
  "serde",
  "serde_json",
@@ -1768,7 +1695,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-api-client"
+name = "kubuno-desktop-api-client"
 version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
@@ -1785,11 +1712,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-app-storage"
+name = "kubuno-desktop-app-storage"
 version = "0.1.0-alpha"
 dependencies = [
  "hex",
- "kubuno-secrets",
+ "kubuno-desktop-secrets",
  "serde",
  "serde_json",
  "sha2",
@@ -1799,44 +1726,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-app-storage-components"
+name = "kubuno-desktop-app-storage-components"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-app-storage",
- "kubuno-resources-model",
- "kubuno-views",
- "kubuno-views-meta",
+ "kubuno-desktop-app-storage",
+ "kubuno-desktop-resources-model",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-meta",
  "serde_json",
  "tracing",
 ]
 
 [[package]]
-name = "kubuno-chat"
-version = "0.1.0-alpha"
-dependencies = [
- "anyhow",
- "base64",
- "embed-manifest",
- "kubuno",
- "kubuno-account",
- "kubuno-header-data",
- "kubuno-shell-controls",
- "kubuno-sync",
- "serde",
- "serde_json",
- "tungstenite",
- "windows 0.62.2",
- "winreg",
- "winresource",
-]
-
-[[package]]
-name = "kubuno-controls"
+name = "kubuno-desktop-controls"
 version = "0.1.0-alpha"
 dependencies = [
  "accesskit",
  "accesskit_windows",
- "drive-app-controls",
+ "kubuno-drive-desktop-app-controls",
  "log",
  "tracing",
  "windows 0.62.2",
@@ -1845,18 +1752,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-data"
+name = "kubuno-desktop-data"
 version = "0.1.0-alpha"
 dependencies = [
  "chrono",
  "futures",
- "kubuno-app-storage",
- "kubuno-controls",
- "kubuno-data-macros",
- "kubuno-data-model",
- "kubuno-ui",
- "kubuno-views",
- "kubuno-views-meta",
+ "kubuno-desktop-app-storage",
+ "kubuno-desktop-controls",
+ "kubuno-desktop-data-macros",
+ "kubuno-desktop-data-model",
+ "kubuno-desktop-ui",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-meta",
  "serde_json",
  "sqlx",
  "thiserror 2.0.18",
@@ -1870,10 +1777,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-data-macros"
+name = "kubuno-desktop-data-macros"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-data-model",
+ "kubuno-desktop-data-model",
  "proc-macro2",
  "quote",
  "sqlx-macros-core",
@@ -1881,7 +1788,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-data-model"
+name = "kubuno-desktop-data-model"
 version = "0.1.0-alpha"
 dependencies = [
  "hex",
@@ -1891,12 +1798,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-data-tool"
+name = "kubuno-desktop-data-tool"
 version = "0.1.0-alpha"
 dependencies = [
  "chrono",
- "kubuno-data",
- "kubuno-data-model",
+ "kubuno-desktop-data",
+ "kubuno-desktop-data-model",
  "serde",
  "serde_json",
  "sqlx",
@@ -1907,68 +1814,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-desktop"
-version = "0.1.0-alpha"
-dependencies = [
- "anyhow",
- "embed-manifest",
- "kubuno",
- "kubuno-account",
- "kubuno-api-client",
- "kubuno-header-data",
- "kubuno-secrets",
- "kubuno-shell-controls",
- "kubuno-sync",
- "serde",
- "serde_json",
- "tauri-winrt-notification",
- "tokio",
- "uuid",
- "windows 0.62.2",
- "windows-core 0.62.2",
- "windows-future 0.3.2",
- "winreg",
- "winresource",
-]
-
-[[package]]
-name = "kubuno-docs-core"
-version = "0.1.0-alpha"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kubuno-documents"
-version = "0.1.0-alpha"
-dependencies = [
- "drive-app-controls",
- "embed-manifest",
- "kubuno",
- "kubuno-account",
- "kubuno-docs-core",
- "kubuno-header-data",
- "kubuno-shell-controls",
- "kubuno-sync",
- "serde",
- "serde_json",
- "windows 0.62.2",
- "windows-numerics 0.3.1",
- "winresource",
-]
-
-[[package]]
-name = "kubuno-header-data"
+name = "kubuno-desktop-header-data"
 version = "0.1.0-alpha"
 dependencies = [
  "async-trait",
  "axum",
- "kubuno",
- "kubuno-account",
- "kubuno-api-client",
- "kubuno-secrets",
- "kubuno-shell-controls",
+ "kubuno-desktop",
+ "kubuno-desktop-account",
+ "kubuno-desktop-api-client",
+ "kubuno-desktop-secrets",
+ "kubuno-desktop-shell-controls",
  "serde",
  "serde_json",
  "tempfile",
@@ -1978,16 +1833,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-print"
+name = "kubuno-desktop-print"
 version = "0.1.0-alpha"
 dependencies = [
- "drive-app-controls",
- "kubuno-app-storage-components",
- "kubuno-controls",
- "kubuno-data",
- "kubuno-ui",
- "kubuno-views",
- "kubuno-views-meta",
+ "kubuno-desktop-app-storage-components",
+ "kubuno-desktop-controls",
+ "kubuno-desktop-data",
+ "kubuno-desktop-ui",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-meta",
+ "kubuno-drive-desktop-app-controls",
  "thiserror 2.0.18",
  "tracing",
  "windows 0.62.2",
@@ -1997,41 +1852,41 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-resources"
+name = "kubuno-desktop-resources"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-resources-macros",
- "kubuno-resources-model",
+ "kubuno-desktop-resources-macros",
+ "kubuno-desktop-resources-model",
  "tracing",
  "windows 0.62.2",
 ]
 
 [[package]]
-name = "kubuno-resources-macros"
+name = "kubuno-desktop-resources-macros"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-resources-model",
+ "kubuno-desktop-resources-model",
  "proc-macro2",
  "quote",
  "syn 2.0.118",
 ]
 
 [[package]]
-name = "kubuno-resources-model"
+name = "kubuno-desktop-resources-model"
 version = "0.1.0-alpha"
 dependencies = [
  "base64",
 ]
 
 [[package]]
-name = "kubuno-resources-tool"
+name = "kubuno-desktop-resources-tool"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-resources-model",
+ "kubuno-desktop-resources-model",
 ]
 
 [[package]]
-name = "kubuno-secrets"
+name = "kubuno-desktop-secrets"
 version = "0.1.0-alpha"
 dependencies = [
  "getrandom 0.2.17",
@@ -2046,23 +1901,48 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-shell-controls"
+name = "kubuno-desktop-shell"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno",
+ "anyhow",
+ "embed-manifest",
+ "kubuno-desktop",
+ "kubuno-desktop-account",
+ "kubuno-desktop-api-client",
+ "kubuno-desktop-header-data",
+ "kubuno-desktop-secrets",
+ "kubuno-desktop-shell-controls",
+ "kubuno-desktop-sync",
+ "serde",
+ "serde_json",
+ "tauri-winrt-notification",
+ "tokio",
+ "uuid",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+ "windows-future 0.3.2",
+ "winreg",
+ "winresource",
+]
+
+[[package]]
+name = "kubuno-desktop-shell-controls"
+version = "0.1.0-alpha"
+dependencies = [
+ "kubuno-desktop",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "kubuno-sync"
+name = "kubuno-desktop-sync"
 version = "0.1.0-alpha"
 dependencies = [
  "anyhow",
  "clap",
  "hex",
- "kubuno-account",
- "kubuno-api-client",
+ "kubuno-desktop-account",
+ "kubuno-desktop-api-client",
  "notify",
  "reqwest",
  "rusqlite",
@@ -2076,13 +1956,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-ui"
+name = "kubuno-desktop-ui"
 version = "0.1.0-alpha"
 dependencies = [
  "accesskit",
  "accesskit_windows",
- "drive-app-controls",
- "kubuno-controls",
+ "kubuno-desktop-controls",
+ "kubuno-drive-desktop-app-controls",
  "serde",
  "serde_json",
  "tracing",
@@ -2091,17 +1971,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-views"
+name = "kubuno-desktop-views"
 version = "0.1.0-alpha"
 dependencies = [
- "drive-app-controls",
- "kubuno-controls",
- "kubuno-resources",
- "kubuno-ui",
- "kubuno-views-macros",
- "kubuno-views-meta",
- "kubuno-views-model",
- "kubuno-views-syntax",
+ "kubuno-desktop-controls",
+ "kubuno-desktop-resources",
+ "kubuno-desktop-ui",
+ "kubuno-desktop-views-macros",
+ "kubuno-desktop-views-meta",
+ "kubuno-desktop-views-model",
+ "kubuno-desktop-views-syntax",
+ "kubuno-drive-desktop-app-controls",
  "rowan",
  "serde",
  "serde_json",
@@ -2110,15 +1990,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-views-ls"
+name = "kubuno-desktop-views-ls"
 version = "0.1.0-alpha"
 dependencies = [
  "crossbeam-channel",
- "kubuno-resources-model",
- "kubuno-views",
- "kubuno-views-meta",
- "kubuno-views-model",
- "kubuno-views-syntax",
+ "kubuno-desktop-resources-model",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-meta",
+ "kubuno-desktop-views-model",
+ "kubuno-desktop-views-syntax",
  "lsp-server",
  "lsp-types",
  "rowan",
@@ -2130,18 +2010,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-views-macros"
+name = "kubuno-desktop-views-macros"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-views",
- "kubuno-views-meta",
+ "kubuno-desktop-views",
+ "kubuno-desktop-views-meta",
  "proc-macro2",
  "quote",
  "syn 2.0.118",
 ]
 
 [[package]]
-name = "kubuno-views-meta"
+name = "kubuno-desktop-views-meta"
 version = "0.1.0-alpha"
 dependencies = [
  "proc-macro2",
@@ -2150,7 +2030,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-views-model"
+name = "kubuno-desktop-views-model"
 version = "0.1.0-alpha"
 dependencies = [
  "serde",
@@ -2158,19 +2038,139 @@ dependencies = [
 ]
 
 [[package]]
-name = "kubuno-views-syntax"
+name = "kubuno-desktop-views-syntax"
 version = "0.1.0-alpha"
 dependencies = [
- "kubuno-views-model",
+ "kubuno-desktop-views-model",
  "rowan",
 ]
 
 [[package]]
-name = "kubuno-views-web"
+name = "kubuno-drive-desktop"
 version = "0.1.0"
 dependencies = [
- "kubuno-views-model",
- "kubuno-views-syntax",
+ "chrono",
+ "crc32fast",
+ "embed-manifest",
+ "git2",
+ "hex",
+ "kubuno-desktop-app-storage",
+ "kubuno-desktop-controls",
+ "kubuno-desktop-ui",
+ "kubuno-drive-desktop-app-controls",
+ "kubuno-drive-desktop-app-storage",
+ "kubuno-drive-desktop-core-storage",
+ "kubuno-drive-desktop-localization",
+ "kubuno-drive-desktop-shared",
+ "md-5",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
+ "windows-collections 0.3.2",
+ "windows-future 0.3.2",
+ "windows-numerics 0.3.1",
+ "winresource",
+]
+
+[[package]]
+name = "kubuno-drive-desktop-app-controls"
+version = "0.1.0"
+dependencies = [
+ "kubuno-drive-desktop-shared",
+ "tracing",
+ "windows 0.62.2",
+ "windows-numerics 0.3.1",
+]
+
+[[package]]
+name = "kubuno-drive-desktop-app-storage"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "kubuno-drive-desktop-core-storage",
+ "kubuno-drive-desktop-shared",
+ "suppaftp",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+]
+
+[[package]]
+name = "kubuno-drive-desktop-core-storage"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bitflags 2.13.0",
+ "futures",
+ "kubuno-drive-desktop-shared",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
+name = "kubuno-drive-desktop-localization"
+version = "0.1.0"
+dependencies = [
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "kubuno-drive-desktop-shared"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "crc32fast",
+ "hex",
+ "md-5",
+ "serde",
+ "sha1",
+ "sha2",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "kubuno-office-desktop"
+version = "0.1.0-alpha"
+dependencies = [
+ "embed-manifest",
+ "kubuno-desktop",
+ "kubuno-desktop-account",
+ "kubuno-desktop-header-data",
+ "kubuno-desktop-shell-controls",
+ "kubuno-desktop-sync",
+ "kubuno-drive-desktop-app-controls",
+ "kubuno-office-docs-core",
+ "serde",
+ "serde_json",
+ "windows 0.62.2",
+ "windows-numerics 0.3.1",
+ "winresource",
+]
+
+[[package]]
+name = "kubuno-office-docs-core"
+version = "0.1.0-alpha"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "kubuno-web-views-compiler-core"
+version = "0.1.0"
+dependencies = [
+ "kubuno-desktop-views-model",
+ "kubuno-desktop-views-syntax",
  "serde",
  "serde_json",
 ]

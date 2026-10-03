@@ -134,7 +134,7 @@ unsafe extern "system" fn on_fetch_data(
     let mut data: Vec<u8> = Vec::new();
     let mut status = STATUS_SUCCESS;
     match ident.split_once('|') {
-        Some((instance, file_id)) => match kubuno_sync::download_for(instance, file_id) {
+        Some((instance, file_id)) => match kubuno_desktop_sync::download_for(instance, file_id) {
             Ok(d) => data = d,
             Err(e) => {
                 eprintln!("[cloudfiles] hydratation échouée ({ident}) : {e}");

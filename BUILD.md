@@ -27,19 +27,19 @@ retiré le 2026-08-17).
 Depuis `windows/` :
 
 ```bash
-cargo build --release -p kubuno-desktop     # → target/release/kubuno-desktop.exe (la coque)
-cargo test  -p kubuno-desktop               # géométrie d'interaction, champs de saisie
-cargo run   -p kubuno-ui --example gallery  # galerie des composants (référence UI)
-cargo build --release -p drive-app          # → target/release/drive.exe (explorateur Drive)
+cargo build --release -p kubuno-desktop-shell     # → target/release/kubuno-desktop.exe (la coque)
+cargo test  -p kubuno-desktop-shell               # géométrie d'interaction, champs de saisie
+cargo run   -p kubuno-desktop-ui --example gallery  # galerie des composants (référence UI)
+cargo build --release -p kubuno-drive-desktop          # → target/release/drive.exe (explorateur Drive)
 ```
 
 ### Static linking: every exe is self-contained
 
 Every program of the workspace (shell, chat, documents, drive, the gallery, the
-tools) links the design system (`kubuno-ui`, with the host `kubuno-controls` and
-the painting surface `drive-app-controls`) and Rust's `std` **statically**: an
-exe runs from a folder that holds only itself — no `kubuno_ui` DLL, no
-`std-*.dll`, nothing to stage after a build. `kubuno-ui` is an ordinary rlib and
+tools) links the design system (`kubuno-desktop-ui`, with the host `kubuno-desktop-controls` and
+the painting surface `kubuno-drive-desktop-app-controls`) and Rust's `std` **statically**: an
+exe runs from a folder that holds only itself — no `kubuno_desktop_ui` DLL, no
+`std-*.dll`, nothing to stage after a build. `kubuno-desktop-ui` is an ordinary rlib and
 the workspace sets no `rustflags` (`windows/.cargo/config.toml`).
 
 Why (product decision of 2026-10-03): the apps will be released from their own
@@ -49,8 +49,8 @@ build of it). Kubuno Desktop (the shell) stays mandatory on every PC, but as a
 **service** dependency — the account/token broker over its named pipe, the sync,
 the launcher — never as a binary one.
 
-What this replaced: until 2026-10-02 `kubuno-ui` was a Rust `dylib`
-(`kubuno_ui-<hash>.dll`, one file name per build, with a link shim in its
+What this replaced: until 2026-10-02 `kubuno-desktop-ui` was a Rust `dylib`
+(`kubuno_desktop_ui-<hash>.dll`, one file name per build, with a link shim in its
 `build.rs`), the workspace was linked with `-C prefer-dynamic`, and
 `tools/stage-runtime.ps1` copied the DLLs next to each exe. All of that is gone.
 The global state the framework keeps (input queue, focus ring, floating
@@ -63,12 +63,12 @@ pwsh ./tools/build-all.ps1 -Profile release   # every app and example in one car
 ```
 
 Les exécutables, au-dessus du socle partagé (`windows/src/crates` +
-`windows/src/drive/crates/drive-app-controls`, linked statically into each exe) :
+`windows/src/drive/crates/kubuno-drive-desktop-app-controls`, linked statically into each exe) :
 
 | Exécutable | Crate | Rôle |
 |---|---|---|
 | `kubuno-desktop.exe` | `src/shell/` | coque : lanceur, comptes, activité, réglages, synchro, Explorateur |
-| `drive.exe` | `src/drive/crates/drive-app` | explorateur de fichiers Kubuno Drive |
+| `drive.exe` | `src/drive/crates/kubuno-drive-desktop` | explorateur de fichiers Kubuno Drive |
 | `kubuno-chat.exe`, `kubuno-documents.exe` | `src/chat/`, `src/documents/` | chat, traitement de texte |
 
 > **target-dir** : le dépôt vit souvent sur un partage réseau (Z:), où le lien
@@ -87,7 +87,7 @@ L'empaquetage vit dans **`windows/packaging/`** (manifeste, logos Store, script)
 SDK Windows 10/11 :
 
 ```powershell
-cargo build --release -p kubuno-desktop        # depuis windows/
+cargo build --release -p kubuno-desktop-shell        # depuis windows/
 cd packaging
 pwsh ./package-msix.ps1 -ExePath ..\target\release\kubuno-desktop.exe
 #   → Kubuno-Desktop.msix (non signé, pour envoi au Store)
@@ -100,11 +100,11 @@ incrémenter `Identity/Version` (le 4ᵉ composant doit rester à 0).
 
 ## Le démon de synchro (commun)
 
-`common/kubuno-sync` est du Rust pur (rustls + SQLite embarqué) et compile sur
+`common/kubuno-desktop-sync` est du Rust pur (rustls + SQLite embarqué) et compile sur
 les trois OS de bureau. Depuis `common/` :
 
 ```bash
-cargo build --release -p kubuno-sync
+cargo build --release -p kubuno-desktop-sync
 bash build_deb.sh            # → .deb + .rpm (Linux)
 ```
 
@@ -115,20 +115,20 @@ Quatre crates de `common/` portent la synchro hors ligne des données (vskubuno
 
 | Crate | Rôle |
 |---|---|
-| `kubuno-secrets` | magasin d'identifiants de l'OS (Gestionnaire d'identification Windows, Trousseau macOS, Secret Service Linux) |
-| `kubuno-api-client` | client HTTP typé de l'API (Kubuno Delta Protocol v1, en-têtes `If-Match`/`Idempotency-Key`, reprises) |
-| `kubuno-account` | comptes (serveur + id utilisateur), propriétaire des jetons, courtier de jetons (tube nommé / socket Unix), migration de `creds.json` |
-| `kubuno-sync-engine` | base locale SQLite/SQLCipher par compte et par appli, outbox, flux, conflits, planificateur |
+| `kubuno-desktop-secrets` | magasin d'identifiants de l'OS (Gestionnaire d'identification Windows, Trousseau macOS, Secret Service Linux) |
+| `kubuno-desktop-api-client` | client HTTP typé de l'API (Kubuno Delta Protocol v1, en-têtes `If-Match`/`Idempotency-Key`, reprises) |
+| `kubuno-desktop-account` | comptes (serveur + id utilisateur), propriétaire des jetons, courtier de jetons (tube nommé / socket Unix), migration de `creds.json` |
+| `kubuno-desktop-sync-engine` | base locale SQLite/SQLCipher par compte et par appli, outbox, flux, conflits, planificateur |
 
 ```bash
-cargo test -p kubuno-secrets -p kubuno-api-client -p kubuno-account
-cargo test -p kubuno-sync-engine                        # avec SQLCipher (défaut)
-cargo test -p kubuno-sync-engine --no-default-features  # SQLite en clair, sans OpenSSL
+cargo test -p kubuno-desktop-secrets -p kubuno-desktop-api-client -p kubuno-desktop-account
+cargo test -p kubuno-desktop-sync-engine                        # avec SQLCipher (défaut)
+cargo test -p kubuno-desktop-sync-engine --no-default-features  # SQLite en clair, sans OpenSSL
 ```
 
 ### SQLCipher : prérequis de build
 
-`kubuno-sync-engine` active par défaut la fonctionnalité `sqlcipher` : la base locale
+`kubuno-desktop-sync-engine` active par défaut la fonctionnalité `sqlcipher` : la base locale
 est chiffrée (AES-256, clé par compte dans le magasin de l'OS). Cargo ne lie qu'un
 seul `libsqlite3-sys` par build : SQLCipher remplace donc aussi le SQLite de
 `rusqlite` (kubuno-sync) dans tout exécutable qui lie le moteur ; sans clé, il lit

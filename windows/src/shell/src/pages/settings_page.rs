@@ -2,7 +2,7 @@
 //! The window shows the stored values with [`SettingsPage::show`] and persists what the page
 //! raises (`SettingChanged`).
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::events::SettingEventArgs;
 
@@ -81,7 +81,7 @@ impl SettingsPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl SettingsPage {
     fn theme_checked_changed(&mut self, e: &CheckedChangedEventArgs) {
         // Each radio of the group reports its own change; the one turned on carries the choice.
@@ -113,7 +113,7 @@ impl SettingsPage {
     }
 
     fn proxy_key_down(&mut self, e: &mut KeyEventArgs) {
-        if e.key == Key(kubuno::controls::host::vk::ENTER) {
+        if e.key == Key(kubuno_desktop::controls::host::vk::ENTER) {
             self.commit_proxy();
             e.handled = true;
         }

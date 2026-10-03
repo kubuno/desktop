@@ -2,7 +2,7 @@
 //! tab of the Backstage. It has no state of its own: the form binds its four properties to what the
 //! page canvas reports (`DocumentWindow::page_view_changed`).
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// « Fichier › Informations » (see the module doc).
 #[derive(UserControl, Default)]

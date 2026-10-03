@@ -1,0 +1,30 @@
+[package]
+name        = "kubuno-desktop-data-macros"
+description = "The data_source! procedural macro of kubuno-desktop-data (vskubuno docs/DATA.md, DATA-4): a .kbdata file becomes typed row structs and sqlx-checked data functions at compile time. Use it through kubuno_desktop_data::data_source! (or kubuno_desktop::data::data_source!)."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+[features]
+# The drivers whose queries the macro can check (forwarded by kubuno-desktop-data's features of the same names).
+sqlite   = ["sqlx-macros-core/sqlite"]
+postgres = ["sqlx-macros-core/postgres", "sqlx-macros-core/_tls-native-tls"]
+mysql    = ["sqlx-macros-core/mysql", "sqlx-macros-core/_tls-native-tls"]
+# SQL Server has no sqlx driver: typed rows go through kubuno-desktop-data's DbCommand (checked at run time).
+mssql    = []
+
+[dependencies]
+proc-macro2 = "1"
+quote       = "1"
+syn         = { version = "2", features = ["full"] }
+# The `.kbdata` format, the typed plan (the SQL of every statement) and the cache check.
+kubuno-desktop-data-model = { workspace = true }
+# The expansion of sqlx's `query!`/`query_as!` (the same code sqlx's own macros run: offline cache
+# `.sqlx`, `DATABASE_URL`, `SQLX_OFFLINE`), called directly so that the generated code can reach sqlx
+# through `kubuno_desktop_data::sqlx` — the application needs no `sqlx` dependency. The crate is semver
+# exempt: a caret requirement lets Cargo unify it with the exact version `sqlx` itself pins.
+sqlx-macros-core = { version = "0.8.6", default-features = false, features = ["macros", "_rt-tokio", "chrono", "uuid", "json"] }

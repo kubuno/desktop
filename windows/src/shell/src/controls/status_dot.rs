@@ -3,13 +3,13 @@
 //! filled-dot primitive (a `Badge` dot is tied to its pill), so this custom control paints the
 //! one shape the former pages drew by hand: a pill as wide as it is tall.
 
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Control, ControlCore, PaintEventCx};
-use kubuno::views::style::ColorValue;
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Control, ControlCore, PaintEventCx};
+use kubuno_desktop::views::style::ColorValue;
 
 /// A filled circle of `Diameter` DIP, centred in its box, in `Color` (a theme token such as
 /// `Success`, `Warning`, `Danger`, `Primary`, `TextTertiary`).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Kubuno")]
 #[toolbox(icon = "circle")]
@@ -53,7 +53,7 @@ impl Control for StatusDot {
         let bounds = e.clip_rectangle;
         let canvas: &dyn Canvas = e.graphics;
         let color = match &self.color {
-            Some(c) => c.resolve_with(canvas.theme(), kubuno::views::style::high_contrast()),
+            Some(c) => c.resolve_with(canvas.theme(), kubuno_desktop::views::style::high_contrast()),
             None => canvas.theme().text_tertiary,
         };
         let dot = dot_rect(bounds, self.diameter);

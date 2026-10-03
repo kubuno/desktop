@@ -1,16 +1,16 @@
 # Cross-platform desktop components, shared by every OS shell.
 #
-# `kubuno-sync` — the offline-first file-sync daemon, pure Rust (rustls +
+# `kubuno-desktop-sync` — the offline-first file-sync daemon, pure Rust (rustls +
 # bundled SQLite), which already compiles on Windows, Linux and macOS — and the
 # foundation of the offline-first data sync (vskubuno
-# docs/DESKTOP-OFFLINE-SYNC.md): `kubuno-secrets` (OS credential store),
-# `kubuno-api-client` (Kubuno Delta Protocol v1 client), `kubuno-account`
-# (accounts, token owner, token broker) and `kubuno-sync-engine` (local
+# docs/DESKTOP-OFFLINE-SYNC.md): `kubuno-desktop-secrets` (OS credential store),
+# `kubuno-desktop-api-client` (Kubuno Delta Protocol v1 client), `kubuno-desktop-account`
+# (accounts, token owner, token broker) and `kubuno-desktop-sync-engine` (local
 # SQLite/SQLCipher database, outbox, feeds, conflicts, scheduler).
-# `kubuno-docs-core` is the word processor's engine (document model, layout,
+# `kubuno-office-docs-core` is the word processor's engine (document model, layout,
 # pagination, editing, undo), with no platform code: it also builds for
 # wasm32-unknown-unknown (vskubuno docs/DOCUMENTS-EDITING.md).
-# `kubuno-app-storage` is where an app keeps its data on the device: the
+# `kubuno-desktop-app-storage` is where an app keeps its data on the device: the
 # per-user/machine directories, typed versioned settings (files, the Windows
 # Registry, memory), app-scoped secrets and the Windows Registry API (vskubuno
 # docs/STORAGE-COMPONENTS.md).
@@ -18,13 +18,13 @@
 [workspace]
 resolver = "2"
 members  = [
-    "kubuno-sync",
-    "kubuno-secrets",
-    "kubuno-api-client",
-    "kubuno-account",
-    "kubuno-sync-engine",
-    "kubuno-docs-core",
-    "kubuno-app-storage",
+    "kubuno-desktop-sync",
+    "kubuno-desktop-secrets",
+    "kubuno-desktop-api-client",
+    "kubuno-desktop-account",
+    "kubuno-desktop-sync-engine",
+    "kubuno-office-docs-core",
+    "kubuno-desktop-app-storage",
 ]
 
 [workspace.package]

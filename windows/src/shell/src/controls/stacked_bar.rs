@@ -3,9 +3,9 @@
 //! carries one fill; this one carries several, on the same track token and thickness, so the two read
 //! as one family.
 
-use kubuno::ui::metrics::pill;
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Component as _, Control, ControlCore, PaintEventCx};
+use kubuno_desktop::ui::metrics::pill;
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Component as _, Control, ControlCore, PaintEventCx};
 
 /// The track's thickness (the `ProgressBar`'s `Md`).
 pub const BAR_H: f32 = 8.0;
@@ -50,7 +50,7 @@ pub fn layout(segments: &[Segment], total: f64, track: Rect) -> Vec<(usize, Rect
 }
 
 /// A composition bar (see the module doc).
-#[derive(kubuno::views::component::Component, Default)]
+#[derive(kubuno_desktop::views::component::Component, Default)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Kubuno")]
 #[toolbox(icon = "chart-bar-stacked")]

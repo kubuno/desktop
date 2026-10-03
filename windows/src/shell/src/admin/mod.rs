@@ -28,7 +28,7 @@ pub mod group_row;
 pub mod settings_category;
 pub mod storage_block;
 
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::{Row, Rows, Value};
 
 /// One node of the navigation tree: a group (with children, expandable) or a leaf (a section).
 /// Top-level nodes carry an icon; the leaves of a group do not, as the web draws them.
@@ -136,7 +136,7 @@ pub fn is_native(id: &str) -> bool {
 
 /// A resource of the main set, by key (the labels of the tree are looked up by their id).
 fn text(key: &str) -> String {
-    match kubuno::views::resources::value_of(Some("resources"), key) {
+    match kubuno_desktop::views::resources::value_of(Some("resources"), key) {
         Some(Value::Str(s)) => s,
         _ => key.to_string(),
     }
@@ -301,7 +301,7 @@ mod view_tests {
             include_str!("storage_block.kbcontrol"),
             include_str!("admin_storage.kbcontrol"),
         ] {
-            if let Err(d) = kubuno::views::compile::compile(text) {
+            if let Err(d) = kubuno_desktop::views::compile::compile(text) {
                 panic!("{d:?}");
             }
         }

@@ -1,0 +1,10 @@
+error: `fail_unknown_provider.kbdata` is not a valid .kbdata file: TOML parse error at line 3, column 12
+         |
+       3 | provider = "oracle"
+         |            ^^^^^^^^
+       unknown variant `oracle`, expected one of `postgres`, `sqlite`, `mysql`, `sqlserver`
+
+ --> tests/ui/fail_unknown_provider.rs:1:35
+  |
+1 | kubuno_desktop_data::data_source!("fail_unknown_provider.kbdata");
+  |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

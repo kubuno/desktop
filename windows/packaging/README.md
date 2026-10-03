@@ -5,7 +5,7 @@ The Microsoft Store distributes desktop applications as **MSIX**: the Win32 exec
 depend on any UI framework — it simply wraps the executable.
 
 > Creating the `.msix` (`MakeAppx.exe`) works **on Windows only**.
-> Build the executable first: `cargo build --release -p kubuno-desktop`.
+> Build the executable first: `cargo build --release -p kubuno-desktop-shell`.
 
 ## Contents
 
@@ -43,7 +43,7 @@ The script produces `Kubuno-Desktop.msix`.
 ### Build the executable, then package
 
 ```powershell
-cargo build --release -p kubuno-desktop   # -> target\release\kubuno-desktop.exe
+cargo build --release -p kubuno-desktop-shell   # -> target\release\kubuno-desktop.exe
 pwsh ./package-msix.ps1 -ExePath ..\target\release\kubuno-desktop.exe
 ```
 

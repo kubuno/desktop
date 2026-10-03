@@ -1,0 +1,42 @@
+[package]
+name        = "kubuno-desktop"
+description = "The one dependency of a Kubuno desktop application: a Windows Forms-like programming model (Application::run, #[kubuno_desktop::view] form classes over .kbview views, code-first forms and controls, MessageBox) over kubuno-desktop-views, kubuno-desktop-controls and kubuno-desktop-ui, which it re-exports."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+# The layers this crate re-exports (`kubuno_desktop::views`, `kubuno_desktop::controls`, `kubuno_desktop::ui`): an
+# application's Cargo.toml names `kubuno-desktop` only.
+kubuno-desktop-ui           = { workspace = true }
+kubuno-desktop-controls     = { workspace = true }
+kubuno-desktop-views        = { workspace = true }
+# `#[kubuno_desktop::view]` (and the other macros, re-exported).
+kubuno-desktop-views-macros = { workspace = true }
+# Logging, re-exported as `kubuno_desktop::tracing` (the templates log with it).
+tracing             = { workspace = true }
+# The printing stack (`kubuno_desktop::printing`): PrintDocument, the preview and the print dialogs — part of
+# Windows Forms itself, so always there (it adds no `windows` feature: see its Cargo.toml).
+kubuno-desktop-print        = { workspace = true }
+# Resources (`kubuno_desktop::resources!`, the UI culture): `.kbres` files embedded at compile time.
+kubuno-desktop-resources    = { workspace = true }
+# Storage (`kubuno_desktop::storage`, `kubuno_desktop::settings!`): typed settings, the app's secrets and the Windows Registry, as
+# components of a view and from code (vskubuno docs/STORAGE-COMPONENTS.md). Like printing, always there: it adds no
+# `windows` feature (the engine uses `windows-sys`).
+kubuno-desktop-app-storage-components = { workspace = true }
+# The `settings!` macro (in the resources macro crate, next to `resources!`).
+kubuno-desktop-resources-macros = { workspace = true }
+# The values of `kubuno_desktop::storage::KeyValueStore`.
+serde_json = { workspace = true }
+# Data access components (`kubuno_desktop::data`), opt-in: they bring SQLx and a Tokio runtime.
+kubuno-desktop-data         = { workspace = true, optional = true }
+
+[features]
+default = []
+# `kubuno_desktop::data`: `kubuno-desktop-data`'s connections, commands, table adapters and binding sources.
+data = ["dep:kubuno-desktop-data"]
+
+[dev-dependencies]
+# The element tables `#[kubuno_desktop::view]` uses, checked against the registry and this crate's handles.
+kubuno-desktop-views-meta = { workspace = true }

@@ -2,7 +2,7 @@
 //
 // Drives the real `System.Windows.Forms` range controls through every case in
 // `..\range-cases.txt` and writes `..\range-winforms.json`. The port replays the
-// same file through `kubuno-controls` and writes `range-port.json` in the same
+// same file through `kubuno-desktop-controls` and writes `range-port.json` in the same
 // shape; `compare-range.ps1` diffs the two.
 //
 // Three deliberate choices make the comparison meaningful:

@@ -2,9 +2,9 @@
 //! comment): the instance's settings, read only. [`load`] reads them (`GET /api/v1/admin/settings`,
 //! off the UI thread) and groups them by category, in a stable order (category, then key).
 
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 use crate::admin::SectionState;
 use crate::admin::admin_dashboard::group_digits;
@@ -54,8 +54,8 @@ fn category_title(cat: &str) -> String {
 }
 
 /// Groups `settings` by category (category, then key: an order that does not depend on the server's).
-pub fn group(settings: &[kubuno_sync::AdminSetting]) -> Vec<SettingsGroup> {
-    let mut order: Vec<&kubuno_sync::AdminSetting> = settings.iter().collect();
+pub fn group(settings: &[kubuno_desktop_sync::AdminSetting]) -> Vec<SettingsGroup> {
+    let mut order: Vec<&kubuno_desktop_sync::AdminSetting> = settings.iter().collect();
     order.sort_by(|a, b| a.category.as_deref().unwrap_or("").cmp(b.category.as_deref().unwrap_or("")).then_with(|| a.key.cmp(&b.key)));
     let mut groups: Vec<(String, SettingsGroup)> = Vec::new();
     for s in order {
@@ -143,7 +143,7 @@ impl InstanceSettingsSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl InstanceSettingsSection {
     fn instance_settings_section_load(&mut self) {
         if self.design_mode() && self.categories.is_empty() {
@@ -160,8 +160,8 @@ impl InstanceSettingsSection {
 mod tests {
     use super::*;
 
-    fn setting(key: &str, category: Option<&str>, value: serde_json::Value) -> kubuno_sync::AdminSetting {
-        kubuno_sync::AdminSetting { key: key.into(), label: None, description: None, category: category.map(str::to_string), value, is_public: false }
+    fn setting(key: &str, category: Option<&str>, value: serde_json::Value) -> kubuno_desktop_sync::AdminSetting {
+        kubuno_desktop_sync::AdminSetting { key: key.into(), label: None, description: None, category: category.map(str::to_string), value, is_public: false }
     }
 
     #[test]

@@ -2,7 +2,7 @@
 //! a veil (`View::show_in_window`): the dialog only answers yes or no; what a « yes » runs is the
 //! [`ConfirmAction`] the window keeps, applied when the dialog closes with `DialogResult::Ok`.
 
-use kubuno::prelude::*;
+use kubuno_desktop::prelude::*;
 
 use crate::Resources;
 
@@ -61,7 +61,7 @@ impl Confirmation {
 }
 
 /// The confirmation dialog (see the module doc).
-#[kubuno::view("confirm_dialog.kbview")]
+#[kubuno_desktop::view("confirm_dialog.kbview")]
 pub struct ConfirmDialog {}
 
 impl ConfirmDialog {
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn confirmations_say_what_happens() {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         let c = Confirmation::delete_label("Urgent");
         assert_eq!(c.title, "Supprimer l'étiquette");
         assert!(c.message.contains("« Urgent »"));
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn the_dialog_shows_the_confirmation() {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         let d = ConfirmDialog::new(&Confirmation::disconnect("cloud.exemple.fr"));
         assert_eq!(d.get_text(), "Déconnecter le compte");
         assert!(d.message.get_text().contains("cloud.exemple.fr"));

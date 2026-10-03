@@ -1,7 +1,7 @@
 //! Code-behind of the user control `StatCard` (`stat_card.kbcontrol`, see its comment): one figure of the
 //! console's dashboard.
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// A share is a whole number out of this (the bar's `Maximum`): a hundredth of a percent.
 pub const SHARE_SCALE: f32 = 10_000.0;
@@ -47,7 +47,7 @@ impl StatCard {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl StatCard {
     fn stat_card_load(&mut self) {
         if self.design_mode() && self.label.is_empty() {

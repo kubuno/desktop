@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use kubuno::prelude::Shared;
-use kubuno::views::prelude::*;
+use kubuno_desktop::prelude::Shared;
+use kubuno_desktop::views::prelude::*;
 
 use crate::controls::message_thread::{MessageActivatedEventArgs, ThreadData};
 use crate::model::view_model::Header;
@@ -144,7 +144,7 @@ impl ConversationPane {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl ConversationPane {
     fn send_click(&mut self) {
         let text = self.draft.trim().to_string();

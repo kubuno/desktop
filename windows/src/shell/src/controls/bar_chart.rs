@@ -2,8 +2,8 @@
 //! accent bar per day, its height the day's count over the series' largest, 3 DIP apart. The design
 //! system has no chart primitive; this is the one the console needs.
 
-use kubuno::ui::{Canvas, Rect, Size};
-use kubuno::views::component::{Component as _, Control, ControlCore, PaintEventCx};
+use kubuno_desktop::ui::{Canvas, Rect, Size};
+use kubuno_desktop::views::component::{Component as _, Control, ControlCore, PaintEventCx};
 
 /// The gap between two bars.
 const GAP: f32 = 3.0;
@@ -11,7 +11,7 @@ const GAP: f32 = 3.0;
 const RADIUS: f32 = 2.0;
 
 /// A daily series as bars (see the module doc).
-#[derive(kubuno::views::component::Component, Default)]
+#[derive(kubuno_desktop::views::component::Component, Default)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Kubuno")]
 #[toolbox(icon = "chart-column")]

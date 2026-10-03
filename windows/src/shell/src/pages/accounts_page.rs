@@ -2,8 +2,8 @@
 //! accounts. The window gives it the rows (`view_model::account_rows`); the page raises
 //! `AccountCommand` with the account's id.
 
-use kubuno::prelude::Rows;
-use kubuno::views::prelude::*;
+use kubuno_desktop::prelude::Rows;
+use kubuno_desktop::views::prelude::*;
 
 use crate::model::events::ItemCommandEventArgs;
 
@@ -39,7 +39,7 @@ impl AccountsPage {
 
     /// The id of the row that raised the current event.
     fn current_id() -> Option<String> {
-        kubuno::views::binding::current_item().map(|item| item.row.text("Id"))
+        kubuno_desktop::views::binding::current_item().map(|item| item.row.text("Id"))
     }
 
     fn command(&mut self, command: &str, id: &str) {
@@ -47,7 +47,7 @@ impl AccountsPage {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl AccountsPage {
     fn list_item_click(&mut self, e: &ItemEventArgs) {
         if let Some(id) = self.rows.get(e.index).map(|r| r.text("Id")) {

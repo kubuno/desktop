@@ -1,6 +1,6 @@
 //! The event arguments the shell's user controls raise to the window.
 
-use kubuno::views::events::EventArgs;
+use kubuno_desktop::views::events::EventArgs;
 
 /// A command of a page the window carries out (`sync_now`, `open_folder`, `browse`, `submit`…).
 #[derive(EventArgs, Debug, Clone, Default, PartialEq)]

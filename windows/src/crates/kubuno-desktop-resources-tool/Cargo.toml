@@ -1,0 +1,14 @@
+[package]
+name        = "kubuno-desktop-resources-tool"
+description = "Command-line helper for Kubuno resource files (vskubuno docs/RESOURCES.md): import .resx/.resw files (one folder per culture, e.g. kubuno-drive-desktop-localization's 49 locales) into .kbres sets, check a set (missing translations, unknown keys), and dump a set as JSON for Visual Studio."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[[bin]]
+name = "kubuno-resources-tool"
+path = "src/main.rs"
+
+[dependencies]
+kubuno-desktop-resources-model = { workspace = true }

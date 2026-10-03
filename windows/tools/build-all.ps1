@@ -3,7 +3,7 @@
   Builds every app and example of the workspace in one cargo invocation.
 
 .DESCRIPTION
-  Every program links kubuno-ui and Rust's std statically: each exe in
+  Every program links kubuno-desktop-ui and Rust's std statically: each exe in
   target\<profile>\ (and target\<profile>\examples\) runs on its own, with no
   DLL to stage beside it. Building a single package (cargo build -p X) is fine
   too; this script only saves typing when every app should pick up a change.

@@ -13,8 +13,8 @@
 # `target/` just works.
 
 # ── Linking ──────────────────────────────────────────────────────────────────
-# No rustflags: every program links `kubuno-ui` (an ordinary rlib) and Rust's
+# No rustflags: every program links `kubuno-desktop-ui` (an ordinary rlib) and Rust's
 # `std` statically, so an exe runs from a folder that holds only itself — no
-# `kubuno_ui` or `std-*.dll` beside it (BUILD.md, "Liaison statique"). Never add
+# `kubuno_desktop_ui` or `std-*.dll` beside it (BUILD.md, "Liaison statique"). Never add
 # `-C prefer-dynamic` back: the apps are released one module at a time, from
 # their own repositories, and must not share a Rust DLL.

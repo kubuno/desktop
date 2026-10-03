@@ -7,16 +7,16 @@
 //! the common zooms around 100 % get most of the travel. (The web's slider is linear over 50–200 %;
 //! the desktop page zooms 10–500 %, which a linear slider of this length could not place well.)
 //!
-//! It is a lib control of Documents rather than a `kubuno-views` element: only the Office editors
+//! It is a lib control of Documents rather than a `kubuno-desktop-views` element: only the Office editors
 //! show a zoom slider, and the mapping is theirs. It paints through the design system's own
-//! `Slider` (`kubuno_ui::range::Slider`), so the rail and thumb are the shared ones.
+//! `Slider` (`kubuno_desktop_ui::range::Slider`), so the rail and thumb are the shared ones.
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::Color;
-use kubuno::ui::range::Slider;
-use kubuno::ui::{Canvas, Rect, Size, Widget, WidgetState};
-use kubuno::views::component::{AccessiblePart, Component, Control, ControlCore, EventCx, PaintEventCx};
-use kubuno::views::events::{ChangeSource, Event};
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::Color;
+use kubuno_desktop::ui::range::Slider;
+use kubuno_desktop::ui::{Canvas, Rect, Size, Widget, WidgetState};
+use kubuno_desktop::views::component::{AccessiblePart, Component, Control, ControlCore, EventCx, PaintEventCx};
+use kubuno_desktop::views::events::{ChangeSource, Event};
 
 /// The zoom range, in percent (`state::ZOOM_MIN` … `ZOOM_MAX`).
 pub const MIN_PERCENT: f32 = 10.0;
@@ -65,7 +65,7 @@ enum Part {
 }
 
 /// The status bar's zoom control (see the module doc).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Documents")]
 #[toolbox(icon = "zoom-in")]
@@ -160,7 +160,7 @@ impl Control for ZoomSlider {
         let b = e.clip_rectangle;
         let c: &dyn Canvas = e.graphics;
         let t = c.theme();
-        let dark = t.mode == kubuno::ui::ThemeMode::Dark;
+        let dark = t.mode == kubuno_desktop::ui::ThemeMode::Dark;
         // `hover:bg-black/5`, and its dark-theme counterpart.
         let hover = if dark { Color::rgba_f(1.0, 1.0, 1.0, 0.08) } else { Color::rgba_f(0.0, 0.0, 0.0, 0.05) }.to_d2d();
         let ink = t.text_secondary;
@@ -196,7 +196,7 @@ impl Control for ZoomSlider {
 
     fn accessible_parts(&self) -> Vec<AccessiblePart> {
         use crate::Resources as R;
-        use kubuno::controls::host::access::AccessRole;
+        use kubuno_desktop::controls::host::access::AccessRole;
         let local = Rect::new(0.0, 0.0, self.size().width, self.size().height);
         Self::parts(local)
             .into_iter()
@@ -253,7 +253,7 @@ impl Control for ZoomSlider {
         e.raise(&*self, "OnMouseUp");
     }
 
-    fn on_mouse_leave(&mut self, e: &mut EventCx<'_, kubuno::views::events::EmptyEventArgs>) {
+    fn on_mouse_leave(&mut self, e: &mut EventCx<'_, kubuno_desktop::views::events::EmptyEventArgs>) {
         if self.hot.take().is_some() {
             self.invalidate();
         }

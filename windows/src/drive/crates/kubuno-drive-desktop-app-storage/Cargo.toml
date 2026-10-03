@@ -1,0 +1,43 @@
+[package]
+name = "kubuno-drive-desktop-app-storage"
+description = "Windows storage implementations over Shell/Win32 (port of Files.App.Storage)"
+version = "0.1.0"   # Drive's own version, not the desktop workspace's
+edition.workspace = true
+license = "MIT"     # Drive's own licence (see the desktop README)
+
+[features]
+default = []
+# FTP storage backend (port of `Files.App.Storage/Ftp`), backed by suppaftp.
+ftp = ["dep:suppaftp"]
+
+[dependencies]
+kubuno-drive-desktop-shared.workspace = true
+kubuno-drive-desktop-core-storage.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+suppaftp = { workspace = true, optional = true }
+windows-core.workspace = true
+
+[dependencies.windows]
+workspace = true
+features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Ole",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_SystemServices",
+    "Win32_Security",
+    "Win32_System_Ioctl",
+    "Win32_System_IO",
+]

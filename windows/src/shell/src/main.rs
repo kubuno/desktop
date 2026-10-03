@@ -13,30 +13,30 @@
 // `println!`s and panics go to the debugger's Output window or to %LOCALAPPDATA%\Kubuno\logs.
 #![windows_subsystem = "windows"]
 
-use kubuno::View;
-use kubuno_shell::{Options, Resources, ShellWindow};
+use kubuno_desktop::View;
+use kubuno_desktop_shell::{Options, Resources, ShellWindow};
 
-fn main() -> kubuno::Result {
-    kubuno::ui::diagnostics::set_display_name("Kubuno Desktop");
+fn main() -> kubuno_desktop::Result {
+    kubuno_desktop::ui::diagnostics::set_display_name("Kubuno Desktop");
     let options = Options::from_args();
     if options.sample {
-        kubuno::tracing::info!("[shell] offline sample (--sample, or a Debug build under a debugger; --live opts out)");
+        kubuno_desktop::tracing::info!("[shell] offline sample (--sample, or a Debug build under a debugger; --live opts out)");
     }
     if let Some(culture) = &options.culture {
-        kubuno::resources::set_culture(culture);
+        kubuno_desktop::resources::set_culture(culture);
     }
 
     // The splash screen, first of all: it paints on its own thread while the rest starts, and fades
     // out once the window is on screen. None at logon, when the shell starts hidden in the
     // notification area.
-    let splash = kubuno::SplashScreen::new()
-        .artwork(kubuno::Artwork::Kubuno)
+    let splash = kubuno_desktop::SplashScreen::new()
+        .artwork(kubuno_desktop::Artwork::Kubuno)
         .product("Kubuno Desktop")
         .version(env!("CARGO_PKG_VERSION"))
         .license(env!("CARGO_PKG_LICENSE"))
         .enabled(!options.background)
         .show();
-    kubuno_shell::set_splash(splash.clone());
+    kubuno_desktop_shell::set_splash(splash.clone());
 
     // COM is initialised here too because the engine may reach the shell's COM objects (the
     // folder picker, WinRT) before the window exists.
@@ -48,26 +48,26 @@ fn main() -> kubuno::Result {
 
     splash.step(Resources::splash_accounts(), 0.12);
     if !options.sample {
-        if let Some(dir) = kubuno_account::paths::sandbox_dir() {
-            kubuno::tracing::info!("[shell] sandboxed profile under {} (no system registration)", dir.display());
+        if let Some(dir) = kubuno_desktop_account::paths::sandbox_dir() {
+            kubuno_desktop::tracing::info!("[shell] sandboxed profile under {} (no system registration)", dir.display());
         }
         // Legacy single-instance layouts move under instances/<id>/ before anything reads them.
-        let _ = kubuno_sync::migrate_legacy();
+        let _ = kubuno_desktop_sync::migrate_legacy();
         // The accounts: plaintext creds.json moved into the OS credential store, the token owner, the
         // file sync's tokens, and the token broker the apps borrow from.
-        match kubuno_shell::services::session::start() {
-            Ok(s) if s.client_mode => kubuno::tracing::warn!("[shell] another Kubuno Desktop owns the accounts: borrowing its tokens"),
+        match kubuno_desktop_shell::services::session::start() {
+            Ok(s) if s.client_mode => kubuno_desktop::tracing::warn!("[shell] another Kubuno Desktop owns the accounts: borrowing its tokens"),
             Ok(_) => {}
-            Err(e) => kubuno::tracing::error!("[shell] the accounts could not be started: {e}"),
+            Err(e) => kubuno_desktop::tracing::error!("[shell] the accounts could not be started: {e}"),
         }
         // A `Run` entry written before the logon start had its flag gets it now.
-        kubuno_shell::services::settings::refresh_autostart_command();
+        kubuno_desktop_shell::services::settings::refresh_autostart_command();
     }
 
     splash.step(Resources::splash_window(), 0.3);
     let window = ShellWindow::new(options);
-    kubuno::Application::set_theme(kubuno_shell::services::settings::theme());
+    kubuno_desktop::Application::set_theme(kubuno_desktop_shell::services::settings::theme());
     splash.step(Resources::splash_open(), 0.55);
     splash.close_when(window.form());
-    kubuno::Application::run(window)
+    kubuno_desktop::Application::run(window)
 }

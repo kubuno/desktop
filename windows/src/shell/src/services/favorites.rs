@@ -1,18 +1,18 @@
-//! The shell's [`LauncherService`]: what the app launcher (`kubuno_shell_controls::WaffleMenu`, in the
+//! The shell's [`LauncherService`]: what the app launcher (`kubuno_desktop_shell_controls::WaffleMenu`, in the
 //! header's waffle flyout) shows and does.
 //!
 //! The apps are the connected instance's modules (`services::apps`, fetched in the background);
 //! the favourites are the SAME list the web shows — `preferences.waffle_favorites` on the account,
-//! an ordered array of app ids, ids this build does not know included (`kubuno_shell_controls::Draft`
+//! an ordered array of app ids, ids this build does not know included (`kubuno_desktop_shell_controls::Draft`
 //! carries them through an edit). Opening an app opens its route in the user's browser; a saved
 //! list goes back to the server, which keeps the web and the desktop showing one list.
 
-use kubuno_shell_controls::{LauncherService, Tile};
+use kubuno_desktop_shell_controls::{LauncherService, Tile};
 
 use crate::services::apps::AppEntry;
 use crate::services::backend;
 
-pub use kubuno_header_data::modules::tile;
+pub use kubuno_desktop_header_data::modules::tile;
 
 /// The launcher's data for the instance the window shows (see the module doc).
 pub struct ShellLauncher {
@@ -47,7 +47,7 @@ impl ShellLauncher {
     /// The URL app `id` opens at, `None` for an app the instance does not have.
     pub fn url_of(&self, id: &str) -> Option<String> {
         let app = self.apps.iter().find(|a| a.id == id)?;
-        Some(kubuno_header_data::modules::web_url(&self.server, &app.path))
+        Some(kubuno_desktop_header_data::modules::web_url(&self.server, &app.path))
     }
 }
 
@@ -57,7 +57,7 @@ impl LauncherService for ShellLauncher {
         if self.admin.is_some() {
             tiles.push(Tile {
                 id: ADMIN_APP_ID.into(),
-                label: kubuno_shell_controls::ShellControlsResources::account_admin().to_string(),
+                label: kubuno_desktop_shell_controls::ShellControlsResources::account_admin().to_string(),
                 icon: "Shield".into(),
                 logo: crate::services::logos::builtin_for_id("admin").map(|p| p.to_string_lossy().into_owned()),
                 module: Some(ADMIN_APP_ID.into()),
@@ -94,7 +94,7 @@ pub fn persist(favorites: Vec<String>) {
     let Some(id) = crate::services::apps::active_instance().map(|c| c.id) else { return };
     let save = move || {
         if let Err(e) = backend::set_waffle_favorites(&id, &favorites) {
-            kubuno::tracing::warn!("[waffle] enregistrement des favoris : {e}");
+            kubuno_desktop::tracing::warn!("[waffle] enregistrement des favoris : {e}");
         }
     };
     if backend::is_sample() {

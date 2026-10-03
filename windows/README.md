@@ -5,7 +5,7 @@ drawn with Direct2D, DirectWrite and DirectComposition — no web view, no UI
 framework, no runtime to install.
 
 It is built on the shared foundation in [`../common`](../common), above all the
-[`kubuno-sync`](../common/kubuno-sync) file synchronisation engine. See the
+[`kubuno-sync`](../common/kubuno-desktop-sync) file synchronisation engine. See the
 [repository README](../README.md) for the whole picture and [`BUILD.md`](../BUILD.md)
 for build notes common to every platform.
 
@@ -22,8 +22,8 @@ windows/
 │   ├── chat/             kubuno-chat — two-pane messaging
 │   ├── documents/        kubuno-documents — word processor for the Office module
 │   └── crates/
-│       ├── kubuno-controls/   the control library, drawn natively on Direct2D
-│       └── kubuno-ui/         the design system built on those controls
+│       ├── kubuno-desktop-controls/   the control library, drawn natively on Direct2D
+│       └── kubuno-desktop-ui/         the design system built on those controls
 ├── packaging/            Microsoft Store (MSIX): manifest, Store logos, packaging script
 └── tools/                UI reference and parity tooling (PowerShell)
 ```
@@ -47,7 +47,7 @@ by `kubuno-sync`. It integrates with Windows itself:
 
 A native file manager for Kubuno Drive, with its own nested workspace in
 `src/drive` (see [its README](src/drive/README.md)): window, tabs, views and actions
-in `drive-app`, custom Direct2D controls, the shell/storage layer, localisation for
+in `kubuno-drive-desktop`, custom Direct2D controls, the shell/storage layer, localisation for
 49 cultures. Those crates are MIT-licensed.
 
 ### Chat and Documents
@@ -66,9 +66,9 @@ in `drive-app`, custom Direct2D controls, the shell/storage layer, localisation 
 From `windows/`:
 
 ```powershell
-cargo build --release -p kubuno-desktop     # → target\release\kubuno-desktop.exe (the shell)
-cargo test  -p kubuno-desktop               # interaction geometry, text fields
-cargo run   -p kubuno-ui --example gallery  # component gallery (UI reference)
+cargo build --release -p kubuno-desktop-shell     # → target\release\kubuno-desktop.exe (the shell)
+cargo test  -p kubuno-desktop-shell               # interaction geometry, text fields
+cargo run   -p kubuno-desktop-ui --example gallery  # component gallery (UI reference)
 
 cd src\drive; cargo build --release         # → drive.exe (nested workspace)
 ```
@@ -91,7 +91,7 @@ Everything lives in [`packaging/`](packaging): the MSIX manifest, the Store logo
 `makeappx.exe` only runs on Windows.
 
 ```powershell
-cargo build --release -p kubuno-desktop
+cargo build --release -p kubuno-desktop-shell
 cd packaging
 pwsh ./package-msix.ps1 -ExePath ..\target\release\kubuno-desktop.exe
 # or, signed for local installation:

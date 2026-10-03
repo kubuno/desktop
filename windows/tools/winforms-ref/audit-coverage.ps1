@@ -17,7 +17,7 @@
 
 param(
     [string]$Catalog = 'C:\kubuno-build\winforms-ref\out\winforms-catalog.json',
-    [string]$Src     = 'Z:\projects\kubuno\desktop\crates\kubuno-controls\src'
+    [string]$Src     = 'Z:\projects\kubuno\desktop\crates\kubuno-desktop-controls\src'
 )
 
 # Which family file owns which .NET type.

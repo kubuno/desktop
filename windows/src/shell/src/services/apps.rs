@@ -5,11 +5,11 @@
 //! fetch runs on a background thread and hands its result back to the window
 //! (its `UiDispatcher`), where the view state is only ever touched.
 
-use kubuno_header_data::modules::{initials_of, migrate_favorites, parse_modules};
+use kubuno_desktop_header_data::modules::{initials_of, migrate_favorites, parse_modules};
 
 use crate::services::{backend, logos};
 
-pub use kubuno_header_data::AppEntry;
+pub use kubuno_desktop_header_data::AppEntry;
 
 /// Connection state of the active instance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -30,11 +30,11 @@ static RESOLVED: std::sync::Mutex<Vec<(String, std::path::PathBuf)>> = std::sync
 pub(crate) fn logo_for(module: &str) -> Option<&'static str> {
     let resolved = RESOLVED.lock().unwrap_or_else(|p| p.into_inner()).iter().find(|(id, _)| id == module).map(|(_, p)| p.clone());
     let path = resolved.or_else(|| logos::builtin_for_id(module))?;
-    kubuno::views::icon::resolve(&path.to_string_lossy())
+    kubuno_desktop::views::icon::resolve(&path.to_string_lossy())
 }
 
 /// The instance the launcher shows: the chosen one, else the first configured one.
-pub fn active_instance() -> Option<kubuno_sync::Config> {
+pub fn active_instance() -> Option<kubuno_desktop_sync::Config> {
     let instances = backend::list_instances();
     let chosen = crate::services::settings::get().active_instance;
     let picked = instances.iter().position(|c| c.id == chosen).unwrap_or(0);
@@ -71,7 +71,7 @@ pub struct Refreshed {
 
 /// Fetches the modules and the identity of `instance` on a background thread, then hands them
 /// to `done` (still on that thread: `done` posts them to the window).
-pub fn refresh_in_background(instance: kubuno_sync::Config, done: impl FnOnce(Refreshed) + Send + 'static) {
+pub fn refresh_in_background(instance: kubuno_desktop_sync::Config, done: impl FnOnce(Refreshed) + Send + 'static) {
     std::thread::spawn(move || {
         let id = instance.id.clone();
         let (apps, conn) = fetch(&id);
@@ -92,7 +92,7 @@ pub fn refresh_in_background(instance: kubuno_sync::Config, done: impl FnOnce(Re
                 avatar: cache_avatar(&id, u.avatar_url.as_deref()),
                 // The waffle's favourites live in the user's preferences, which
                 // is what keeps this list identical to the web's (ids an older desktop wrote mapped to the web's).
-                favorites: migrate_favorites(&kubuno_sync::waffle_favorites(&u), &apps),
+                favorites: migrate_favorites(&kubuno_desktop_sync::waffle_favorites(&u), &apps),
             }
         });
         done(Refreshed { apps, conn, identity });
@@ -127,8 +127,8 @@ fn fetch(id: &str) -> (Vec<AppEntry>, Conn) {
         Err(e) => {
             // Only a refused refresh token really ends the session; a network
             // blip or a 5xx leaves it valid, so it reads as offline.
-            let conn = match e.downcast_ref::<kubuno_sync::api::AuthFailure>() {
-                Some(kubuno_sync::api::AuthFailure::Genuine) => Conn::Expired,
+            let conn = match e.downcast_ref::<kubuno_desktop_sync::api::AuthFailure>() {
+                Some(kubuno_desktop_sync::api::AuthFailure::Genuine) => Conn::Expired,
                 _ => Conn::Offline,
             };
             // Offline-first: the launcher of a start without the server is the last one it sent.
@@ -159,7 +159,7 @@ fn resolve_logos(id: &str, apps: &mut [AppEntry], online: bool) {
         if let Some(p) = &path {
             resolved.push((app.id.clone(), p.clone()));
         }
-        app.logo_path = path.filter(|p| kubuno_header_data::logos::tile_grid_draws(p));
+        app.logo_path = path.filter(|p| kubuno_desktop_header_data::logos::tile_grid_draws(p));
     }
     *RESOLVED.lock().unwrap_or_else(|p| p.into_inner()) = resolved;
 }
@@ -172,11 +172,11 @@ mod tests {
     /// server serves it under, or by the core's lookup rule for the app's id (Office's SVG).
     #[test]
     fn the_fallback_is_the_web_file() {
-        if kubuno_header_data::logos::builtin_names().next().is_none() {
+        if kubuno_desktop_header_data::logos::builtin_names().next().is_none() {
             return; // built without `core/frontend/public` next to the checkout
         }
         let drive = logos::builtin_for_url("/drive-logo.png").expect("drive's web logo is embedded");
-        assert_eq!(std::fs::read(&drive).ok().as_deref().and_then(kubuno_header_data::logos::image_extension), Some("png"));
+        assert_eq!(std::fs::read(&drive).ok().as_deref().and_then(kubuno_desktop_header_data::logos::image_extension), Some("png"));
         let office = logos::builtin_for_id("office").expect("office's web logo is embedded");
         assert_eq!(office.extension().and_then(|e| e.to_str()), Some("svg"));
         assert!(logo_for("drive").is_some_and(|v| v.ends_with(".png")), "the admin console draws the web logo too");

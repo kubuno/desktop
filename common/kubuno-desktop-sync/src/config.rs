@@ -1,0 +1,221 @@
+//! Local configuration and credential storage.
+//!
+//! The client can be connected to several Kubuno instances at once. Each
+//! instance gets its own sub-directory under the OS config dir:
+//!
+//! ```text
+//! <config_dir>/kubuno-desktop/
+//!   instances/
+//!     <instance-id>/
+//!       config.json   server URL + sync folder
+//!       state.db      sync cursor, folder tree, file index, outbox
+//! ```
+//!
+//! No secret lives here any more: the tokens belong to the account the instance is linked to
+//! (`kubuno_desktop_account`: refresh token in the OS credential store, owned by the shell). The plaintext
+//! `creds.json` of older versions is moved into the OS store once, by the shell, at start-up
+//! (`kubuno_desktop_account::migrate::adopt_legacy_instances`).
+
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+
+/// Root config directory (`%APPDATA%/kubuno-desktop` on Windows; moved by `KUBUNO_LEGACY_CONFIG_DIR` or a
+/// sandboxed profile, `KUBUNO_SANDBOX_DIR`: see `kubuno_desktop_account::paths`).
+pub fn config_dir() -> Result<PathBuf> {
+    let dir = kubuno_desktop_account::paths::legacy_config_dir().context("dossier de configuration introuvable")?;
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// App-wide settings (not tied to a single instance).
+#[derive(Serialize, Deserialize, Default)]
+struct AppSettings {
+    /// Outbound HTTP(S) proxy (e.g. `http://user:pass@host:8080`), applied to
+    /// every instance's requests. `None`/empty = direct connection.
+    #[serde(default)]
+    proxy: Option<String>,
+    /// User-forced offline mode: the client stops talking to the core (sync,
+    /// connection state, document proxy all behave as offline) until turned back
+    /// on. Lets the user work fully local and test offline behaviour.
+    #[serde(default)]
+    offline: bool,
+}
+
+fn settings_path() -> Result<PathBuf> {
+    Ok(config_dir()?.join("settings.json"))
+}
+
+fn load_settings() -> AppSettings {
+    settings_path()
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_settings(s: &AppSettings) -> Result<()> {
+    std::fs::write(settings_path()?, serde_json::to_string_pretty(s)?)?;
+    Ok(())
+}
+
+/// The configured outbound proxy URL, if any (used to access instances behind a
+/// proxy). Empty string is treated as unset.
+pub fn proxy_url() -> Option<String> {
+    load_settings().proxy.filter(|p| !p.trim().is_empty())
+}
+
+/// Persist the outbound proxy URL (pass `None`/empty to clear it).
+pub fn set_proxy(url: Option<&str>) -> Result<()> {
+    let mut s = load_settings();
+    s.proxy = url.map(str::to_string).filter(|u| !u.trim().is_empty());
+    save_settings(&s)
+}
+
+/// True when the user has forced offline mode.
+pub fn is_offline() -> bool {
+    load_settings().offline
+}
+
+/// Turn forced offline mode on/off.
+pub fn set_offline(offline: bool) -> Result<()> {
+    let mut s = load_settings();
+    s.offline = offline;
+    save_settings(&s)
+}
+
+/// Directory holding one sub-directory per connected instance.
+pub fn instances_dir() -> Result<PathBuf> {
+    let dir = config_dir()?.join("instances");
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// Per-instance directory (created on demand).
+pub fn instance_dir(id: &str) -> Result<PathBuf> {
+    let dir = instances_dir()?.join(id);
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// Path to an instance's local sync-state database.
+pub fn db_path(id: &str) -> Result<PathBuf> {
+    Ok(instance_dir(id)?.join("state.db"))
+}
+
+/// Derive a unique, filesystem-safe instance id from the server URL: a hostname
+/// slug plus a short random suffix so the same server can be added twice.
+pub fn new_instance_id(server: &str) -> String {
+    let host = server
+        .split("://")
+        .last()
+        .unwrap_or(server)
+        .split('/')
+        .next()
+        .unwrap_or(server)
+        .split(':')
+        .next()
+        .unwrap_or(server);
+    let slug: String = host
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .collect();
+    let slug = slug.trim_matches('-');
+    let slug = if slug.is_empty() { "kubuno" } else { slug };
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    format!("{slug}-{}", &suffix[..8])
+}
+
+/// Persistent per-instance settings written by `login`.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Config {
+    /// Stable instance identifier (also the sub-directory name).
+    pub id:         String,
+    pub server_url: String,
+    pub sync_root:  PathBuf,
+    /// Optional human label shown in the account switcher (defaults to the host).
+    #[serde(default)]
+    pub label:      Option<String>,
+}
+
+impl Config {
+    fn path(id: &str) -> Result<PathBuf> {
+        Ok(instance_dir(id)?.join("config.json"))
+    }
+
+    /// Load one instance's config by id.
+    pub fn load(id: &str) -> Result<Self> {
+        let p = Self::path(id)?;
+        let s = std::fs::read_to_string(&p).with_context(|| {
+            format!("configuration absente pour l'instance « {id} » ({}).", p.display())
+        })?;
+        Ok(serde_json::from_str(&s)?)
+    }
+
+    pub fn save(&self) -> Result<()> {
+        std::fs::write(Self::path(&self.id)?, serde_json::to_string_pretty(self)?)?;
+        Ok(())
+    }
+
+    /// Every configured instance (each `instances/<id>/config.json` that parses),
+    /// sorted by id for a stable display order.
+    pub fn list() -> Result<Vec<Config>> {
+        let mut out = Vec::new();
+        if let Ok(rd) = std::fs::read_dir(instances_dir()?) {
+            for entry in rd.flatten() {
+                if !entry.path().is_dir() {
+                    continue;
+                }
+                let cfg = entry.path().join("config.json");
+                if let Ok(s) = std::fs::read_to_string(&cfg) {
+                    if let Ok(c) = serde_json::from_str::<Config>(&s) {
+                        out.push(c);
+                    }
+                }
+            }
+        }
+        out.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(out)
+    }
+
+    /// Remove an instance: its config, credentials and local sync state. The
+    /// downloaded files in `sync_root` are left untouched.
+    pub fn remove(id: &str) -> Result<()> {
+        let dir = instance_dir(id)?;
+        std::fs::remove_dir_all(&dir)
+            .with_context(|| format!("suppression de l'instance « {id} »"))?;
+        Ok(())
+    }
+}
+
+/// Migrate a legacy single-instance layout (config.json / creds.json / state.db
+/// directly under the config dir) into `instances/<id>/`. No-op once migrated.
+pub fn migrate_legacy() -> Result<()> {
+    let root = config_dir()?;
+    let legacy_cfg = root.join("config.json");
+    if !legacy_cfg.exists() {
+        return Ok(());
+    }
+    let s = std::fs::read_to_string(&legacy_cfg)?;
+    let mut v: serde_json::Value = serde_json::from_str(&s)?;
+    let server = v
+        .get("server_url")
+        .and_then(|x| x.as_str())
+        .unwrap_or("kubuno")
+        .to_string();
+    let id = new_instance_id(&server);
+    let dir = instance_dir(&id)?;
+
+    // Stamp the id into the migrated config.
+    v["id"] = serde_json::Value::String(id.clone());
+    std::fs::write(dir.join("config.json"), serde_json::to_string_pretty(&v)?)?;
+    for f in ["creds.json", "state.db"] {
+        let src = root.join(f);
+        if src.exists() {
+            let _ = std::fs::rename(&src, dir.join(f));
+        }
+    }
+    let _ = std::fs::remove_file(&legacy_cfg);
+    Ok(())
+}

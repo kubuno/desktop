@@ -1,0 +1,40 @@
+[package]
+name        = "kubuno-desktop-header-data"
+description = "The data of a Kubuno header for the desktop apps other than the shell: the LauncherService and AccountService of kubuno-desktop-shell-controls, fetched as the shell's current account through its token broker, kept on disk (offline-first)"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# Why here and not in desktop/common: it implements the traits of `kubuno-desktop-shell-controls` (a user-control
+# library on the `kubuno-desktop` facade) and posts to the UI thread with the facade's `UiDispatcher`, so it belongs
+# to the UI workspace. Its network and disk parts (`feed`, `logos`, `modules`, `snapshot`) use the
+# platform-neutral `desktop/common` crates only. It depends on no app crate (module isolation).
+[lib]
+name = "kubuno_desktop_header_data"
+path = "src/lib.rs"
+
+[dependencies]
+kubuno-desktop                = { workspace = true }
+kubuno-desktop-shell-controls = { workspace = true }
+# The shell's token broker (accounts, current account, borrowed access tokens, switch, events) and the
+# per-user directories (`paths`, sandbox-aware).
+kubuno-desktop-account    = { path = "../../../../common/kubuno-desktop-account" }
+# `/api/v1/modules`, `/api/v1/me`, the pictures and the favourites' PATCH, with the broker's tokens.
+kubuno-desktop-api-client = { path = "../../../../common/kubuno-desktop-api-client" }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+tokio      = { version = "1", features = ["rt", "time", "sync", "macros", "net"] }
+tracing    = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+# ShellExecuteW: a web route in the user's browser (never in a sandboxed profile).
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[dev-dependencies]
+tempfile = "3"
+# tests/feed_broker.rs: a fake shell behind a real broker server, and a fake core.
+tokio          = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "sync"] }
+axum           = "0.7"
+async-trait    = "0.1"
+kubuno-desktop-secrets = { path = "../../../../common/kubuno-desktop-secrets" }

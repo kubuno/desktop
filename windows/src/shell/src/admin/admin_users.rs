@@ -3,13 +3,13 @@
 //! thread); [`UsersSection::show`] shows it. The table's own text draws the plain columns; this file
 //! draws the user cell (a name over an address), the role and state badges, and the pencil.
 
-use kubuno::ui::buttons::IconButton;
-use kubuno::ui::display::{Badge, BadgeVariant};
-use kubuno::ui::{Canvas, Rect, Widget, WidgetState};
-use kubuno::views::component::Shared;
-use kubuno::views::events::{CellEventArgs, DrawItemEventArgs, NumericValueChangedEventArgs, TextChangedEventArgs};
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::ui::buttons::IconButton;
+use kubuno_desktop::ui::display::{Badge, BadgeVariant};
+use kubuno_desktop::ui::{Canvas, Rect, Widget, WidgetState};
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::events::{CellEventArgs, DrawItemEventArgs, NumericValueChangedEventArgs, TextChangedEventArgs};
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 use crate::admin::{SectionRequest, SectionState};
 use crate::model::events::ItemCommandEventArgs;
@@ -52,7 +52,7 @@ pub struct UsersData {
 }
 
 /// Who an account is: its display name, else its username, else « — ».
-fn name_of(u: &kubuno_sync::AdminUser) -> String {
+fn name_of(u: &kubuno_desktop_sync::AdminUser) -> String {
     u.display_name.as_deref().filter(|s| !s.trim().is_empty()).or(u.username.as_deref()).filter(|s| !s.trim().is_empty()).unwrap_or("—").to_string()
 }
 
@@ -222,7 +222,7 @@ fn draw_badge(c: &dyn Canvas, cell: Rect, badge: Badge) {
     badge.paint(c, Rect::new(cell.left, cy - size.height / 2.0, cell.left + size.width.min(room), cy + size.height / 2.0), WidgetState::REST);
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl UsersSection {
     fn users_section_load(&mut self) {
         if self.design_mode() && self.users.is_empty() {

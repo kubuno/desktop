@@ -6,9 +6,9 @@
 
   Usage:
     # 1. Build the app exe (on Windows):
-    #      cargo build --release -p kubuno-desktop
+    #      cargo build --release -p kubuno-desktop-shell
     #    then point -ExePath at target\release\kubuno-desktop.exe. It links
-    #    kubuno-ui and Rust's std statically: the exe is the whole program.
+    #    kubuno-desktop-ui and Rust's std statically: the exe is the whole program.
     # 2. Package:
     #      pwsh ./package-msix.ps1                       # unsigned, for Store upload
     #      pwsh ./package-msix.ps1 -Sign -Thumbprint ..  # signed, for local install/testing
@@ -54,15 +54,15 @@ $layout = Join-Path $root "layout"
 if (Test-Path $layout) { Remove-Item $layout -Recurse -Force }
 New-Item -ItemType Directory -Force $layout | Out-Null
 
-if (-not (Test-Path $ExePath)) { throw "Exécutable introuvable : $ExePath (build d'abord avec 'cargo build --release -p kubuno-desktop')." }
+if (-not (Test-Path $ExePath)) { throw "Exécutable introuvable : $ExePath (build d'abord avec 'cargo build --release -p kubuno-desktop-shell')." }
 Copy-Item $ExePath (Join-Path $layout "kubuno-desktop.exe")
-# The exe links the design system (kubuno-ui) and Rust's std statically
+# The exe links the design system (kubuno-desktop-ui) and Rust's std statically
 # (.cargo/config.toml): no DLL ships beside it. An exe built before that change
-# would still import a `kubuno_ui-<hash>.dll`: refuse it rather than ship a
+# would still import a `kubuno_desktop_ui-<hash>.dll`: refuse it rather than ship a
 # package that cannot start.
 $exeText = [System.Text.Encoding]::GetEncoding(28591).GetString([System.IO.File]::ReadAllBytes((Resolve-Path $ExePath).Path))
-if ($exeText -match 'kubuno_ui(-[0-9a-f]{16})?\.dll|std-[0-9a-f]{16}\.dll') {
-  throw "$ExePath importe encore une DLL Rust ($($Matches[0])) : reconstruis-le ('cargo build --release -p kubuno-desktop')."
+if ($exeText -match 'kubuno_desktop_ui(-[0-9a-f]{16})?\.dll|std-[0-9a-f]{16}\.dll') {
+  throw "$ExePath importe encore une DLL Rust ($($Matches[0])) : reconstruis-le ('cargo build --release -p kubuno-desktop-shell')."
 }
 Copy-Item $Manifest (Join-Path $layout "AppxManifest.xml")
 Copy-Item $Assets   (Join-Path $layout "Assets") -Recurse

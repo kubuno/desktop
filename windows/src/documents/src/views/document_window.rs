@@ -7,9 +7,9 @@
 
 use std::path::PathBuf;
 
-use kubuno::prelude::*;
-use kubuno::views::component::Control as _;
-use kubuno_docs_core::model::Node;
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::views::component::Control as _;
+use kubuno_office_docs_core::model::Node;
 use serde_json::{json, Value as Json};
 
 use crate::controls::page_canvas::{DragGuide, EditorStateEventArgs, PageCanvas, PageViewEventArgs};
@@ -38,7 +38,7 @@ pub struct Options {
 impl Options {
     pub fn from_args() -> Self {
         let args: Vec<String> = std::env::args().collect();
-        Self { sample: kubuno_header_data::sample_requested(&args), ..Self::parse(args.into_iter().skip(1)) }
+        Self { sample: kubuno_desktop_header_data::sample_requested(&args), ..Self::parse(args.into_iter().skip(1)) }
     }
 
     pub fn parse(args: impl IntoIterator<Item = String>) -> Self {
@@ -62,7 +62,7 @@ impl Options {
     pub fn open_document(&self) -> App {
         match &self.file {
             Some(path) => App::open_file(path).unwrap_or_else(|why| {
-                kubuno::tracing::error!("[documents] {why}");
+                kubuno_desktop::tracing::error!("[documents] {why}");
                 App::default()
             }),
             None => App::default(),
@@ -71,7 +71,7 @@ impl Options {
 }
 
 /// Kubuno Documents' main window.
-#[kubuno::view("document_window.kbview")]
+#[kubuno_desktop::view("document_window.kbview")]
 pub struct DocumentWindow {
     #[control]
     page: Custom<PageCanvas>,
@@ -260,12 +260,12 @@ impl DocumentWindow {
             ruler_inset: crate::controls::ruler::RULER_SZ,
             zoom: 1.0,
             page_origin: f32::NAN,
-            page_width: kubuno_docs_core::editor::PAGE_W,
-            page_height: kubuno_docs_core::editor::PAGE_H,
-            margin_left: kubuno_docs_core::editor::MARGIN,
-            margin_right: kubuno_docs_core::editor::MARGIN,
-            margin_top: kubuno_docs_core::editor::MARGIN,
-            margin_bottom: kubuno_docs_core::editor::MARGIN,
+            page_width: kubuno_office_docs_core::editor::PAGE_W,
+            page_height: kubuno_office_docs_core::editor::PAGE_H,
+            margin_left: kubuno_office_docs_core::editor::MARGIN,
+            margin_right: kubuno_office_docs_core::editor::MARGIN,
+            margin_top: kubuno_office_docs_core::editor::MARGIN,
+            margin_bottom: kubuno_office_docs_core::editor::MARGIN,
             tab_type: "left".to_string(),
             zoom_percent: 100.0,
             font_family: "Arial".to_string(),
@@ -305,11 +305,11 @@ impl DocumentWindow {
         }
         // The title bar's waffle and avatar: the account's apps, favourites and other accounts, through the
         // shell's broker (the sample: the controls' design data).
-        let mut header = kubuno_header_data::FeedConfig::new("kubuno-documents");
+        let mut header = kubuno_desktop_header_data::FeedConfig::new("kubuno-documents");
         if !self.header_sample {
-            header.proxy = kubuno_sync::get_proxy();
+            header.proxy = kubuno_desktop_sync::get_proxy();
         }
-        kubuno_header_data::start(kubuno_header_data::HeaderOptions::for_app(&["office-documents"]), header, self.header_sample, self.dispatcher());
+        kubuno_desktop_header_data::start(kubuno_desktop_header_data::HeaderOptions::for_app(&["office-documents"]), header, self.header_sample, self.dispatcher());
     }
 
     // ── A document of the server ────────────────────────────────────────────
@@ -318,7 +318,7 @@ impl DocumentWindow {
     /// saves (vskubuno docs/DOCUMENTS-EDITING.md §D); its events come back on the UI thread.
     fn start_live(&mut self, id: String) {
         let Some(dispatcher) = self.dispatcher() else {
-            kubuno::tracing::warn!("[documents] the window has no dispatcher: the server document cannot open");
+            kubuno_desktop::tracing::warn!("[documents] the window has no dispatcher: the server document cannot open");
             return;
         };
         self.sync_status = Resources::sync_opening().to_string();
@@ -337,7 +337,7 @@ impl DocumentWindow {
 
     /// Loads `bytes` into the canvas, titled `title`.
     fn load_bytes(&mut self, bytes: &[u8], title: &str) -> bool {
-        match kubuno_docs_core::editor::Editor::open(bytes) {
+        match kubuno_office_docs_core::editor::Editor::open(bytes) {
             Ok(editor) => {
                 self.doc_title = title.to_string();
                 self.page.with(|p| {
@@ -424,7 +424,7 @@ impl DocumentWindow {
         if let Some(live) = self.live.take() {
             let bytes = self.document_bytes();
             if !live.close(bytes) {
-                kubuno::tracing::warn!("[documents] the server session did not finish closing in time; the local copy is kept");
+                kubuno_desktop::tracing::warn!("[documents] the server session did not finish closing in time; the local copy is kept");
             }
         }
     }
@@ -524,7 +524,7 @@ impl DocumentWindow {
                 });
             }
             Err(why) => {
-                kubuno::tracing::error!("[documents] save {}: {why}", path.display());
+                kubuno_desktop::tracing::error!("[documents] save {}: {why}", path.display());
                 self.hidden_status = Resources::msg_save_failed().replace("{why}", &why);
                 self.has_hidden = true;
             }
@@ -837,7 +837,7 @@ impl DocumentWindow {
             Ok(bytes) => {
                 self.page.with(|p| p.insert_image_bytes(&bytes));
             }
-            Err(e) => kubuno::tracing::warn!("[documents] {}: {e}", path.display()),
+            Err(e) => kubuno_desktop::tracing::warn!("[documents] {}: {e}", path.display()),
         }
     }
 
@@ -975,7 +975,7 @@ impl DocumentWindow {
     }
 
     fn find_key_down(&mut self, e: &mut KeyEventArgs) {
-        use kubuno::controls::host::vk;
+        use kubuno_desktop::controls::host::vk;
         if e.key.0 == vk::ENTER {
             if e.mods.shift { self.find_prev_click() } else { self.find_next_click() }
             e.handled = true;
@@ -1123,7 +1123,7 @@ pub fn table_node(rows: usize, cols: usize) -> Node {
 
 /// The installed font families, for the ribbon's font list (`Text` rows).
 fn font_rows() -> Rows {
-    Rows::from(kubuno::ui::editors::system_font_families().iter().map(|f| Row::new().with("Text", Value::Str(f.clone()))).collect::<Vec<_>>())
+    Rows::from(kubuno_desktop::ui::editors::system_font_families().iter().map(|f| Row::new().with("Text", Value::Str(f.clone()))).collect::<Vec<_>>())
 }
 
 #[cfg(test)]

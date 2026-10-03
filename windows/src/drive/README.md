@@ -21,19 +21,19 @@ The crates are licensed MIT, like the original project.
 
 | Crate | Role |
 |---|---|
-| `crates/drive-app` | The application: window, tabs, views, actions, settings |
-| `crates/drive-app-controls` | Custom Direct2D controls |
-| `crates/drive-app-storage` | Shell/storage layer (IShellItem, IFileOperation, watchers, FTP) |
-| `crates/drive-core-storage` | Storage model traits (OwlCore.Storage model) |
-| `crates/drive-localization` | 49 cultures ported from the original `.resw` resources |
-| `crates/drive-shared` | Shared helpers |
+| `crates/kubuno-drive-desktop` | The application: window, tabs, views, actions, settings |
+| `crates/kubuno-drive-desktop-app-controls` | Custom Direct2D controls |
+| `crates/kubuno-drive-desktop-app-storage` | Shell/storage layer (IShellItem, IFileOperation, watchers, FTP) |
+| `crates/kubuno-drive-desktop-core-storage` | Storage model traits (OwlCore.Storage model) |
+| `crates/kubuno-drive-desktop-localization` | 49 cultures ported from the original `.resw` resources |
+| `crates/kubuno-drive-desktop-shared` | Shared helpers |
 
 `suppa/` vendors the `suppaftp` crate. The binary is `drive.exe`. These crates are
 members of the desktop's Windows workspace (`windows/Cargo.toml`) and link the same component library,
-`kubuno-ui`, as the other Kubuno apps - statically: `drive.exe` needs no DLL beside it.
+`kubuno-desktop-ui`, as the other Kubuno apps - statically: `drive.exe` needs no DLL beside it.
 From `windows/`:
 
 ```powershell
-cargo build --release -p drive-app
+cargo build --release -p kubuno-drive-desktop
 target\release\drive.exe [folder-to-open]
 ```

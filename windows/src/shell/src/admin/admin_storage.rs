@@ -4,10 +4,10 @@
 //! the overview, the accounts' states, the split by organisational unit (when the server sends one) and
 //! the split by category. Nothing is invented: a figure the server does not send is left out.
 
-use kubuno::ui::containers::Card;
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::ui::containers::Card;
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 use crate::admin::SectionState;
 use crate::admin::admin_dashboard::group_digits;
@@ -87,7 +87,7 @@ pub fn chrome(title: &str, subtitle: &str) -> f32 {
         card = card.with_subtitle(subtitle);
     }
     let card = card.on_layer();
-    let probe = kubuno::ui::Rect::new(0.0, 0.0, 400.0, 1000.0);
+    let probe = kubuno_desktop::ui::Rect::new(0.0, 0.0, 400.0, 1000.0);
     let body = card.body_rect(probe);
     (body.top - probe.top) + (probe.bottom - body.bottom)
 }
@@ -120,7 +120,7 @@ pub fn category_label(id: &str) -> String {
 }
 
 /// The overview worded into its cards.
-pub fn blocks(o: &kubuno_sync::StorageOverview) -> Vec<Block> {
+pub fn blocks(o: &kubuno_desktop_sync::StorageOverview) -> Vec<Block> {
     let mut out = Vec::new();
 
     let title = Resources::storage_overview().to_string();
@@ -184,7 +184,7 @@ pub fn blocks(o: &kubuno_sync::StorageOverview) -> Vec<Block> {
     }
 
     // The categories that hold something, largest first.
-    let mut cats: Vec<&kubuno_sync::StorageCategory> = o.categories.iter().filter(|c| c.used_bytes > 0).collect();
+    let mut cats: Vec<&kubuno_desktop_sync::StorageCategory> = o.categories.iter().filter(|c| c.used_bytes > 0).collect();
     cats.sort_by_key(|c| std::cmp::Reverse(c.used_bytes));
     let max = cats.first().map(|c| c.used_bytes).unwrap_or(0);
     let title = Resources::storage_categories().to_string();
@@ -305,7 +305,7 @@ impl StorageSection {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl StorageSection {
     fn storage_section_load(&mut self) {
         if self.design_mode() && self.blocks.is_empty() {
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn no_category_still_leaves_room_for_its_message() {
-        let b = blocks(&kubuno_sync::StorageOverview::default());
+        let b = blocks(&kubuno_desktop_sync::StorageOverview::default());
         let kinds: Vec<&str> = b.iter().map(|b| b.kind).collect();
         assert_eq!(kinds, ["overview", "states", "categories"]);
         assert_eq!(b[2].height, chrome(&b[2].title, "") + CATEGORY_ROW_H);

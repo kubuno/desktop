@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-use kubuno::prelude::{Row, Rows, Value};
+use kubuno_desktop::prelude::{Row, Rows, Value};
 
 use crate::controls::message_thread::{matches, ThreadData};
 use crate::model::{ChatState, Conversation, Section};
@@ -135,7 +135,7 @@ mod tests {
     use crate::model::Conversation;
 
     fn state() -> ChatState {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         ChatState::new()
     }
 

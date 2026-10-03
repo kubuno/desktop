@@ -2,8 +2,8 @@
 //! console's groups, a group's header or its details. Its chevron and its pencil raise
 //! `ToggleRequested` and `EditRequested`, which the section handles knowing the item.
 
-use kubuno::views::prelude::*;
-use kubuno::Rows;
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::Rows;
 
 /// One group's header, or its details (see the module doc).
 #[derive(UserControl, Default)]
@@ -70,7 +70,7 @@ impl GroupRow {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl GroupRow {
     fn group_row_load(&mut self) {
         if self.design_mode() && self.group_name.is_empty() && self.kind.is_empty() {

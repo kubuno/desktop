@@ -7,7 +7,7 @@
 //! message and follows new ones while the reader is at the bottom.
 //!
 //! The text is wrapped on words with DirectWrite measurements of each candidate line
-//! (`kubuno_ui::display::wrap_lines`) and painted line by line, so what is laid out is
+//! (`kubuno_desktop_ui::display::wrap_lines`) and painted line by line, so what is laid out is
 //! exactly what is drawn — the former window estimated the line count from one long line.
 //! The geometry is the pure function [`layout`], unit-tested with a fake measure.
 //!
@@ -15,12 +15,12 @@
 //! `self.thread.with(|t| t.set_thread(data))`), or a binding of `Messages` to a
 //! `Shared<ThreadData>`. In the designer it shows sample bubbles.
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::Color;
-use kubuno::ui::{Canvas, Rect, Size, Widget, WidgetState};
-use kubuno::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
-use kubuno::views::events::Event;
-use kubuno::views::events::EmptyEventArgs;
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::Color;
+use kubuno_desktop::ui::{Canvas, Rect, Size, Widget, WidgetState};
+use kubuno_desktop::views::component::{Component, Control, ControlCore, EventCx, PaintEventCx};
+use kubuno_desktop::views::events::Event;
+use kubuno_desktop::views::events::EmptyEventArgs;
 
 use crate::model::{Message, Status};
 
@@ -183,7 +183,7 @@ pub fn layout(data: &ThreadData, width: f32, measure: &mut dyn FnMut(&str, TextK
             y += SEPARATOR_STEP;
             day = Some(m.day.as_str());
         }
-        let lines = kubuno::ui::display::wrap_lines(&m.text, inner_max, &mut |s| measure(s, TextKind::Body));
+        let lines = kubuno_desktop::ui::display::wrap_lines(&m.text, inner_max, &mut |s| measure(s, TextKind::Body));
         let lines = if lines.is_empty() { vec![String::new()] } else { lines };
         let text_w = lines.iter().map(|l| measure(l, TextKind::Body)).fold(0.0f32, f32::max);
         let meta = meta_of(m);
@@ -206,7 +206,7 @@ pub fn follow_scroll(scroll: f32, was_at_bottom: bool, new_key: bool, content: f
 }
 
 /// Raised when a message is activated (double-clicked): which one.
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct MessageActivatedEventArgs {
     /// The message's index in the thread's data.
     pub index: usize,
@@ -217,7 +217,7 @@ pub struct MessageActivatedEventArgs {
 }
 
 /// A conversation's messages, as bubbles (see the module doc).
-#[derive(kubuno::views::component::Component, Default)]
+#[derive(kubuno_desktop::views::component::Component, Default)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Chat")]
 #[toolbox(icon = "messages-square")]
@@ -332,8 +332,8 @@ impl MessageThread {
         self.cached_from = Some(data);
     }
 
-    fn scrollbar(&self) -> Option<kubuno::ui::range::ScrollBar> {
-        kubuno::ui::range::ScrollBar::from_content(false, self.cache.height, self.viewport(), self.scroll)
+    fn scrollbar(&self) -> Option<kubuno_desktop::ui::range::ScrollBar> {
+        kubuno_desktop::ui::range::ScrollBar::from_content(false, self.cache.height, self.viewport(), self.scroll)
     }
 
     fn paint_item(&self, c: &dyn Canvas, item: &Item, origin: (f32, f32)) {
@@ -343,7 +343,7 @@ impl MessageThread {
         match item {
             Item::Separator { label, rect } => {
                 let r = at(*rect);
-                let dark = t.mode == kubuno::ui::ThemeMode::Dark;
+                let dark = t.mode == kubuno_desktop::ui::ThemeMode::Dark;
                 let wash = if dark { Color::rgba_f(1.0, 1.0, 1.0, 0.08) } else { Color::rgba_f(0.0, 0.0, 0.0, 0.06) }.to_d2d();
                 c.fill_rounded(&r, SEPARATOR_H / 2.0, &wash);
                 c.text(label, &r, &f.caption, &t.text_secondary, true);
@@ -477,7 +477,7 @@ impl Control for MessageThread {
     }
 
     fn on_key_down(&mut self, e: &mut EventCx<'_, KeyEventArgs>) {
-        use kubuno::controls::host::vk;
+        use kubuno_desktop::controls::host::vk;
         let key = e.args().key.0;
         let page = self.viewport() * 0.9;
         let target = match key {

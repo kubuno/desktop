@@ -2,9 +2,9 @@
 //! directory's groups. [`load`] reads them (`GET /api/v1/admin/groups`, off the UI thread);
 //! [`GroupsSection::show`] lists them; the chevrons expand them here.
 
-use kubuno::views::component::Shared;
-use kubuno::views::prelude::*;
-use kubuno::{Row, Rows, Value};
+use kubuno_desktop::views::component::Shared;
+use kubuno_desktop::views::prelude::*;
+use kubuno_desktop::{Row, Rows, Value};
 
 use crate::admin::SectionState;
 use crate::model::events::ItemCommandEventArgs;
@@ -155,11 +155,11 @@ impl GroupsSection {
     }
 
     fn current_id() -> Option<String> {
-        kubuno::views::binding::current_item().map(|item| item.row.text("Id"))
+        kubuno_desktop::views::binding::current_item().map(|item| item.row.text("Id"))
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl GroupsSection {
     fn groups_section_load(&mut self) {
         if self.design_mode() && self.groups.is_empty() {

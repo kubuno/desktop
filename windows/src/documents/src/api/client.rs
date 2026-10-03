@@ -61,10 +61,10 @@
 //! # The transport
 //!
 //! Auth, instance discovery, token rotation, the process-wide refresh lock and
-//! the shared-token cache all belong to `kubuno_sync` (the access token is
+//! the shared-token cache all belong to `kubuno_desktop_sync` (the access token is
 //! borrowed from the shell's broker) and are not reimplemented here. The routing
 //! logic is written against [`Transport`]; the shipped [`SyncTransport`] goes
-//! through `kubuno_sync::request`, which carries any method and every header
+//! through `kubuno_desktop_sync::request`, which carries any method and every header
 //! (`If-Match`, `Idempotency-Key` — neither may ever be dropped) and returns the
 //! status whatever it is, so a 412 or a 413 is told from a 500.
 
@@ -406,7 +406,7 @@ pub trait Transport {
     fn send(&self, request: &Request) -> ApiResult<Response>;
 }
 
-/// The shipping transport: `kubuno_sync::request`, which owns the bearer token
+/// The shipping transport: `kubuno_desktop_sync::request`, which owns the bearer token
 /// (borrowed from the shell's broker), the refresh lock and the rotation.
 pub struct SyncTransport {
     instance: String,
@@ -424,7 +424,7 @@ impl SyncTransport {
 
 impl Transport for SyncTransport {
     fn send(&self, request: &Request) -> ApiResult<Response> {
-        // `kubuno_sync::request` carries every header (`If-Match`, `Idempotency-Key`) and every method, and
+        // `kubuno_desktop_sync::request` carries every header (`If-Match`, `Idempotency-Key`) and every method, and
         // hands back the status whatever it is: a 412 or a 413 reaches `Error::from_response` as such.
         // A POST without a body still sends `{}`: the office handlers that take no body run through axum,
         // and `create` has a `Json<CreateDocumentDto>` extractor that refuses `null`.
@@ -433,7 +433,7 @@ impl Transport for SyncTransport {
             (None, Method::Post) => Some(b"{}".to_vec()),
             (None, _) => None,
         };
-        match kubuno_sync::request(&self.instance, request.method.as_str(), &request.path, &request.headers, body) {
+        match kubuno_desktop_sync::request(&self.instance, request.method.as_str(), &request.path, &request.headers, body) {
             Ok(r) => Ok(Response { status: r.status, body: r.body }),
             Err(e) => Err(Error::Transport(e.to_string())),
         }

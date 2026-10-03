@@ -1,5 +1,5 @@
 [package]
-name        = "kubuno-desktop"
+name        = "kubuno-desktop-shell"
 description = "Kubuno desktop shell — launcher, sync client and settings, written like a Windows Forms application (.kbview views)"
 version.workspace = true
 edition.workspace = true
@@ -10,7 +10,7 @@ license.workspace = true
 # custom controls (`StorageGauge`, `StatusDot`, `AppTileGrid`…) and the flyouts. The binary is the
 # short `Program.cs` (`main.rs`): the splash screen, then `Application::run(ShellWindow)`.
 [lib]
-name = "kubuno_shell"
+name = "kubuno_desktop_shell"
 path = "src/lib.rs"
 
 [[bin]]
@@ -18,23 +18,23 @@ name = "kubuno-desktop"
 path = "src/main.rs"
 
 [dependencies]
-# The Kubuno desktop programming model (Application::run, #[kubuno::view], user and custom
-# controls, resources): it re-exports kubuno-views, kubuno-controls and kubuno-ui. The shell
+# The Kubuno desktop programming model (Application::run, #[kubuno_desktop::view], user and custom
+# controls, resources): it re-exports kubuno-desktop-views, kubuno-desktop-controls and kubuno-desktop-ui. The shell
 # depends on no other application's crate (module isolation, vskubuno docs/VIEWS-SPEC.md).
-kubuno = { path = "../crates/kubuno" }
+kubuno-desktop = { path = "../crates/kubuno-desktop" }
 # The header's menus (`WaffleMenu`, `AccountMenu`): shared user controls the flyouts host, fed through
 # their `LauncherService` / `AccountService` (`services::favorites`, `model::view_model`).
-kubuno-shell-controls = { path = "../crates/kubuno-shell-controls" }
+kubuno-desktop-shell-controls = { path = "../crates/kubuno-desktop-shell-controls" }
 # The launcher's data logic shared with the other desktop apps: module parsing, tiles, logo cache.
-kubuno-header-data = { path = "../crates/kubuno-header-data" }
+kubuno-desktop-header-data = { path = "../crates/kubuno-desktop-header-data" }
 # The sync engine, unchanged: this crate only puts a native face on it.
-kubuno-sync = { path = "../../../common/kubuno-sync" }
+kubuno-desktop-sync = { path = "../../../common/kubuno-desktop-sync" }
 # Accounts and tokens (vskubuno docs/DESKTOP-OFFLINE-SYNC.md section 19.4): the shell is the only refresh-token
 # owner of the machine (`TokenOwner`, refresh tokens in the OS credential store) and serves the token broker
 # the apps borrow access tokens from.
-kubuno-account    = { path = "../../../common/kubuno-account" }
-kubuno-secrets    = { path = "../../../common/kubuno-secrets" }
-kubuno-api-client = { path = "../../../common/kubuno-api-client" }
+kubuno-desktop-account    = { path = "../../../common/kubuno-desktop-account" }
+kubuno-desktop-secrets    = { path = "../../../common/kubuno-desktop-secrets" }
+kubuno-desktop-api-client = { path = "../../../common/kubuno-desktop-api-client" }
 tokio       = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"

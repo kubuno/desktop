@@ -16,8 +16,8 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::Instant;
 
-use kubuno::prelude::*;
-use kubuno::views::events::{CloseReason, Key};
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::views::events::{CloseReason, Key};
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, RegisterWindowMessageW, WM_APP, WM_SETTINGCHANGE};
 
@@ -35,7 +35,7 @@ use crate::pages::login_page::LoginPage;
 use crate::services::options::{Options, StartPage};
 use crate::services::settings::{self, ThemeSetting};
 use crate::pages::settings_page::{SettingsPage, SettingsValues};
-use kubuno_shell_controls::{AccountAction, AccountButton, AccountService, WaffleButton};
+use kubuno_desktop_shell_controls::{AccountAction, AccountButton, AccountService, WaffleButton};
 use crate::controls::storage_gauge::StorageGauge;
 use crate::model::view_model::{self, AccountInfo, LoginState, ShellState};
 use crate::Resources;
@@ -79,12 +79,12 @@ const BRAND_WIDE: f32 = 204.0;
 const BRAND_NARROW: f32 = 32.0;
 
 /// Kubuno Desktop's main window.
-#[kubuno::view("shell_window.kbview")]
+#[kubuno_desktop::view("shell_window.kbview")]
 pub struct ShellWindow {
     #[control]
     storage_gauge: Custom<StorageGauge>,
     /// The header's waffle and avatar: they open the launcher and the account panel in popups of
-    /// their own (`kubuno-shell-controls`), fed by [`ShellWindow::refresh_header_menus`].
+    /// their own (`kubuno-desktop-shell-controls`), fed by [`ShellWindow::refresh_header_menus`].
     #[control]
     apps_button: Custom<WaffleButton>,
     #[control]
@@ -216,11 +216,11 @@ struct ShellAccounts {
 }
 
 impl AccountService for ShellAccounts {
-    fn user(&self) -> kubuno_shell_controls::AccountUser {
+    fn user(&self) -> kubuno_desktop_shell_controls::AccountUser {
         self.panel.user()
     }
 
-    fn accounts(&self) -> Vec<kubuno_shell_controls::AccountEntry> {
+    fn accounts(&self) -> Vec<kubuno_desktop_shell_controls::AccountEntry> {
         self.panel.accounts()
     }
 
@@ -445,7 +445,7 @@ impl ShellWindow {
     fn open_pending_admin(&mut self) {
         let Some(section) = self.pending_admin.take() else { return };
         if !self.state.identity.is_admin {
-            kubuno::tracing::warn!("[shell] --page admin:{section} ignored: this account is not an administrator");
+            kubuno_desktop::tracing::warn!("[shell] --page admin:{section} ignored: this account is not an administrator");
             return;
         }
         self.open_admin(Some(section));
@@ -538,7 +538,7 @@ impl ShellWindow {
         });
     }
 
-    fn apply_labels(&mut self, result: Result<Vec<kubuno_sync::Label>, String>) {
+    fn apply_labels(&mut self, result: Result<Vec<kubuno_desktop_sync::Label>, String>) {
         self.state.labels_loading = false;
         match result {
             Ok(list) => {
@@ -615,7 +615,7 @@ impl ShellWindow {
 
     fn toggle_offline(&mut self) {
         if let Err(e) = backend::set_offline(!backend::is_offline()) {
-            kubuno::tracing::warn!("[shell] mode hors ligne : {e}");
+            kubuno_desktop::tracing::warn!("[shell] mode hors ligne : {e}");
         }
         self.state.offline = backend::is_offline();
         self.refresh_launcher();
@@ -624,8 +624,8 @@ impl ShellWindow {
 
     /// Applies the theme preference (and the font) to the windows.
     fn apply_theme(&mut self) {
-        kubuno::Application::set_theme(settings::theme());
-        kubuno::controls::host::set_font_override(settings::font_override());
+        kubuno_desktop::Application::set_theme(settings::theme());
+        kubuno_desktop::controls::host::set_font_override(settings::font_override());
     }
 
     /// Asks before something destructive (an in-window dialog over a veil); `action` runs when
@@ -725,12 +725,12 @@ impl ShellWindow {
                 }
             }
             Err(e) => {
-                kubuno::tracing::warn!("[comptes] déconnexion : {e}");
+                kubuno_desktop::tracing::warn!("[comptes] déconnexion : {e}");
                 crate::services::activity::record("error", Resources::disconnect_title(), &e);
                 return;
             }
         }
-        if !backend::is_sample() && kubuno_account::paths::system_integration_allowed() {
+        if !backend::is_sample() && kubuno_desktop_account::paths::system_integration_allowed() {
             crate::platform::cloudfiles::unregister(&id);
         }
         settings::update(|s| {
@@ -756,8 +756,8 @@ impl ShellWindow {
 
     /// An account event of the token owner (on the UI thread): a session revoked elsewhere pauses the sync
     /// (nothing is deleted) and asks to sign in again.
-    fn account_event(&mut self, event: kubuno_account::AccountEvent) {
-        use kubuno_account::AccountEvent;
+    fn account_event(&mut self, event: kubuno_desktop_account::AccountEvent) {
+        use kubuno_desktop_account::AccountEvent;
         if let AccountEvent::SessionExpired { .. } = &event {
             crate::services::activity::record("expired", Resources::session_expired_reconnect(), Resources::session_paused_text());
             if settings::notifications_enabled() {
@@ -778,7 +778,7 @@ impl ShellWindow {
 
     // ── The header's menus ───────────────────────────────────────────────────────────────────
 
-    /// Hands the header's waffle and avatar (`kubuno-shell-controls`' `WaffleButton` / `AccountButton`,
+    /// Hands the header's waffle and avatar (`kubuno-desktop-shell-controls`' `WaffleButton` / `AccountButton`,
     /// which open their menus in a popup of their own) what they show now: the instance's apps and
     /// the account's favourites, the signed-in user and the other accounts. A confirmed list of
     /// favourites and the account panel's picks come back to the window.
@@ -803,7 +803,7 @@ impl ShellWindow {
         self.apps_button.with(|b| b.set_service(Rc::new(launcher)));
         let id = &self.state.identity;
         let panel = view_model::AccountPanel {
-            user: kubuno_shell_controls::AccountUser {
+            user: kubuno_desktop_shell_controls::AccountUser {
                 name: id.name.clone(),
                 email: id.email.clone(),
                 initials: self.initials.clone(),
@@ -872,7 +872,7 @@ impl ShellWindow {
                 self.refresh_apps();
             }
             Err(e) => {
-                kubuno::tracing::warn!("[comptes] déplacement du dossier : {e}");
+                kubuno_desktop::tracing::warn!("[comptes] déplacement du dossier : {e}");
                 crate::services::activity::record("error", Resources::move_failed(), &e.to_string());
             }
         }
@@ -948,9 +948,9 @@ impl ShellWindow {
             Command::OpenFolder => self.open_folder(),
             Command::Show => {
                 self.set_visible(true);
-                kubuno::controls::host::restore_and_focus();
+                kubuno_desktop::controls::host::restore_and_focus();
             }
-            Command::Quit => kubuno::Application::exit(),
+            Command::Quit => kubuno_desktop::Application::exit(),
         }
     }
 
@@ -960,7 +960,7 @@ impl ShellWindow {
         self.hwnd = self.handle().unwrap_or(0);
         self.ui = self.dispatcher();
         if let Some(font) = settings::font_override() {
-            kubuno::controls::host::set_font_override(Some(font));
+            kubuno_desktop::controls::host::set_font_override(Some(font));
         }
         if self.options.sample {
             for (kind, title, body) in backend::sample_activity().iter().rev() {
@@ -1017,7 +1017,7 @@ impl ShellWindow {
     }
 
     fn shell_window_key_down(&mut self, e: &mut KeyEventArgs) {
-        if e.key != Key(kubuno::controls::host::vk::ESCAPE) {
+        if e.key != Key(kubuno_desktop::controls::host::vk::ESCAPE) {
             return;
         }
         match self.state.page {
@@ -1162,12 +1162,12 @@ impl ShellWindow {
                 let (module, enabled) = (e.id.clone(), e.value == "true");
                 std::thread::spawn(move || {
                     if let Err(err) = backend::set_module_enabled(&instance, &module, enabled) {
-                        kubuno::tracing::warn!("[admin] module {module}: {err}");
+                        kubuno_desktop::tracing::warn!("[admin] module {module}: {err}");
                     }
                     drop(ui.begin_invoke(|w: &mut ShellWindow| w.load_admin("modules")));
                 });
             }
-            other => kubuno::tracing::warn!("[shell] unknown console command {other}"),
+            other => kubuno_desktop::tracing::warn!("[shell] unknown console command {other}"),
         }
     }
 
@@ -1177,7 +1177,7 @@ impl ShellWindow {
             "open_folder" => self.open_folder(),
             "open_web" => self.open_web(),
             "toggle_offline" => self.toggle_offline(),
-            other => kubuno::tracing::warn!("[shell] unknown launcher command {other}"),
+            other => kubuno_desktop::tracing::warn!("[shell] unknown launcher command {other}"),
         }
     }
 
@@ -1196,7 +1196,7 @@ impl ShellWindow {
             "autostart" => {
                 // The Run key is the source of truth here.
                 if let Err(e) = settings::set_autostart(value == "true") {
-                    kubuno::tracing::warn!("[settings] démarrage automatique : {e}");
+                    kubuno_desktop::tracing::warn!("[settings] démarrage automatique : {e}");
                 }
             }
             // Lives in the engine's own config, not in the shell's settings.
@@ -1208,10 +1208,10 @@ impl ShellWindow {
             "proxy" => {
                 let proxy = (!value.trim().is_empty()).then(|| value.trim().to_string());
                 if let Err(e) = backend::set_proxy(proxy) {
-                    kubuno::tracing::warn!("[settings] proxy : {e}");
+                    kubuno_desktop::tracing::warn!("[settings] proxy : {e}");
                 }
             }
-            other => kubuno::tracing::warn!("[shell] unknown setting {other}"),
+            other => kubuno_desktop::tracing::warn!("[shell] unknown setting {other}"),
         }
         self.refresh_settings();
     }
@@ -1292,10 +1292,10 @@ fn accounts() -> Vec<AccountInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kubuno::views::events::ChangeSource;
+    use kubuno_desktop::views::events::ChangeSource;
 
     fn sample_window(args: &[&str]) -> ShellWindow {
-        kubuno::resources::set_culture("fr");
+        kubuno_desktop::resources::set_culture("fr");
         let mut all = vec!["--sample".to_string()];
         all.extend(args.iter().map(|s| s.to_string()));
         ShellWindow::new(Options::parse(all))
@@ -1375,7 +1375,7 @@ mod tests {
     #[test]
     fn escape_goes_back_to_the_launcher() {
         let mut w = sample_window(&["--page", "settings"]);
-        let mut e = KeyEventArgs::new(Key(kubuno::controls::host::vk::ESCAPE), Default::default());
+        let mut e = KeyEventArgs::new(Key(kubuno_desktop::controls::host::vk::ESCAPE), Default::default());
         w.shell_window_key_down(&mut e);
         assert!(e.handled && w.state().page == Page::Launcher);
     }

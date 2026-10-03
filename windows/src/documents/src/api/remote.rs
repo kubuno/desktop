@@ -71,7 +71,7 @@ pub struct FileJournal {
 impl FileJournal {
     /// The journal of this user (or of the sandbox), `None` when no data folder can be resolved.
     pub fn for_user() -> Option<Self> {
-        let dir = kubuno_account::paths::user_data_dir().ok()?.join("documents").join("journal");
+        let dir = kubuno_desktop_account::paths::user_data_dir().ok()?.join("documents").join("journal");
         Some(Self { dir })
     }
 
@@ -151,7 +151,7 @@ impl session::Journal for Link {
 pub fn connect(id: &str) -> Result<(Link, String), String> {
     use session::Journal as _;
     let journal = FileJournal::for_user().ok_or_else(|| "dossier de données introuvable".to_string())?;
-    let account = kubuno_sync::current_account()
+    let account = kubuno_desktop_sync::current_account()
         .map_err(|e| format!("compte : {e}"))?
         .ok_or_else(|| "aucun compte connecté : connectez-vous dans Kubuno Desktop".to_string())?;
     let client = Client::new(account.key.clone());

@@ -1,0 +1,44 @@
+[package]
+name        = "kubuno-desktop-data-tool"
+description = "The helper process behind the Visual Studio data tooling of Kubuno (vskubuno docs/DATA.md, DATA-5..7): schema introspection, connection tests, queries, scripts, .kbdata generation, sqlx migrations and offline-cache commands, as JSON lines over stdio, on exactly the drivers and secrets chain of the kubuno-desktop-data runtime."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[lib]
+name = "kubuno_desktop_data_tool"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kubuno-data-tool"
+path = "src/main.rs"
+
+[features]
+default = ["sqlite", "postgres", "credential-manager"]
+sqlite = ["kubuno-desktop-data/sqlite"]
+postgres = ["kubuno-desktop-data/postgres"]
+# MySQL / MariaDB and SQL Server: the Visual Studio build uses `--features mysql,mssql`.
+mysql = ["kubuno-desktop-data/mysql"]
+mssql = ["kubuno-desktop-data/mssql"]
+credential-manager = ["kubuno-desktop-data/credential-manager"]
+
+[dependencies]
+# The runtime itself: providers, pools, secrets chain, values, redacted connection strings. Not the
+# workspace entry (it would ignore `default-features = false`): the features are ours to forward.
+kubuno-desktop-data       = { path = "../kubuno-desktop-data", default-features = false }
+kubuno-desktop-data-model = { workspace = true }
+
+# `migrate` only here: the tool runs migrations through sqlx's `Migrator` (kubuno-desktop-data itself stays
+# free of it). The drivers come from kubuno-desktop-data's features.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "migrate"] }
+
+# `process`: `cargo sqlx prepare` / `cargo check` are child processes killed when a request is cancelled.
+tokio              = { workspace = true, features = ["process"] }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+chrono             = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+# `[package] name` of the crate whose sqlx cache is prepared.
+toml = "1"

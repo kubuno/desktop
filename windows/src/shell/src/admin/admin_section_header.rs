@@ -2,7 +2,7 @@
 //! comment): the head of every section of the administration console — a breadcrumb, the title, an
 //! inline count and an optional introduction, all set as properties by the section that uses it.
 
-use kubuno::views::prelude::*;
+use kubuno_desktop::views::prelude::*;
 
 /// How tall the header is: the breadcrumb (20), the title's line (40), and the introduction line with
 /// its gap (4 + 22) when there is one.
@@ -51,7 +51,7 @@ impl AdminSectionHeader {
     }
 }
 
-#[kubuno::views::event_handlers]
+#[kubuno_desktop::views::event_handlers]
 impl AdminSectionHeader {
     fn admin_section_header_load(&mut self) {
         if self.design_mode() && self.title.is_empty() {

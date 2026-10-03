@@ -3,11 +3,11 @@
 //! under the pointer. No primitive holds those three things, so this custom control paints them
 //! with the primitives' own pieces (`ProgressBar`, the canvas' glyphs and text).
 
-use kubuno::ui::metrics::{pill, space};
-use kubuno::ui::range::{ProgressBar, ProgressSize};
-use kubuno::ui::{Canvas, Rect, Size, Widget, WidgetState};
-use kubuno::views::component::{Component as _, Control, ControlCore, EventCx, HasControlCore, PaintEventCx};
-use kubuno::views::events::EmptyEventArgs;
+use kubuno_desktop::ui::metrics::{pill, space};
+use kubuno_desktop::ui::range::{ProgressBar, ProgressSize};
+use kubuno_desktop::ui::{Canvas, Rect, Size, Widget, WidgetState};
+use kubuno_desktop::views::component::{Component as _, Control, ControlCore, EventCx, HasControlCore, PaintEventCx};
+use kubuno_desktop::views::events::EmptyEventArgs;
 
 /// The gauge's track: `w-20`, and the resolution its fraction is kept at.
 const TRACK: f32 = 80.0;
@@ -16,7 +16,7 @@ const STEPS: i32 = 1000;
 const GLYPH: f32 = 16.0;
 
 /// The storage pill of the header (see the module doc). `Click` opens the storage page.
-#[derive(kubuno::views::component::Component, Default)]
+#[derive(kubuno_desktop::views::component::Component, Default)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Kubuno")]
 #[toolbox(icon = "hard-drive")]
@@ -112,7 +112,7 @@ mod tests {
     /// unset quota draws an empty bar.
     #[test]
     fn the_gauge_follows_the_quota_thresholds() {
-        use kubuno::ui::range::ProgressVariant;
+        use kubuno_desktop::ui::range::ProgressVariant;
         assert_eq!(gauge(50, 100).resolved_variant(), ProgressVariant::Primary);
         assert_eq!(gauge(80, 100).resolved_variant(), ProgressVariant::Warning);
         assert_eq!(gauge(95, 100).resolved_variant(), ProgressVariant::Danger);

@@ -13,12 +13,12 @@ use crate::platform::{cloudfiles, explorer};
 /// configured instance. Does nothing when no account is set up yet.
 pub fn start(hwnd: isize) {
     std::thread::spawn(move || {
-        let _ = kubuno_sync::daemon::watch_all(30, move |id, ev| on_event(hwnd, id, ev));
+        let _ = kubuno_desktop_sync::daemon::watch_all(30, move |id, ev| on_event(hwnd, id, ev));
     });
 }
 
 /// One sync outcome: refresh the placeholders, tell the user, wake the view.
-fn on_event(hwnd: isize, id: &str, ev: kubuno_sync::daemon::SyncEvent) {
+fn on_event(hwnd: isize, id: &str, ev: kubuno_desktop_sync::daemon::SyncEvent) {
     let kind = ev.kind.clone();
     crate::services::activity::record(&kind, &ev.title, &ev.body);
     if crate::services::settings::notifications_enabled() && kind != "syncing" {
@@ -27,10 +27,10 @@ fn on_event(hwnd: isize, id: &str, ev: kubuno_sync::daemon::SyncEvent) {
     // Files the daemon just pulled are full on disk: turn the tree back into
     // placeholders and make the new ones online-only, so they do not pile up
     // locally — the on-demand model Explorer shows in its Status column.
-    if kind == "synced" && kubuno_account::paths::system_integration_allowed() {
+    if kind == "synced" && kubuno_desktop_account::paths::system_integration_allowed() {
         let id = id.to_string();
         std::thread::spawn(move || {
-            if let Some(cfg) = kubuno_sync::current_config(&id) {
+            if let Some(cfg) = kubuno_desktop_sync::current_config(&id) {
                 cloudfiles::mark_tree_in_sync(&cfg.sync_root);
                 cloudfiles::make_ondemand(&id, &instance_files(&id));
             }
@@ -73,9 +73,9 @@ pub fn toast(title: &str, body: &str) {
 /// Every file known to an instance, as `(local path, server id)` — what the
 /// placeholder conversion needs.
 fn instance_files(id: &str) -> Vec<(PathBuf, String)> {
-    kubuno_sync::db_path(id)
+    kubuno_desktop_sync::db_path(id)
         .ok()
-        .and_then(|db| kubuno_sync::store::Store::open(&db).ok())
+        .and_then(|db| kubuno_desktop_sync::store::Store::open(&db).ok())
         .and_then(|s| s.all_files().ok())
         .unwrap_or_default()
         .into_iter()
@@ -93,14 +93,14 @@ fn instance_files(id: &str) -> Vec<(PathBuf, String)> {
 pub fn refresh_explorer_nav() {
     // A sandboxed profile (`KUBUNO_SANDBOX_DIR`) registers nothing with Explorer: it must neither add entries
     // for its own folders nor prune the real ones it does not know.
-    if !kubuno_account::paths::system_integration_allowed() {
+    if !kubuno_desktop_account::paths::system_integration_allowed() {
         return;
     }
-    let instances = kubuno_sync::list_instances();
+    let instances = kubuno_desktop_sync::list_instances();
     let live: Vec<String> = instances.iter().map(|c| c.id.clone()).collect();
     cloudfiles::prune_orphans(&live);
 
-    let host_of = |c: &kubuno_sync::config::Config| {
+    let host_of = |c: &kubuno_desktop_sync::config::Config| {
         c.server_url
             .split("://")
             .last()

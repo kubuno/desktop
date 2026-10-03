@@ -14,7 +14,7 @@
 
 use std::path::Path;
 
-use kubuno_docs_core::editor::{Editor, PageSetup};
+use kubuno_office_docs_core::editor::{Editor, PageSetup};
 
 use crate::doc::DocPx;
 

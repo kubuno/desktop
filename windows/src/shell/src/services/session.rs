@@ -3,11 +3,11 @@
 //! At start ([`start`]), before any window:
 //!
 //! 1. the plaintext `creds.json` of the file-sync instances are moved into the OS credential store
-//!    (`kubuno_account::migrate::adopt_legacy_instances`: written and read back before the file is deleted;
+//!    (`kubuno_desktop_account::migrate::adopt_legacy_instances`: written and read back before the file is deleted;
 //!    idempotent, crash-safe);
 //! 2. the `TokenOwner` loads the accounts: the shell is the **only** holder of refresh tokens (rotation with the
 //!    server's grace window, revoked session, account switch);
-//! 3. the file sync (`kubuno_sync`) is given the owner as its token provider: it never reads a token file again;
+//! 3. the file sync (`kubuno_desktop_sync`) is given the owner as its token provider: it never reads a token file again;
 //! 4. the **token broker** is bound (named pipe restricted to the current user, remote clients refused, clients
 //!    filtered by executable: only programs installed next to the shell) and served: the apps borrow access
 //!    tokens from it. If another shell already serves it, this one becomes a broker client instead of a second
@@ -17,7 +17,7 @@
 //! first when changes were not sent (« Envoyer d'abord » / « Exporter » / « Supprimer quand même »). A session
 //! revoked remotely only pauses the sync (nothing is deleted) and is reported through [`set_event_handler`].
 //!
-//! A sandboxed profile (`KUBUNO_SANDBOX_DIR`, see `kubuno_account::paths`) moves every file under that directory,
+//! A sandboxed profile (`KUBUNO_SANDBOX_DIR`, see `kubuno_desktop_account::paths`) moves every file under that directory,
 //! keeps its secrets under a prefix of their own and gets its own broker pipe.
 
 use std::path::{Path, PathBuf};
@@ -25,12 +25,12 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
-use kubuno::tracing;
-use kubuno_account::broker::{BrokerEndpoint, BrokerServer, ClientPolicy};
-use kubuno_account::login::{self, LoginOutcome, NativeTokens, TotpCode};
-use kubuno_account::{paths, AccountEvent, AccountInfo, AccountKey, AccountStore, OwnerConfig, TokenOwner};
-use kubuno_api_client::ApiClient;
-use kubuno_secrets::{OsSecretStore, PrefixedSecretStore, SecretStore};
+use kubuno_desktop::tracing;
+use kubuno_desktop_account::broker::{BrokerEndpoint, BrokerServer, ClientPolicy};
+use kubuno_desktop_account::login::{self, LoginOutcome, NativeTokens, TotpCode};
+use kubuno_desktop_account::{paths, AccountEvent, AccountInfo, AccountKey, AccountStore, OwnerConfig, TokenOwner};
+use kubuno_desktop_api_client::ApiClient;
+use kubuno_desktop_secrets::{OsSecretStore, PrefixedSecretStore, SecretStore};
 
 /// How this process holds the accounts.
 enum Mode {
@@ -70,14 +70,14 @@ fn secret_store() -> Result<Arc<dyn SecretStore>> {
 }
 
 fn normalized(server: &str) -> String {
-    kubuno_account::normalize_server_url(server).unwrap_or_else(|_| server.trim().trim_end_matches('/').to_ascii_lowercase())
+    kubuno_desktop_account::normalize_server_url(server).unwrap_or_else(|_| server.trim().trim_end_matches('/').to_ascii_lowercase())
 }
 
 /// Links the file-sync instances that belong to no account to the only account of their server, if there is
 /// exactly one (an instance added by `kubuno-sync add`, or one whose migration could not read the user id).
 fn link_orphans(accounts: &AccountStore) {
     let Ok(all) = accounts.list() else { return };
-    for inst in kubuno_sync::list_instances() {
+    for inst in kubuno_desktop_sync::list_instances() {
         if all.iter().any(|a| a.linked_instances.contains(&inst.id)) {
             continue;
         }
@@ -101,7 +101,7 @@ pub fn start() -> Result<Startup> {
 
     // 1. The legacy plaintext tokens move into the OS store (the user id comes from the stored token's `sub`).
     let legacy = paths::legacy_config_dir()?;
-    let report = kubuno_account::migrate::adopt_legacy_instances(&legacy, &accounts, secrets.as_ref(), &|_| None);
+    let report = kubuno_desktop_account::migrate::adopt_legacy_instances(&legacy, &accounts, secrets.as_ref(), &|_| None);
     startup.migrated = report.migrated();
     startup.migration_failed = report.failed();
     if startup.migrated > 0 || startup.migration_failed > 0 {
@@ -112,13 +112,13 @@ pub fn start() -> Result<Startup> {
     // 2. The broker first: it is also what tells whether another shell already owns the accounts.
     let endpoint = BrokerEndpoint::for_current_user(&paths::user_runtime_dir()?)?;
     let install_dir = std::env::current_exe()?.parent().map(Path::to_path_buf).ok_or_else(|| anyhow!("the shell has no directory"))?;
-    let owner = TokenOwner::new(secrets, accounts, OwnerConfig { proxy: kubuno_sync::get_proxy(), ..OwnerConfig::default() });
+    let owner = TokenOwner::new(secrets, accounts, OwnerConfig { proxy: kubuno_desktop_sync::get_proxy(), ..OwnerConfig::default() });
     let bound = runtime.block_on(BrokerServer::new(endpoint, owner.clone(), ClientPolicy::ImagesUnder(vec![install_dir])).bind());
     let mode = match bound {
         Ok(bound) => {
             // 3. The owner, the file sync's tokens, the events, then the broker.
             runtime.block_on(owner.load())?;
-            kubuno_sync::tokens::install(Arc::new(kubuno_sync::tokens::OwnerProvider::new(owner.clone(), runtime.handle().clone())));
+            kubuno_desktop_sync::tokens::install(Arc::new(kubuno_desktop_sync::tokens::OwnerProvider::new(owner.clone(), runtime.handle().clone())));
             let mut events = owner.subscribe();
             runtime.spawn(async move {
                 loop {
@@ -143,8 +143,8 @@ pub fn start() -> Result<Startup> {
         Err(e) => {
             // Another shell serves the broker: borrow from it, never become a second token owner.
             tracing::warn!("[session] the token broker is already served ({e}): this shell borrows its tokens");
-            match kubuno_sync::tokens::BrokerProvider::for_app("kubuno-desktop") {
-                Ok(p) => kubuno_sync::tokens::install(Arc::new(p)),
+            match kubuno_desktop_sync::tokens::BrokerProvider::for_app("kubuno-desktop") {
+                Ok(p) => kubuno_desktop_sync::tokens::install(Arc::new(p)),
                 Err(e) => tracing::error!("[session] no token broker client: {e}"),
             }
             startup.client_mode = true;
@@ -183,11 +183,11 @@ pub enum SignIn {
 }
 
 fn api_for(server: &str) -> Result<ApiClient> {
-    Ok(ApiClient::builder(server.trim()).timeout(Duration::from_secs(30)).proxy(kubuno_sync::get_proxy()).build()?)
+    Ok(ApiClient::builder(server.trim()).timeout(Duration::from_secs(30)).proxy(kubuno_desktop_sync::get_proxy()).build()?)
 }
 
 /// A user-facing reason for a failed sign-in (never the server's raw body).
-fn sign_in_error(e: kubuno_api_client::ApiError) -> anyhow::Error {
+fn sign_in_error(e: kubuno_desktop_api_client::ApiError) -> anyhow::Error {
     match e.status() {
         Some(401) | Some(403) => anyhow!("Identifiant, mot de passe ou code incorrect."),
         Some(429) => anyhow!("Trop de tentatives : réessayez dans une minute."),
@@ -202,11 +202,11 @@ fn finish(session: &Session, owner: &Arc<TokenOwner>, server: &str, tokens: Nati
     let o = owner.clone();
     let server_owned = server.trim().to_string();
     let info = session.runtime.block_on(async move { o.sign_in(&server_owned, tokens).await }).map_err(|e| anyhow!("{e}"))?;
-    let instance = kubuno_sync::register_instance(&info.server_url, folder.trim())?;
+    let instance = kubuno_desktop_sync::register_instance(&info.server_url, folder.trim())?;
     owner.account_store().link_instance(&info.key, &instance)?;
     // A plaintext token left by an older version for this folder is abandoned now (the new session replaces it).
-    if let Ok(dir) = kubuno_sync::config::instance_dir(&instance) {
-        if let Ok(true) = kubuno_account::migrate::discard_legacy_creds(&dir) {
+    if let Ok(dir) = kubuno_desktop_sync::config::instance_dir(&instance) {
+        if let Ok(true) = kubuno_desktop_account::migrate::discard_legacy_creds(&dir) {
             tracing::info!("[session] the leftover plaintext credentials of {instance} were deleted");
         }
     }
@@ -245,7 +245,7 @@ pub fn sign_in_code(server: &str, totp_session: &str, code: &str, folder: &str) 
 
 /// How many changes of a sync folder are not sent yet.
 pub fn unsent_count(instance: &str) -> u32 {
-    kubuno_sync::unsent_changes(instance).map(|ops| u32::try_from(ops.len()).unwrap_or(u32::MAX)).unwrap_or(0)
+    kubuno_desktop_sync::unsent_changes(instance).map(|ops| u32::try_from(ops.len()).unwrap_or(u32::MAX)).unwrap_or(0)
 }
 
 /// What the user chose when changes were not sent (§10, §18.5).
@@ -297,7 +297,7 @@ pub fn sign_out_instance(instance: &str, choice: SignOutChoice) -> Result<SignOu
     let mut exported = None;
     match choice {
         SignOutChoice::SendFirst => {
-            if let Err(e) = kubuno_sync::sync_once(instance) {
+            if let Err(e) = kubuno_desktop_sync::sync_once(instance) {
                 tracing::warn!("[session] sending before the sign-out failed: {e}");
             }
             let left = unsent_count(instance);
@@ -307,7 +307,7 @@ pub fn sign_out_instance(instance: &str, choice: SignOutChoice) -> Result<SignOu
         }
         SignOutChoice::Export => {
             let dest = export_dir(instance)?;
-            let n = kubuno_sync::export_unsent(instance, &dest).context("export des modifications non envoyées")?;
+            let n = kubuno_desktop_sync::export_unsent(instance, &dest).context("export des modifications non envoyées")?;
             exported = Some((dest, n));
         }
         SignOutChoice::Discard => {}
@@ -316,7 +316,7 @@ pub fn sign_out_instance(instance: &str, choice: SignOutChoice) -> Result<SignOu
         Some(Mode::Owner(o)) => o.account_store().account_of_instance(instance).ok().flatten().map(|a| a.key),
         _ => None,
     };
-    kubuno_sync::remove_instance(instance)?;
+    kubuno_desktop_sync::remove_instance(instance)?;
     if let Some(key) = account {
         sign_out_account_if_unused(&key, instance)?;
     }

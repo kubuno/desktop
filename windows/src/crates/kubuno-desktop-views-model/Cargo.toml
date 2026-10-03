@@ -1,0 +1,13 @@
+[package]
+name        = "kubuno-desktop-views-model"
+description = "The element registry model of Kubuno .kbview views: property/event/level metadata types, the kbview-registry.json schema and its loader, editor kinds and the binding source schema. Platform-neutral (no UI, no Windows API): shared by the desktop runtime, the language server and the web tooling (WASM)."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# Platform-neutral on purpose (`vskubuno/docs/WEB-VIEWS.md` WV-1): it must keep building for
+# `wasm32-unknown-unknown`, Linux and macOS. Never add a UI, Windows or C dependency here.
+[dependencies]
+serde      = { workspace = true }
+serde_json = { workspace = true }

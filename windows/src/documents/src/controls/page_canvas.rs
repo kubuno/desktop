@@ -2,7 +2,7 @@
 //! like the web's page container, and on them the core's layout, the selection and the caret.
 //!
 //! The document, its selection, its history and its layout are the platform-neutral core's
-//! (`kubuno_docs_core::editor::Editor`, a port of the web editor's engine and editing semantics);
+//! (`kubuno_office_docs_core::editor::Editor`, a port of the web editor's engine and editing semantics);
 //! this control is the Windows half: it measures with DirectWrite, paints with Direct2D, and turns
 //! the input into the core's calls —
 //!
@@ -25,19 +25,19 @@
 
 use std::rc::Rc;
 
-use kubuno::prelude::*;
-use kubuno::ui::graphics::{Brush, Color, DashStyle, Font, Pen, PointF, StringFormat};
-use kubuno::ui::range::{ScrollBar, ScrollPart};
-use kubuno::ui::{Canvas, Rect, Size, Widget, WidgetState};
-use kubuno::views::component::{Component, Control, ControlCore, EventCx, Keys, PaintEventCx};
-use kubuno::views::events::Event;
-use kubuno_docs_core::edit::clipboard::{self as clip, Pasted};
-use kubuno_docs_core::edit::commands::{self as cmd, EditState};
-use kubuno_docs_core::edit::history::Selection;
-use kubuno_docs_core::edit::step::EditError;
-use kubuno_docs_core::editor::Motion;
-use kubuno_docs_core::measure::{FixedMeasure, Measure};
-use kubuno_docs_core::model::Node;
+use kubuno_desktop::prelude::*;
+use kubuno_desktop::ui::graphics::{Brush, Color, DashStyle, Font, Pen, PointF, StringFormat};
+use kubuno_desktop::ui::range::{ScrollBar, ScrollPart};
+use kubuno_desktop::ui::{Canvas, Rect, Size, Widget, WidgetState};
+use kubuno_desktop::views::component::{Component, Control, ControlCore, EventCx, Keys, PaintEventCx};
+use kubuno_desktop::views::events::Event;
+use kubuno_office_docs_core::edit::clipboard::{self as clip, Pasted};
+use kubuno_office_docs_core::edit::commands::{self as cmd, EditState};
+use kubuno_office_docs_core::edit::history::Selection;
+use kubuno_office_docs_core::edit::step::EditError;
+use kubuno_office_docs_core::editor::Motion;
+use kubuno_office_docs_core::measure::{FixedMeasure, Measure};
+use kubuno_office_docs_core::model::Node;
 
 use crate::controls::ruler::{format_tab_stops, parse_tab_stops, TabKind, TabStop};
 use crate::doc::fonts::Fonts;
@@ -62,8 +62,8 @@ const BLINK_HALF_MS: u64 = 500;
 
 /// The ground around the sheets and their edge: Word's grey in the light theme, the web's viewer
 /// backdrop and the `Border` token in the dark one. The paper stays white in both, as on the web.
-pub fn page_ground(t: &kubuno::ui::Theme) -> (windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F, windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F) {
-    if t.mode == kubuno::ui::ThemeMode::Dark {
+pub fn page_ground(t: &kubuno_desktop::ui::Theme) -> (windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F, windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F) {
+    if t.mode == kubuno_desktop::ui::ThemeMode::Dark {
         (t.layer_background, t.card_stroke)
     } else {
         (paint::BACKDROP, paint::PAGE_EDGE)
@@ -71,7 +71,7 @@ pub fn page_ground(t: &kubuno::ui::Theme) -> (windows::Win32::Graphics::Direct2D
 }
 
 /// What the rulers and the status bar show of the page (raised as `ViewChanged`).
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct PageViewEventArgs {
     pub zoom: f32,
     /// Where the active page's paper starts, in DIP from the canvas's left edge.
@@ -96,7 +96,7 @@ pub struct PageViewEventArgs {
 
 /// What the ribbon shows of the selection, and the document's edit state (raised as
 /// `EditorStateChanged` when it differs).
-#[derive(kubuno::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
+#[derive(kubuno_desktop::views::events::EventArgs, Debug, Clone, Default, PartialEq)]
 pub struct EditorStateEventArgs {
     pub bold: bool,
     pub italic: bool,
@@ -144,7 +144,7 @@ pub struct DragGuide {
 }
 
 /// The paginated, editable document (see the module doc).
-#[derive(kubuno::views::component::Component)]
+#[derive(kubuno_desktop::views::component::Component)]
 #[kubuno(extends = Control, overrides(Control))]
 #[category("Documents")]
 #[toolbox(icon = "file-text")]
@@ -257,7 +257,7 @@ pub fn hscrollbar(viewport: Rect, state: &App, hot: bool) -> Option<(ScrollBar, 
 }
 
 fn now() -> u64 {
-    kubuno::controls::host::now_ms()
+    kubuno_desktop::controls::host::now_ms()
 }
 
 impl PageCanvas {
@@ -353,7 +353,7 @@ impl PageCanvas {
             Ok(()) => true,
             Err(EditError::NotApplicable) => false,
             Err(e) => {
-                kubuno::tracing::warn!("[documents] edit refused: {e}");
+                kubuno_desktop::tracing::warn!("[documents] edit refused: {e}");
                 false
             }
         };
@@ -387,12 +387,12 @@ impl PageCanvas {
             Ok((private, html, plain)) => match clipboard::write(Self::owner_window(), &private, &html, &plain) {
                 Ok(()) => true,
                 Err(e) => {
-                    kubuno::tracing::warn!("[documents] {e}");
+                    kubuno_desktop::tracing::warn!("[documents] {e}");
                     false
                 }
             },
             Err(e) => {
-                kubuno::tracing::warn!("[documents] {e}");
+                kubuno_desktop::tracing::warn!("[documents] {e}");
                 false
             }
         }
@@ -437,8 +437,8 @@ impl PageCanvas {
                 if b.node_type() == Some("image") {
                     let a = b.attrs();
                     if let Some(src) = a.get("src").and_then(|v| v.as_str()) {
-                        if let Some((_, bytes)) = kubuno_docs_core::base64::data_uri(src) {
-                            if bytes.len() > kubuno_docs_core::layout::images::MAX_ENCODED_BYTES {
+                        if let Some((_, bytes)) = kubuno_office_docs_core::base64::data_uri(src) {
+                            if bytes.len() > kubuno_office_docs_core::layout::images::MAX_ENCODED_BYTES {
                                 if let Ok(p) = crate::platform::images::prepare_insert(&bytes) {
                                     return Node::element("image", Some(serde_json::json!({ "src": p.data_uri, "width": p.width, "height": p.height })), vec![]);
                                 }
@@ -596,7 +596,7 @@ impl PageCanvas {
 
     fn apply_painter(&mut self) {
         let Some(cap) = self.painter.take() else { return };
-        let word = self.state.editor.layout().map(|l| kubuno_docs_core::layout::caret::word_boundaries_at(l, self.state.editor.selection().head));
+        let word = self.state.editor.layout().map(|l| kubuno_office_docs_core::layout::caret::word_boundaries_at(l, self.state.editor.selection().head));
         self.run(move |s| cmd::apply_format(s, &cap, word));
     }
 
@@ -626,7 +626,7 @@ impl PageCanvas {
     /// Finds the next (`backwards`: previous) match from the selection and selects it; returns
     /// its 1-based index and the number of matches.
     pub fn find(&mut self, query: &str, match_case: bool, backwards: bool) -> (usize, usize) {
-        use kubuno_docs_core::edit::find::{find_all, FindOptions};
+        use kubuno_office_docs_core::edit::find::{find_all, FindOptions};
         let all = find_all(self.state.editor.doc(), query, FindOptions { match_case, whole_word: false });
         if all.is_empty() {
             return (0, 0);
@@ -644,7 +644,7 @@ impl PageCanvas {
 
     /// Replaces the selected match (if the selection is one), then finds the next.
     pub fn replace(&mut self, query: &str, with: &str, match_case: bool) -> (usize, usize) {
-        use kubuno_docs_core::edit::find::{find_all, FindOptions};
+        use kubuno_office_docs_core::edit::find::{find_all, FindOptions};
         let sel = self.state.editor.selection();
         let all = find_all(self.state.editor.doc(), query, FindOptions { match_case, whole_word: false });
         if all.iter().any(|m| *m == (sel.from(), sel.to())) {
@@ -658,7 +658,7 @@ impl PageCanvas {
 
     /// Replaces every match; returns how many.
     pub fn replace_all(&mut self, query: &str, with: &str, match_case: bool) -> usize {
-        use kubuno_docs_core::edit::find::FindOptions;
+        use kubuno_office_docs_core::edit::find::FindOptions;
         let mut count = 0;
         let (q, w) = (query.to_string(), with.to_string());
         self.run(|s| {
@@ -695,7 +695,7 @@ impl PageCanvas {
         };
         if let Err(e) = r {
             if e != EditError::NotApplicable {
-                kubuno::tracing::warn!("[documents] indents: {e}");
+                kubuno_desktop::tracing::warn!("[documents] indents: {e}");
             }
         }
         self.edited();
@@ -872,7 +872,7 @@ impl PageCanvas {
         (BLINK_HALF_MS - (t - BLINK_SOLID_MS) % BLINK_HALF_MS) as u32
     }
 
-    fn paint_pages(&mut self, c: &dyn kubuno::controls::ControlCanvas) {
+    fn paint_pages(&mut self, c: &dyn kubuno_desktop::controls::ControlCanvas) {
         let (backdrop, edge) = page_ground(c.theme());
         c.fill_rounded(&self.viewport, 0.0, &backdrop);
         let Some(renderer) = c.renderer() else { return };
@@ -965,7 +965,7 @@ impl PageCanvas {
         self.state.scroll_by(dy, self.viewport_height());
         if self.state.scroll != before {
             self.drag_select(x, y);
-            kubuno::controls::host::request_repaint_after(16);
+            kubuno_desktop::controls::host::request_repaint_after(16);
         }
     }
 
@@ -990,8 +990,8 @@ impl PageCanvas {
     }
 
     /// The keys the canvas handles itself (the ribbon's command shortcuts are taken before).
-    fn key(&mut self, key: u16, mods: kubuno::controls::host::Modifiers) -> bool {
-        use kubuno::controls::host::vk;
+    fn key(&mut self, key: u16, mods: kubuno_desktop::controls::host::Modifiers) -> bool {
+        use kubuno_desktop::controls::host::vk;
         let (ctrl, shift, alt) = (mods.ctrl, mods.shift, mods.alt);
         // AltGr is Ctrl+Alt: never a shortcut, its character arrives through WM_CHAR.
         if ctrl && alt {
@@ -1096,38 +1096,38 @@ impl Control for PageCanvas {
         self.paint_guide(e);
         self.place_system_caret();
         if self.has_focus && self.state.editor.selection().is_empty() {
-            kubuno::controls::host::request_repaint_after(self.next_blink().max(16));
+            kubuno_desktop::controls::host::request_repaint_after(self.next_blink().max(16));
         }
         if !self.design_mode() {
             let args = self.view_args();
             if self.reported.as_ref() != Some(&args) {
                 self.reported = Some(args.clone());
                 self.raise_view_changed(args);
-                kubuno::controls::host::request_repaint_after(0);
+                kubuno_desktop::controls::host::request_repaint_after(0);
             }
             let st = self.editor_args();
             if self.reported_state.as_ref() != Some(&st) {
                 self.reported_state = Some(st.clone());
                 self.raise_editor_state_changed(st);
-                kubuno::controls::host::request_repaint_after(0);
+                kubuno_desktop::controls::host::request_repaint_after(0);
             }
         }
         e.raise(self, "OnPaint");
     }
 
     fn is_input_key(&self, key: Keys) -> bool {
-        use kubuno::controls::host::vk;
+        use kubuno_desktop::controls::host::vk;
         [vk::PAGE_DOWN, vk::PAGE_UP, vk::DOWN, vk::UP, vk::LEFT, vk::RIGHT, vk::HOME, vk::END, vk::TAB, vk::ENTER, vk::BACK, vk::DELETE, vk::SPACE, vk::ESCAPE].contains(&key.key.0)
     }
 
-    fn on_got_focus(&mut self, e: &mut EventCx<'_, kubuno::views::events::EmptyEventArgs>) {
+    fn on_got_focus(&mut self, e: &mut EventCx<'_, kubuno_desktop::views::events::EmptyEventArgs>) {
         self.has_focus = true;
         self.caret_moved_ms = now();
         self.invalidate();
         e.raise(&*self, "OnGotFocus");
     }
 
-    fn on_lost_focus(&mut self, e: &mut EventCx<'_, kubuno::views::events::EmptyEventArgs>) {
+    fn on_lost_focus(&mut self, e: &mut EventCx<'_, kubuno_desktop::views::events::EmptyEventArgs>) {
         self.has_focus = false;
         self.sys_caret.destroy();
         self.invalidate();
@@ -1195,7 +1195,7 @@ impl Control for PageCanvas {
                     self.message.clear();
                 } else if button == MouseButton::Right {
                     // A right click outside the selection moves the caret; inside, it keeps it (web).
-                    let layout_pos = self.state.editor.layout().map(|l| kubuno_docs_core::layout::caret::coords_to_pos(l, cx, cy, &*m));
+                    let layout_pos = self.state.editor.layout().map(|l| kubuno_office_docs_core::layout::caret::coords_to_pos(l, cx, cy, &*m));
                     let sel = self.state.editor.selection();
                     if let Some(pos) = layout_pos {
                         if sel.is_empty() || pos < sel.from() || pos > sel.to() {
@@ -1223,7 +1223,7 @@ impl Control for PageCanvas {
         if self.state.editor.pressing() && e.args().button == MouseButton::Left {
             self.drag_at = Some((x, y));
             self.drag_select(x, y);
-            kubuno::controls::host::request_repaint_after(16);
+            kubuno_desktop::controls::host::request_repaint_after(16);
         }
         let hbar = hscrollbar(self.viewport, &self.state, self.hscroll_hot);
         let hhot = self.hscroll_grab.is_some() || hbar.as_ref().is_some_and(|(_, rail)| rail.inflate(0.0, 4.0).contains(x, y));
@@ -1263,7 +1263,7 @@ impl Control for PageCanvas {
         e.raise(&*self, "OnMouseUp");
     }
 
-    fn on_mouse_leave(&mut self, e: &mut EventCx<'_, kubuno::views::events::EmptyEventArgs>) {
+    fn on_mouse_leave(&mut self, e: &mut EventCx<'_, kubuno_desktop::views::events::EmptyEventArgs>) {
         if self.state.scroll_grab.is_none() && std::mem::take(&mut self.state.scroll_hot) {
             self.invalidate();
         }
@@ -1273,10 +1273,10 @@ impl Control for PageCanvas {
         e.raise(&*self, "OnMouseLeave");
     }
 
-    fn cursor_at(&self, x: f32, y: f32) -> Option<kubuno::controls::host::Cursor> {
+    fn cursor_at(&self, x: f32, y: f32) -> Option<kubuno_desktop::controls::host::Cursor> {
         let (x, y) = (x + self.bounds.left, y + self.bounds.top);
         let over_bar = scrollbar(self.viewport, &self.state).is_some_and(|(_, r)| r.contains(x, y));
-        (self.viewport.contains(x, y) && !over_bar).then_some(kubuno::controls::host::Cursor::IBeam)
+        (self.viewport.contains(x, y) && !over_bar).then_some(kubuno_desktop::controls::host::Cursor::IBeam)
     }
 
     fn on_key_down(&mut self, e: &mut EventCx<'_, KeyEventArgs>) {
@@ -1305,7 +1305,7 @@ mod tests {
 
     fn canvas_with(json: &str) -> PageCanvas {
         let mut c = PageCanvas::default();
-        let editor = kubuno_docs_core::editor::Editor::open(json.as_bytes()).expect("opens");
+        let editor = kubuno_office_docs_core::editor::Editor::open(json.as_bytes()).expect("opens");
         c.open(App::new(editor, "t".into()));
         c.viewport = Rect::new(0.0, 20.0, 1200.0, 900.0);
         c.ensure_layout();
@@ -1319,15 +1319,15 @@ mod tests {
         let mut c = canvas_with(DOC);
         c.state.editor.set_selection(Selection::caret(6));
         c.run(|s| cmd::insert_text(s, ","));
-        let mods = kubuno::controls::host::Modifiers::NONE;
-        assert!(c.key(kubuno::controls::host::vk::ENTER, mods));
-        let text = kubuno_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
+        let mods = kubuno_desktop::controls::host::Modifiers::NONE;
+        assert!(c.key(kubuno_desktop::controls::host::vk::ENTER, mods));
+        let text = kubuno_office_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
         assert_eq!(text, "hello,\n world");
-        assert!(c.key(kubuno::controls::host::vk::BACK, mods));
-        let text = kubuno_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
+        assert!(c.key(kubuno_desktop::controls::host::vk::BACK, mods));
+        let text = kubuno_office_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
         assert_eq!(text, "hello, world");
         c.undo();
-        let text = kubuno_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
+        let text = kubuno_office_docs_core::edit::clipboard::plain_text(c.state.editor.doc(), 0, 100);
         assert_eq!(text, "hello world");
     }
 

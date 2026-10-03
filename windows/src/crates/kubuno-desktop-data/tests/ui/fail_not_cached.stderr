@@ -1,0 +1,7 @@
+error: `fail_not_cached.kbdata`: Customer::fetch_all, Customer::insert: `SQLX_OFFLINE=true` but there is no cached data for this query, run `cargo sqlx prepare` to update the query cache or unset `SQLX_OFFLINE` — not in the offline query cache (.sqlx): the .kbdata (or the schema) changed since the cache was prepared, or it never was. Regenerate the cache against a database that has the schema: set DATABASE_URL, SQLX_OFFLINE=false and SQLX_OFFLINE_DIR=<the crate's absolute path>/.sqlx (an existing folder), then `cargo check` (Visual Studio: Update the SQLx cache)
+ --> tests/ui/fail_not_cached.rs:3:1
+  |
+3 | kubuno_desktop_data::data_source!("fail_not_cached.kbdata");
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `$crate::__data_source_impl` which comes from the expansion of the macro `kubuno_desktop_data::data_source` (in Nightly builds, run with -Z macro-backtrace for more info)

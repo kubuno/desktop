@@ -1,8 +1,8 @@
-//! The shell's preferences moved onto `kubuno::storage` (vskubuno docs/STORAGE-COMPONENTS.md, lot ST-2): the older
+//! The shell's preferences moved onto `kubuno_desktop::storage` (vskubuno docs/STORAGE-COMPONENTS.md, lot ST-2): the older
 //! `kubuno-desktop\shell.json` is imported once, in a sandboxed profile (its own binary: the variable is
 //! process-wide). Nothing here reaches the user's profile or the `Run` key.
 
-use kubuno_shell::services::settings::{self, ThemeSetting};
+use kubuno_desktop_shell::services::settings::{self, ThemeSetting};
 
 #[test]
 fn the_older_shell_json_is_imported_once() {
