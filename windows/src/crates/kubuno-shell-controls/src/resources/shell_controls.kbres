@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Version="1">
+  <String Name="launcher_apps" Comment="The launcher's list of apps, as a screen reader names it">Kubuno apps</String>
+  <String Name="launcher_title" Comment="The app launcher's favourites card">Your favourites</String>
+  <String Name="launcher_edit_tip" Comment="The pencil of the favourites card">Edit favourites</String>
+  <String Name="launcher_cancel" Comment="Abandons the edited favourites">Cancel</String>
+  <String Name="launcher_ok" Comment="Saves the edited favourites">OK</String>
+  <String Name="launcher_drag_help" Comment="Under the edit buttons">Drag and drop apps</String>
+  <String Name="launcher_drop_here" Comment="The empty favourites card while editing">Drag your apps here</String>
+  <String Name="launcher_all_favorites" Comment="Editing, when every app is a favourite">All apps are in your favourites</String>
+  <String Name="account_tip" Comment="The header's avatar: opens the account panel">Account</String>
+  <String Name="account_close_tip" Comment="The account panel's close button">Close</String>
+  <String Name="account_greeting" Comment="The account panel's greeting; {0} is the first name">Hello, {0}!</String>
+  <String Name="account_manage" Comment="The account panel's pill under the greeting">Manage your account</String>
+  <String Name="account_others" Comment="The other accounts' list, as a screen reader names it">Accounts</String>
+  <String Name="account_actions" Comment="The account panel's list of actions, as a screen reader names it">Account actions</String>
+  <String Name="account_add" Comment="The account panel: adds an account">Add an account</String>
+  <String Name="account_labels" Comment="The account panel: the labels page">Labels</String>
+  <String Name="account_admin" Comment="The account panel: the administration console">Administration</String>
+  <String Name="account_logout" Comment="The account panel: signs out">Sign out</String>
+  <String Name="header_notifications_tip" Comment="The header's bell">Notifications</String>
+  <String Name="header_settings_tip" Comment="The header's settings button">Settings</String>
+  <String Name="header_help_tip" Comment="The header's help button">Help</String>
+  <String Name="account_change_photo" Comment="The camera button on the avatar">Change photo</String>
+  <String Name="account_show_more" Comment="The other accounts card, folded">Show more accounts</String>
+  <String Name="account_hide_more" Comment="The other accounts card, unfolded">Hide more accounts</String>
+  <String Name="account_open" Comment="Opens an account of another instance">Open</String>
+  <String Name="account_remove" Comment="Removes an account from the list">Remove</String>
+  <String Name="account_reconnect" Comment="Signs a dead session in again">Sign in</String>
+  <String Name="account_disconnected" Comment="A dead session's badge">Signed out</String>
+</Resources>

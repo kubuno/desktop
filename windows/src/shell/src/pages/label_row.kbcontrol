@@ -1,0 +1,25 @@
+<!--
+  One label of the labels page (the item template of its Repeater): its colour, its name, how many items
+  carry it, and — when it is someone else's — who shared it. A label the user may manage has a delete
+  button, and its palette before the count while the row is selected (the current colour ringed). The
+  swatches and the button raise ColourRequested / DeleteRequested, which the page handles with the item.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="LabelRow" DesignWidth="904" DesignHeight="44" OnLoad="label_row_load">
+  <StatusDot x:Name="colour" Color="{Binding Colour}" d:Color="#1a73e8" Diameter="13" X="12" Y="15" Width="13" Height="13"/>
+  <Label x:Name="name" Text="{Binding LabelName}" d:Text="Projet Atlas" TextAlign="MiddleLeft" X="37" Y="0" Width="599" Height="44" Anchor="Top, Left, Right"/>
+  <Label x:Name="count" Text="{Binding Count}" d:Text="24" Role="Meta" ForeColor="TextTertiary" TextAlign="MiddleCenter" Visible="{Binding CanManage}" X="812" Y="0" Width="48" Height="44" Anchor="Top, Right"/>
+  <!-- Without the delete button, the count takes its place at the end of the row. -->
+  <Label x:Name="count_end" Text="{Binding Count}" Role="Meta" ForeColor="TextTertiary" TextAlign="MiddleCenter" Visible="{Binding IsReadOnly}" d:Visible="false" X="848" Y="0" Width="48" Height="44" Anchor="Top, Right"/>
+  <IconButton x:Name="delete" Icon="Trash2" Diameter="28" Glyph="14" ToolTip="{Res delete_label_tip}" Visible="{Binding CanManage}" X="868" Y="8" Width="28" Height="28" Anchor="Top, Right" OnClick="delete_click"/>
+  <Label x:Name="shared" Text="{Binding Shared}" Role="Meta" ForeColor="TextTertiary" TextAlign="MiddleLeft" Visible="{Binding IsShared}" d:Visible="false" X="37" Y="28" Width="859" Height="16" Anchor="Top, Left, Right"/>
+  <Panel x:Name="palette" Visible="{Binding Expanded}" X="636" Y="9" Width="176" Height="26" Anchor="Top, Right">
+    <StatusDot x:Name="swatch0" Color="#1e8e3e" Ring="{Binding Ring0}" Diameter="14" ToolTip="{Res colour_green}" X="0" Y="4" Width="18" Height="18" OnClick="swatch0_click"/>
+    <StatusDot x:Name="swatch1" Color="#1a73e8" Ring="{Binding Ring1}" d:Ring="true" Diameter="14" ToolTip="{Res colour_blue}" X="20" Y="4" Width="18" Height="18" OnClick="swatch1_click"/>
+    <StatusDot x:Name="swatch2" Color="#9334e6" Ring="{Binding Ring2}" Diameter="14" ToolTip="{Res colour_purple}" X="40" Y="4" Width="18" Height="18" OnClick="swatch2_click"/>
+    <StatusDot x:Name="swatch3" Color="#ec4899" Ring="{Binding Ring3}" Diameter="14" ToolTip="{Res colour_pink}" X="60" Y="4" Width="18" Height="18" OnClick="swatch3_click"/>
+    <StatusDot x:Name="swatch4" Color="#d93025" Ring="{Binding Ring4}" Diameter="14" ToolTip="{Res colour_red}" X="80" Y="4" Width="18" Height="18" OnClick="swatch4_click"/>
+    <StatusDot x:Name="swatch5" Color="#f59e0b" Ring="{Binding Ring5}" Diameter="14" ToolTip="{Res colour_orange}" X="100" Y="4" Width="18" Height="18" OnClick="swatch5_click"/>
+    <StatusDot x:Name="swatch6" Color="#14b8a6" Ring="{Binding Ring6}" Diameter="14" ToolTip="{Res colour_teal}" X="120" Y="4" Width="18" Height="18" OnClick="swatch6_click"/>
+    <StatusDot x:Name="swatch7" Color="#5f6368" Ring="{Binding Ring7}" Diameter="14" ToolTip="{Res colour_grey}" X="140" Y="4" Width="18" Height="18" OnClick="swatch7_click"/>
+  </Panel>
+</UserControl>

@@ -1,0 +1,32 @@
+<!--
+  The settings page: one card of six rows — the theme, the sync interval, the notifications, the
+  start with Windows, the forced offline mode and the outgoing proxy. Each change is raised as
+  SettingChanged (name, value) and persisted at once by the window: there is no « Save » button, so a
+  setting that did not stick would be silent data loss. The proxy is saved when its field loses the
+  focus or on Enter.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="SettingsPage" DesignWidth="984" DesignHeight="736" BackColor="Background">
+  <Label x:Name="title" Text="{Res settings_title}" Role="Page" TextAlign="MiddleLeft" X="24" Y="0" Width="936" Height="64" Anchor="Top, Left, Right"/>
+  <Card x:Name="card" X="24" Y="64" Width="936" Height="648" Anchor="Top, Bottom, Left, Right">
+    <Panel x:Name="rows" Width="902" Height="614">
+      <Panel x:Name="theme_row" X="7" Y="7" Width="888" Height="56" Anchor="Top, Left, Right">
+        <Label x:Name="theme_label" Text="{Res setting_theme}" TextAlign="MiddleLeft" X="12" Y="0" Width="500" Height="56" Anchor="Top, Left, Right"/>
+        <RadioButton x:Name="theme_system" Text="{Res theme_system}" Value="System" Group="theme" SelectedValue="{Binding Theme, Mode=TwoWay}" X="572" Y="10" Width="96" Height="36" Anchor="Top, Right" OnCheckedChanged="theme_checked_changed"/>
+        <RadioButton x:Name="theme_light" Text="{Res theme_light}" Value="Light" Group="theme" SelectedValue="{Binding Theme, Mode=TwoWay}" X="676" Y="10" Width="96" Height="36" Anchor="Top, Right" OnCheckedChanged="theme_checked_changed"/>
+        <RadioButton x:Name="theme_dark" Text="{Res theme_dark}" Value="Dark" Group="theme" SelectedValue="{Binding Theme, Mode=TwoWay}" X="780" Y="10" Width="96" Height="36" Anchor="Top, Right" OnCheckedChanged="theme_checked_changed"/>
+      </Panel>
+      <Panel x:Name="interval_row" X="7" Y="63" Width="888" Height="56" Anchor="Top, Left, Right">
+        <Label x:Name="interval_label" Text="{Res setting_interval}" TextAlign="MiddleLeft" X="12" Y="0" Width="700" Height="56" Anchor="Top, Left, Right"/>
+        <NumericField x:Name="interval" Minimum="1" Maximum="120" Value="{Binding Interval, Mode=TwoWay}" ToolTip="{Res setting_interval}" X="748" Y="10" Width="96" Height="36" Anchor="Top, Right" OnValueChanged="interval_value_changed"/>
+        <Label x:Name="interval_unit" Text="{Res minutes_unit}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="852" Y="0" Width="24" Height="56" Anchor="Top, Right"/>
+      </Panel>
+      <Switch x:Name="notifications" Label="{Res setting_notifications}" On="{Binding Notifications, Mode=TwoWay}" CheckAlign="MiddleRight" X="19" Y="119" Width="864" Height="56" Anchor="Top, Left, Right" OnCheckedChanged="notifications_checked_changed"/>
+      <Switch x:Name="autostart" Label="{Res setting_autostart}" On="{Binding Autostart, Mode=TwoWay}" CheckAlign="MiddleRight" X="19" Y="175" Width="864" Height="56" Anchor="Top, Left, Right" OnCheckedChanged="autostart_checked_changed"/>
+      <Switch x:Name="offline" Label="{Res setting_offline}" On="{Binding Offline, Mode=TwoWay}" CheckAlign="MiddleRight" X="19" Y="231" Width="864" Height="56" Anchor="Top, Left, Right" OnCheckedChanged="offline_checked_changed"/>
+      <Panel x:Name="proxy_row" X="7" Y="287" Width="888" Height="56" Anchor="Top, Left, Right">
+        <Label x:Name="proxy_label" Text="{Res setting_proxy}" TextAlign="MiddleLeft" X="12" Y="0" Width="200" Height="56"/>
+        <TextField x:Name="proxy" Text="{Binding Proxy, Mode=TwoWay}" Placeholder="{Res proxy_placeholder}" AccessibleName="{Res setting_proxy}" X="220" Y="10" Width="320" Height="36" OnLostFocus="proxy_lost_focus" OnKeyDown="proxy_key_down"/>
+      </Panel>
+    </Panel>
+  </Card>
+</UserControl>

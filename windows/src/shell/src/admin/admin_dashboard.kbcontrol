@@ -1,0 +1,25 @@
+<!--
+  The console's « Tableau de bord » (the web's dashboard): four figures in a row (StatCard) — the accounts,
+  the active ones (a bar of their share), who is connected, the modules — a line that says where the figures
+  come from, then two daily series as bar charts. Nothing is estimated: every figure is read from the
+  server's statistics. While they load, or when they fail, the StatusPresenter says so.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="DashboardSection" DesignWidth="936" DesignHeight="700" OnLoad="dashboard_section_load">
+  <AdminSectionHeader x:Name="header" Parent="{Res adm_console}" Title="{Res adm_dashboard}" X="0" Y="0" Width="936" Height="60" Anchor="Top, Left, Right"/>
+  <StatusPresenter x:Name="status" Mode="{Binding StatusMode}" d:Visible="false" EmptyIcon="ChartColumn" EmptyTitle="{Res dash_empty_title}" EmptyText="{Res dash_empty_text}" ErrorText="{Binding ErrorText}" X="0" Y="60" Width="936" Height="600" Anchor="Top, Bottom, Left, Right"/>
+  <TableLayoutPanel x:Name="cards" ColumnCount="4" RowCount="1" ColumnStyles="Percent 25;Percent 25;Percent 25;Percent 25" RowStyles="Percent 100" CellSpacing="16" Visible="{Binding HasStats}" X="0" Y="60" Width="936" Height="117" Anchor="Top, Left, Right">
+    <StatCard x:Name="total_card" Label="{Res dash_users_total}" Glyph="Users" Value="{Binding Total}" d:Value="248" Sub="{Binding TotalSub}" d:Sub="+6 cette semaine" Share="-1" Dock="Fill"/>
+    <StatCard x:Name="active_card" Label="{Res dash_users_active}" Glyph="UserRound" Value="{Binding Active}" d:Value="231" Share="{Binding ActiveShare}" d:Share="9315" Dock="Fill"/>
+    <StatCard x:Name="online_card" Label="{Res dash_users_online}" Glyph="Activity" Value="{Binding Online}" d:Value="37" Sub="{Binding OnlineSub}" d:Sub="52 sessions" Share="-1" Dock="Fill"/>
+    <StatCard x:Name="modules_card" Label="{Res dash_modules_active}" Glyph="LayoutGrid" Value="{Binding Modules}" d:Value="14" Sub="{Binding ModulesSub}" d:Sub="13/14 sains" Share="-1" Dock="Fill"/>
+  </TableLayoutPanel>
+  <Label x:Name="intro" Text="{Res dash_intro}" Role="Meta" ForeColor="TextSecondary" TextAlign="MiddleLeft" Visible="{Binding HasStats}" X="0" Y="189" Width="936" Height="24" Anchor="Top, Left, Right"/>
+  <TableLayoutPanel x:Name="charts" ColumnCount="2" RowCount="1" ColumnStyles="Percent 50;Percent 50" RowStyles="Percent 100" CellSpacing="16" Visible="{Binding HasStats}" X="0" Y="225" Width="936" Height="159" Anchor="Top, Left, Right">
+    <Card x:Name="logins_card" Title="{Res dash_logins}" Dense="true" Surface="Layer" Dock="Fill">
+      <BarChart x:Name="logins" Series="{Binding Logins}" Width="434" Height="96"/>
+    </Card>
+    <Card x:Name="signups_card" Title="{Res dash_signups}" Dense="true" Surface="Layer" Dock="Fill">
+      <BarChart x:Name="signups" Series="{Binding Signups}" Width="434" Height="96"/>
+    </Card>
+  </TableLayoutPanel>
+</UserControl>

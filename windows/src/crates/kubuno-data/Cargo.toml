@@ -1,0 +1,74 @@
+[package]
+name        = "kubuno-data"
+description = "Data access components for Kubuno desktop applications (vskubuno docs/DATA.md): connections with secret resolution and pooling, parameterized commands, table adapters with change tracking, BindingSource and ErrorProvider for kubuno-views bindings, all asynchronous off the UI thread."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[features]
+default = ["sqlite", "postgres", "credential-manager", "macros"]
+sqlite = ["sqlx/sqlite", "kubuno-data-macros?/sqlite"]
+postgres = ["sqlx/postgres", "sqlx/tls-native-tls", "sqlx/uuid", "sqlx/chrono", "sqlx/json", "kubuno-data-macros?/postgres"]
+# Typed data sources (DATA-4): `data_source!("shop.kbdata")` → typed row structs and functions
+# checked at compile time against the offline `.sqlx` cache. `sqlx/macros` provides the hidden
+# helpers the expanded queries use (`sqlx::ty_match`); the application needs no `sqlx` dependency of
+# its own (the expansion goes through `kubuno_data::sqlx`).
+macros = ["dep:kubuno-data-macros", "sqlx/macros", "sqlx/chrono", "sqlx/uuid", "sqlx/json"]
+# MySQL / MariaDB (DATA-3), through sqlx. Not in the defaults: sqlx's MySQL driver brings the `rsa`
+# crate (RUSTSEC-2023-0071, a timing side channel in RSA decryption used by the
+# `caching_sha2_password` exchange over non-TLS connections) — TLS is required for remote servers.
+mysql = ["sqlx/mysql", "sqlx/tls-native-tls", "sqlx/chrono", "sqlx/json", "kubuno-data-macros?/mysql"]
+# SQL Server (DATA-3), through `tiberius` (pure Rust TDS, TLS through SChannel, Windows integrated
+# authentication) with a small pool of its own on the data runtime.
+mssql = ["dep:tiberius", "dep:tokio-util", "tokio/net", "kubuno-data-macros?/mssql"]
+# The Windows Credential Manager as a secret source (generic credentials).
+credential-manager = ["dep:windows-sys"]
+
+[dependencies]
+# The view layer: `Value`/`Row` (bindings), `Event<A>` and the args derive, the `Component` hierarchy
+# and its registry (the component tray), `UiHandle` (the EVT-6 executor) and the `.kbview` syntax tree.
+kubuno-views = { workspace = true }
+# The app's storage (vskubuno docs/STORAGE-COMPONENTS.md): local database files (`Data Source=app:<name>`,
+# `LocalDatabase`) and the unified secret naming scheme (`AppSecretsSource`).
+kubuno-app-storage = { path = "../../../../common/kubuno-app-storage" }
+
+# The drivers and pools. Kubuno's server stack uses SQLx 0.8 too. Its `macros` feature comes with the
+# `macros` feature of this crate (typed data sources, DATA-4).
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio"] }
+# The `.kbdata` format and the `@name` lexer shared with the `data_source!` macro and the tools.
+kubuno-data-model = { workspace = true }
+# `data_source!` (feature `macros`).
+kubuno-data-macros = { workspace = true, optional = true }
+# SQLx needs a Tokio reactor: the crate owns a small private runtime (`rt.rs`), never the UI thread.
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = "1"
+serde_json = { workspace = true }
+# Streaming reads (rows counted as they arrive, DATA-3).
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# SQL Server (feature `mssql`).
+tiberius   = { version = "0.12", optional = true, default-features = false, features = ["tds73", "native-tls", "winauth", "chrono"] }
+tokio-util = { version = "0.7", optional = true, features = ["compat"] }
+
+# `windows-sys` rather than the workspace's `windows`: a new feature on `windows` would change its
+# metadata for every crate of the workspace, `kubuno_ui.dll` included.
+windows-sys = { version = "0.61", optional = true, features = ["Win32_Foundation", "Win32_Security_Credentials"] }
+
+[dev-dependencies]
+# `tests/sqlite.rs` drives a real view (a DataTable edited in place) on a recording canvas with
+# the host's frame input.
+kubuno-ui       = { workspace = true }
+kubuno-controls = { workspace = true }
+# Compile-pass / compile-fail tests of `data_source!` (DATA-4).
+trybuild = "1"
+# `LIBRARY_ELEMENTS`, the names `#[kubuno::view]` accepts for this crate's components (kept in sync by a test).
+kubuno-views-meta = { workspace = true }
+
+# `examples/view_embed.rs` compiles kubuno-views' designer surface, whose `#[cfg(kubuno_design_project)]` is set by
+# the Visual Studio design build only.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kubuno_design_project)"] }

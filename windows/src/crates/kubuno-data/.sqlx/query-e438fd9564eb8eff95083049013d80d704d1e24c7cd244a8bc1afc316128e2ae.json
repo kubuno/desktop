@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT \"id\" AS \"id!: i64\", \"customer_id\" AS \"customer_id!: i64\", \"label\" AS \"label!: String\", \"amount\" AS \"amount!: f64\" FROM \"orders\" ORDER BY \"id\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "customer_id!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "label!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount!: f64",
+        "ordinal": 3,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e438fd9564eb8eff95083049013d80d704d1e24c7cd244a8bc1afc316128e2ae"
+}

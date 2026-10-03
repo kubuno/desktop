@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Version="1">
+  <String Name="app_title" Comment="The window title (task bar, Alt+Tab)">Kubuno</String>
+  <Icon Name="app_icon" File="../../assets/kubuno.ico" Comment="The application icon"/>
+  <String Name="brand_name" Comment="The wordmark of the header">Kubuno</String>
+  <String Name="menu_tip">Main menu</String>
+  <String Name="search_tip">Search</String>
+  <String Name="storage_tip" Comment="The header's storage gauge (opens the storage page on the web)">Storage</String>
+  <String Name="notifications_tip" Comment="The header's bell (opens the activity page)">Activity</String>
+  <String Name="settings_tip">Settings</String>
+  <String Name="help_tip">Help</String>
+  <String Name="nav_name" Comment="The rail, as a screen reader names it">Navigation</String>
+  <String Name="nav_home" Comment="Rail: the home page">Home</String>
+  <String Name="nav_activity" Comment="Rail: the activity page">Activity</String>
+  <String Name="nav_accounts" Comment="Rail: the accounts page">Accounts</String>
+  <String Name="nav_settings" Comment="Rail: the settings page">Settings</String>
+  <String Name="nav_admin" Comment="Rail: the administration console's section">Administration</String>
+  <String Name="conn_online" Comment="The connection state at the foot of the rail">Connected</String>
+  <String Name="conn_offline">Offline</String>
+  <String Name="conn_expired">Session expired</String>
+  <String Name="launcher_title">Home</String>
+  <String Name="card_sync">Sync status</String>
+  <String Name="card_connection">Connection</String>
+  <String Name="card_links">Quick links</String>
+  <String Name="sync_busy">Synchronising…</String>
+  <String Name="sync_up_to_date">Your files are up to date</String>
+  <String Name="session_expired">Session expired</String>
+  <String Name="offline">Offline</String>
+  <String Name="activity_placeholder">Activities will show here</String>
+  <String Name="sync_now_button">Sync now</String>
+  <String Name="sync_running_button">Synchronising…</String>
+  <String Name="server_unreachable">Server unreachable</String>
+  <String Name="session_expired_reconnect">Session expired — sign in again</String>
+  <String Name="online_label">Online</String>
+  <String Name="online_description">Communication with the server enabled.</String>
+  <String Name="offline_label">Offline</String>
+  <String Name="offline_description">No communication with the server.</String>
+  <String Name="link_sync">Sync</String>
+  <String Name="link_folder">Open the folder</String>
+  <String Name="link_web">Open the website</String>
+  <String Name="no_account">No account connected.</String>
+  <String Name="sync_summary" Comment="{0} sent, {1} modified, {2} received, {3} deleted">↑ {0} sent, {1} modified — ↓ {2} received, {3} deleted</String>
+  <String Name="sync_failed" Comment="{0}: the error">Synchronisation failed: {0}</String>
+  <String Name="sync_failed_title">Synchronisation failed</String>
+  <String Name="manual_sync_title">Manual synchronisation</String>
+  <String Name="settings_title">Settings</String>
+  <String Name="setting_theme">Theme</String>
+  <String Name="theme_system">System</String>
+  <String Name="theme_light">Light</String>
+  <String Name="theme_dark">Dark</String>
+  <String Name="setting_interval">Sync interval</String>
+  <String Name="minutes_unit" Comment="Minutes, after the sync interval">min</String>
+  <String Name="setting_notifications">Notifications</String>
+  <String Name="setting_autostart">Start with Windows</String>
+  <String Name="setting_offline">Work offline</String>
+  <String Name="setting_proxy">Outgoing proxy</String>
+  <String Name="proxy_placeholder">http://host:port (none)</String>
+  <String Name="accounts_title">Accounts</String>
+  <String Name="move_folder" Comment="Moves an account's sync folder">Move…</String>
+  <String Name="disconnect">Disconnect</String>
+  <String Name="add_account">Add an account</String>
+  <String Name="move_folder_picker_title">New location of the sync folder</String>
+  <String Name="folder_moved">Folder moved</String>
+  <String Name="move_failed">Could not move the folder</String>
+  <String Name="activity_title">Activity</String>
+  <String Name="activity_empty_title">No activity</String>
+  <String Name="activity_empty_text">Syncs, conflicts and errors will appear here throughout the day.</String>
+  <String Name="age_now">just now</String>
+  <String Name="age_minutes" Comment="{0}: minutes">{0} min ago</String>
+  <String Name="age_hours" Comment="{0}: hours">{0} h ago</String>
+  <String Name="age_days" Comment="{0}: days">{0} d ago</String>
+  <String Name="login_title">Sign in to Kubuno</String>
+  <String Name="field_server">Server</String>
+  <String Name="field_login">Username</String>
+  <String Name="field_password">Password</String>
+  <String Name="field_folder">Local folder</String>
+  <String Name="browse">Browse…</String>
+  <String Name="sign_in">Sign in</String>
+  <String Name="signing_in">Signing in…</String>
+  <String Name="cancel">Cancel</String>
+  <String Name="login_folder_picker_title">Kubuno sync folder</String>
+  <String Name="labels_title">Labels</String>
+  <String Name="labels_intro">Link items of every module, then find them here.</String>
+  <String Name="new_label_placeholder">New label…</String>
+  <String Name="create">Create</String>
+  <String Name="labels_empty_title">No labels yet</String>
+  <String Name="labels_empty_text">Create one above, then put it on items of every module.</String>
+  <String Name="labels_unavailable" Comment="{0}: the error">Labels unavailable: {0}</String>
+  <String Name="shared_by" Comment="{0}: who shared the label">Shared by {0}</String>
+  <String Name="delete_label_tip">Delete the label</String>
+  <String Name="colour_green">Green</String>
+  <String Name="colour_blue">Blue</String>
+  <String Name="colour_purple">Purple</String>
+  <String Name="colour_pink">Pink</String>
+  <String Name="colour_red">Red</String>
+  <String Name="colour_orange">Orange</String>
+  <String Name="colour_teal">Teal</String>
+  <String Name="colour_grey">Grey</String>
+  <String Name="delete_label_title">Delete the label</String>
+  <String Name="delete_label_text" Comment="{0}: the label's name">« {0} » will be removed from every item that carries it.</String>
+  <String Name="delete">Delete</String>
+  <String Name="disconnect_title">Disconnect the account</String>
+  <String Name="disconnect_text" Comment="{0}: the account">« {0} » will no longer be synchronised. The files already downloaded stay on this computer.</String>
+  <String Name="loading">Loading…</String>
+  <String Name="unit_bytes" Comment="Bytes, after a size">B</String>
+  <String Name="unit_kb">KB</String>
+  <String Name="unit_mb">MB</String>
+  <String Name="unit_gb">GB</String>
+  <String Name="tray_tip">Kubuno Desktop</String>
+  <String Name="tray_sync_now">Sync now</String>
+  <String Name="tray_open_folder">Open the folder</String>
+  <String Name="tray_show">Show the window</String>
+  <String Name="tray_quit">Quit</String>
+  <String Name="splash_accounts">Preparing the accounts…</String>
+  <String Name="splash_window">Loading the launcher and the settings…</String>
+  <String Name="splash_open">Opening the window…</String>
+  <String Name="splash_explorer">Explorer integration and synchronisation…</String>
+  <String Name="adm_console" Comment="The breadcrumb root of a top-level console section">Administration</String>
+  <String Name="adm_section_header" Comment="The rail's header over the console's tree">Administration</String>
+  <String Name="adm_home">Home</String>
+  <String Name="adm_dashboard">Dashboard</String>
+  <String Name="adm_directory">Directory</String>
+  <String Name="adm_users">Users</String>
+  <String Name="adm_groups">Groups</String>
+  <String Name="adm_audiences">Target audiences</String>
+  <String Name="adm_org_units">Organisational units</String>
+  <String Name="adm_resources">Buildings and resources</String>
+  <String Name="adm_directory_settings">Directory settings</String>
+  <String Name="adm_devices">Devices</String>
+  <String Name="adm_device_sessions">Active sessions</String>
+  <String Name="adm_networks">Networks</String>
+  <String Name="adm_apps">Applications</String>
+  <String Name="adm_modules">Installed modules</String>
+  <String Name="adm_marketplace">Marketplace</String>
+  <String Name="adm_core_features">Core features</String>
+  <String Name="adm_voice_search">Voice search</String>
+  <String Name="adm_security">Security</String>
+  <String Name="adm_security_health">Instance health</String>
+  <String Name="adm_alerts">Alert centre</String>
+  <String Name="adm_sso">Authentication and SSO</String>
+  <String Name="adm_ldap">Directory (LDAP / AD)</String>
+  <String Name="adm_session_policy">Session policy</String>
+  <String Name="adm_access_data">Access and data</String>
+  <String Name="adm_service_protection">Service protection</String>
+  <String Name="adm_security_center">Security centre</String>
+  <String Name="adm_security_dashboard">Security dashboard</String>
+  <String Name="adm_reporting">Reports</String>
+  <String Name="adm_reports">Printable reports</String>
+  <String Name="adm_event_log">Event log</String>
+  <String Name="adm_audit">Audit</String>
+  <String Name="adm_account">Instance</String>
+  <String Name="adm_settings">Identity</String>
+  <String Name="adm_holidays">Public holidays</String>
+  <String Name="adm_apparence">Customisation</String>
+  <String Name="adm_domains">Domains</String>
+  <String Name="adm_admin_roles">Administration roles</String>
+  <String Name="adm_data_migration">Data migration</String>
+  <String Name="adm_data_export">Data export</String>
+  <String Name="adm_automation">Automation</String>
+  <String Name="adm_rules">Administration rules</String>
+  <String Name="adm_rules_log">Execution log</String>
+  <String Name="adm_detectors">Content detectors</String>
+  <String Name="adm_billing">Billing</String>
+  <String Name="adm_subscription">Subscription and licence</String>
+  <String Name="adm_storage">Storage</String>
+  <String Name="adm_system">System</String>
+  <String Name="adm_background_jobs">Background jobs</String>
+  <String Name="adm_email">Email</String>
+  <String Name="adm_not_ported" Comment="The console's fallback for a section shown only on the web">This section is not on the desktop yet.</String>
+  <String Name="adm_open_web">Open in the browser</String>
+  <String Name="dash_users_total">Total users</String>
+  <String Name="dash_users_active">Active users</String>
+  <String Name="dash_users_online">Connected users</String>
+  <String Name="dash_modules_active">Active modules</String>
+  <String Name="dash_new_this_week" Comment="{0} is the number of accounts created in the last 7 days">+{0} this week</String>
+  <String Name="dash_sessions">{0} sessions</String>
+  <String Name="dash_healthy" Comment="{0} healthy modules out of {1}">{0}/{1} healthy</String>
+  <String Name="dash_intro">What this instance recorded. Every figure is read from a table the core writes — nothing is estimated.</String>
+  <String Name="dash_logins">Logins per day</String>
+  <String Name="dash_signups">New accounts per day</String>
+  <String Name="dash_empty_title">No data</String>
+  <String Name="dash_empty_text">The server returned no statistics for this instance.</String>
+  <String Name="users_search">Search for a user…</String>
+  <String Name="users_count">{0} users</String>
+  <String Name="users_new">New user</String>
+  <String Name="users_col_user">User</String>
+  <String Name="users_col_unit">Organisational unit</String>
+  <String Name="users_col_role">Role</String>
+  <String Name="users_col_quota">Quota</String>
+  <String Name="users_col_login">Last login</String>
+  <String Name="users_col_status">Status</String>
+  <String Name="users_role_admin">Admin</String>
+  <String Name="users_role_user">User</String>
+  <String Name="users_role_guest">Guest</String>
+  <String Name="users_active">Active</String>
+  <String Name="users_inactive">Inactive</String>
+  <String Name="users_never">Never</String>
+  <String Name="users_today">Today</String>
+  <String Name="users_one_day">1 day ago</String>
+  <String Name="users_days">{0} days ago</String>
+  <String Name="users_empty_title">No user</String>
+  <String Name="users_empty_text">No account matches this search.</String>
+  <String Name="groups_new">New group</String>
+  <String Name="groups_count">{0} groups</String>
+  <String Name="groups_count_one">{0} group</String>
+  <String Name="groups_member">{0} member</String>
+  <String Name="groups_members">{0} members</String>
+  <String Name="groups_default">Default</String>
+  <String Name="groups_system">System</String>
+  <String Name="groups_permissions">Permissions</String>
+  <String Name="groups_no_permission">No permission.</String>
+  <String Name="groups_created">Created on {0}</String>
+  <String Name="groups_perm_api_tokens">API tokens</String>
+  <String Name="groups_edit_tip">Edit the group</String>
+  <String Name="groups_empty_title">No group</String>
+  <String Name="groups_empty_text">Groups gather accounts to give them access in one go.</String>
+  <String Name="audiences_search">Search for an audience</String>
+  <String Name="audiences_new">New audience</String>
+  <String Name="audiences_count">{0} audiences</String>
+  <String Name="audiences_count_one">{0} audience</String>
+  <String Name="audiences_col_name">Name</String>
+  <String Name="audiences_col_description">Description</String>
+  <String Name="audiences_col_members">Members</String>
+  <String Name="audiences_col_reach">Accounts reached</String>
+  <String Name="audiences_col_applied">Offered</String>
+  <String Name="audiences_nowhere">nowhere</String>
+  <String Name="audiences_place">{0} place</String>
+  <String Name="audiences_places">{0} places</String>
+  <String Name="audiences_empty_title">No audience</String>
+  <String Name="audiences_empty_text">An audience names the accounts a module or a setting is offered to.</String>
+  <String Name="units_new">New unit</String>
+  <String Name="units_count">{0} units</String>
+  <String Name="units_count_one">{0} unit</String>
+  <String Name="units_account">{0} account</String>
+  <String Name="units_accounts">{0} accounts</String>
+  <String Name="units_empty_title">No organisational unit</String>
+  <String Name="units_empty_text">Units gather accounts to apply rules by department or by site.</String>
+  <String Name="modules_marketplace">Marketplace</String>
+  <String Name="modules_filter">Filter the applications</String>
+  <String Name="modules_count">{0} installed modules</String>
+  <String Name="modules_count_one">{0} installed module</String>
+  <String Name="modules_col_app">Application</String>
+  <String Name="modules_col_status">Service status</String>
+  <String Name="modules_on">On for everyone</String>
+  <String Name="modules_off">Off for everyone</String>
+  <String Name="modules_default">Default</String>
+  <String Name="modules_empty_title">No module</String>
+  <String Name="modules_empty_text">The modules installed on this instance are listed here — the Marketplace is where to start.</String>
+  <String Name="isettings_intro">The instance's settings — read only.</String>
+  <String Name="isettings_on">On</String>
+  <String Name="isettings_off">Off</String>
+  <String Name="isettings_misc">Miscellaneous</String>
+  <String Name="isettings_empty_title">No setting</String>
+  <String Name="isettings_empty_text">This instance exposes no setting — the server returned an empty list.</String>
+  <String Name="storage_intro">What the accounts use, against what the volume can hold.</String>
+  <String Name="storage_overview">Overview</String>
+  <String Name="storage_of" Comment="The overview's figure: « 812 GB of 4 TB »">of {0}</String>
+  <String Name="storage_no_volume">Physical volume unknown — the server does not report it.</String>
+  <String Name="storage_accounts">Accounts</String>
+  <String Name="storage_allocated">Allocated space</String>
+  <String Name="storage_states">Account states</String>
+  <String Name="storage_threshold">threshold {0} %</String>
+  <String Name="storage_all_ok">Every account is within its quota.</String>
+  <String Name="storage_some_full">{0} account(s) full, {1} close to the limit.</String>
+  <String Name="storage_units">Split by organisational unit</String>
+  <String Name="storage_no_unit">No unit</String>
+  <String Name="storage_unit_accounts"> · {0} account(s)</String>
+  <String Name="storage_categories">Split by category</String>
+  <String Name="storage_billed">Billed</String>
+  <String Name="storage_not_billed">Not billed</String>
+  <String Name="storage_objects">{0} obj.</String>
+  <String Name="storage_no_category">The server reported no storage category for this instance.</String>
+  <String Name="storage_empty_title">No data</String>
+  <String Name="storage_empty_text">The server reported nothing about this instance's storage.</String>
+  <String Name="storage_cat_content">Files</String>
+  <String Name="storage_cat_trash">Trash</String>
+  <String Name="storage_cat_versions">Versions</String>
+  <String Name="storage_cat_retention">Retention</String>
+  <String Name="storage_cat_thumbnails">Thumbnails</String>
+  <String Name="storage_cat_index">Index</String>
+  <String Name="storage_cat_cache">Cache</String>
+  <String Name="storage_cat_staging">Staging</String>
+  <String Name="storage_cat_system">System</String>
+  <String Name="storage_cat_delegated">Delegated</String>
+  <String Name="groups_details_tip">Show the details</String>
+  <String Name="field_code" Comment="The sign-in page: the two-factor code, shown once the server asks for it">Code</String>
+  <String Name="login_code_hint" Comment="Shown above the code field">Enter the code from your authenticator app (or a backup code).</String>
+  <String Name="login_verify" Comment="The submit button while the two-factor code is asked">Verify</String>
+  <String Name="signout_title" Comment="Sign-out with changes not sent yet">Changes not sent</String>
+  <String Name="signout_text" Comment="{0}: number of changes; {1}: the account">{0} change(s) of « {1} » have not been sent to the server yet. Send them before signing out?</String>
+  <String Name="signout_still_unsent" Comment="{0}: number of changes; {1}: the account">{0} change(s) of « {1} » could not be sent (is the server reachable?). Try again, export them, or sign out anyway.</String>
+  <String Name="signout_send" Comment="The default choice">Send first</String>
+  <String Name="signout_export">Export</String>
+  <String Name="signout_discard">Delete anyway</String>
+  <String Name="signout_exported" Comment="{0}: number of files; {1}: the folder">{0} file(s) exported to {1}</String>
+  <String Name="session_paused_text" Comment="A session revoked from elsewhere: the sync pauses, nothing is deleted">Synchronisation is paused. Sign in again: your local files and unsent changes are kept.</String>
+  <String Name="already_running" Comment="A second shell while the first one owns the accounts">Kubuno Desktop is already running: use its window (notification area).</String>
+</Resources>

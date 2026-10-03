@@ -1,0 +1,453 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# The layout-panel parity cases — declared ONCE, read by BOTH probes.
+#
+#   tools/winforms-ref/parity/panels-winforms/   → real WinForms   → panels-winforms.json
+#   crates/kubuno-controls/examples/parity_panels.rs → the port    → panels-port.json
+#   tools/winforms-ref/parity/compare-panels.ps1 → diffs the two
+#
+# Neither probe may carry a case of its own: if this file does not say it, it is
+# not tested, and the two can therefore never drift apart in WHAT they test.
+#
+# Everything is in DIP at 96 DPI. The WinForms probe runs DPI-unaware with
+# AutoScaleMode.None precisely so that one WinForms pixel is one DIP, which is
+# the unit the port's Direct2D space already uses.
+#
+# GRAMMAR — whitespace separated, `#` starts a comment, blank lines ignored.
+#
+#   case <id> <flow|table|split|tab>
+#   box   <w> <h> <padL> <padT> <padR> <padB> <none|single|fixed3d>
+#
+#   flow  <ltr|td|rtl|bu> <wrap:true|false>
+#   child <w> <h> <mL> <mT> <mR> <mB> <flowbreak:true|false>
+#
+#   grid  <cols> <rows> <cellborder> <fixed|addrows|addcolumns>
+#   col   <abs|pct|auto> <value>
+#   row   <abs|pct|auto> <value>
+#   cell  <w> <h> <mL> <mT> <mR> <mB> <col> <row> <cspan> <rspan> <fill|topleft>
+#         (col/row = -1 means « no explicit cell »; `fill` docks the child so it
+#          takes the whole cell, which is what the port's child_rects always does)
+#
+#   split <vertical|horizontal> <none|panel1|panel2> <distance> <splitterWidth>
+#         <min1> <min2> <collapse1:true|false> <collapse2:true|false>
+#   resize <w> <h>            (optional: re-measure after the container resizes)
+#
+#   tabs  <top|bottom|left|right> <multiline> <normal|filltoright|fixed>
+#         <itemW> <itemH> <padX> <padY>
+#   page  <caption>
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FlowLayoutPanel — four directions × WrapContents, with per-child margins, a
+# FlowBreak, a child WIDER than the line and a child that EXACTLY fills it.
+#
+# Horizontal sets run against a 300 DIP line: child #3 (320) cannot fit at all,
+# child #4 (300) fits to the last DIP. Vertical sets mirror that on the 200 DIP
+# column: 220 overruns, 200 lands exactly.
+# ═══════════════════════════════════════════════════════════════════════════
+
+case flow-ltr-wrap flow
+box 300 200 0 0 0 0 none
+flow ltr true
+child 80 30 3 3 3 3 false
+child 60 40 0 0 0 0 true
+child 50 20 5 2 5 2 false
+child 320 25 0 0 0 0 false
+child 300 20 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-ltr-nowrap flow
+box 300 200 0 0 0 0 none
+flow ltr false
+child 80 30 3 3 3 3 false
+child 60 40 0 0 0 0 true
+child 50 20 5 2 5 2 false
+child 320 25 0 0 0 0 false
+child 300 20 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-rtl-wrap flow
+box 300 200 0 0 0 0 none
+flow rtl true
+child 80 30 3 3 3 3 false
+child 60 40 0 0 0 0 true
+child 50 20 5 2 5 2 false
+child 320 25 0 0 0 0 false
+child 300 20 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-rtl-nowrap flow
+box 300 200 0 0 0 0 none
+flow rtl false
+child 80 30 3 3 3 3 false
+child 60 40 0 0 0 0 true
+child 50 20 5 2 5 2 false
+child 320 25 0 0 0 0 false
+child 300 20 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-td-wrap flow
+box 300 200 0 0 0 0 none
+flow td true
+child 30 80 3 3 3 3 false
+child 40 60 0 0 0 0 true
+child 20 50 2 5 2 5 false
+child 25 220 0 0 0 0 false
+child 20 200 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-td-nowrap flow
+box 300 200 0 0 0 0 none
+flow td false
+child 30 80 3 3 3 3 false
+child 40 60 0 0 0 0 true
+child 20 50 2 5 2 5 false
+child 25 220 0 0 0 0 false
+child 20 200 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-bu-wrap flow
+box 300 200 0 0 0 0 none
+flow bu true
+child 30 80 3 3 3 3 false
+child 40 60 0 0 0 0 true
+child 20 50 2 5 2 5 false
+child 25 220 0 0 0 0 false
+child 20 200 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+case flow-bu-nowrap flow
+box 300 200 0 0 0 0 none
+flow bu false
+child 30 80 3 3 3 3 false
+child 40 60 0 0 0 0 true
+child 20 50 2 5 2 5 false
+child 25 220 0 0 0 0 false
+child 20 200 0 0 0 0 false
+child 40 40 3 3 3 3 false
+
+# The panel's own Padding and BorderStyle: does a child's Bounds start at the
+# CLIENT origin (WinForms) or at the PADDED origin (the port's local space)?
+case flow-padding-border flow
+box 300 200 10 8 6 4 single
+flow ltr true
+child 80 30 3 3 3 3 false
+child 100 40 0 0 0 0 false
+child 120 20 0 0 0 0 false
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TableLayoutPanel
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Mixed Absolute / AutoSize / Percent on both axes.
+# Port arithmetic: col0 = 50, col1 = 40+3+3 = 46, remaining 204 split 25:75.
+case table-mixed table
+box 300 200 0 0 0 0 none
+grid 4 3 none addrows
+col abs 50
+col auto 0
+col pct 25
+col pct 75
+row abs 30
+row pct 100
+row auto 0
+cell 40 20 3 3 3 3 1 0 1 1 fill
+cell 30 15 3 3 3 3 0 2 1 1 fill
+cell 20 20 0 0 0 0 -1 -1 1 1 fill
+cell 20 20 0 0 0 0 -1 -1 1 1 fill
+
+# Percents that do NOT sum to 100. WinForms treats them as relative weights, so
+# 30/30 must behave exactly like 50/50 — the rule the port took from the docs.
+case table-pct-not-100 table
+box 300 100 0 0 0 0 none
+grid 2 1 none addrows
+col pct 30
+col pct 30
+row pct 100
+cell 20 20 0 0 0 0 0 0 1 1 fill
+cell 20 20 0 0 0 0 1 0 1 1 fill
+
+# Three equal weights over 302 DIP: 100.667 each. The port spreads the two spare
+# DIP by the largest-remainder rule; this is where a plausible-but-wrong reading
+# of the distribution would show up.
+case table-pct-thirds table
+box 302 100 0 0 0 0 none
+grid 3 1 none addrows
+col pct 1
+col pct 1
+col pct 1
+row abs 50
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+# Uneven weights summing to 100 — the uncontroversial baseline.
+case table-pct-uneven table
+box 300 100 0 0 0 0 none
+grid 3 1 none addrows
+col pct 20
+col pct 30
+col pct 50
+row abs 50
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+# A child far wider than its percent share: does the percent track keep its
+# computed share, or is it floored by its content?
+case table-pct-content-overflow table
+box 200 100 0 0 0 0 none
+grid 2 1 none addrows
+col pct 10
+col pct 90
+row abs 50
+cell 150 20 0 0 0 0 0 0 1 1 fill
+cell 10 20 0 0 0 0 1 0 1 1 fill
+
+# CellBorderStyle: how many DIP does each style really reserve?
+case table-border-single table
+box 303 100 0 0 0 0 single
+grid 3 1 single addrows
+col pct 1
+col pct 1
+col pct 1
+row abs 40
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+case table-border-inset table
+box 303 100 0 0 0 0 none
+grid 3 1 inset addrows
+col pct 1
+col pct 1
+col pct 1
+row abs 40
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+case table-border-insetdouble table
+box 303 100 0 0 0 0 none
+grid 3 1 insetdouble addrows
+col pct 1
+col pct 1
+col pct 1
+row abs 40
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+case table-border-outsetpartial table
+box 303 100 0 0 0 0 none
+grid 3 1 outsetpartial addrows
+col pct 1
+col pct 1
+col pct 1
+row abs 40
+cell 10 10 0 0 0 0 0 0 1 1 fill
+cell 10 10 0 0 0 0 1 0 1 1 fill
+cell 10 10 0 0 0 0 2 0 1 1 fill
+
+# Column and row spans, with a border so a span's swallowed lines are visible.
+case table-spans table
+box 310 160 0 0 0 0 none
+grid 3 3 single addrows
+col abs 100
+col abs 100
+col abs 100
+row abs 50
+row abs 50
+row abs 50
+cell 10 10 0 0 0 0 0 0 2 1 fill
+cell 10 10 0 0 0 0 0 1 1 2 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+
+# Children with no explicit cell, filling left→right then wrapping down.
+case table-nocell table
+box 300 200 0 0 0 0 none
+grid 3 0 none addrows
+col abs 100
+col abs 100
+col abs 100
+row abs 50
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+
+# GrowStyle = AddColumns: unset children fill top→bottom, then wrap right.
+case table-grow-addcolumns table
+box 300 200 0 0 0 0 none
+grid 0 2 none addcolumns
+row abs 60
+row abs 60
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+
+# GrowStyle = FixedSize with one child too many for the 2×2 grid.
+case table-grow-fixed table
+box 200 120 0 0 0 0 none
+grid 2 2 none fixed
+col abs 100
+col abs 100
+row abs 60
+row abs 60
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+cell 10 10 0 0 0 0 -1 -1 1 1 fill
+
+# Default anchoring (Top|Left, no Dock): WinForms leaves the child its own size
+# inside the cell. The port has no anchor inside a cell — every child fills it.
+case table-anchor-topleft table
+box 300 120 0 0 0 0 none
+grid 2 1 none addrows
+col abs 150
+col abs 150
+row abs 60
+cell 40 20 5 4 3 2 0 0 1 1 topleft
+cell 40 20 0 0 0 0 1 0 1 1 topleft
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SplitContainer — the naming trap: Orientation.Vertical is a VERTICAL SPLITTER,
+# so the panels sit SIDE BY SIDE and SplitterDistance is Panel1's WIDTH.
+# ═══════════════════════════════════════════════════════════════════════════
+
+case split-vertical-basic split
+box 300 200 0 0 0 0 none
+split vertical none 60 4 25 25 false false
+
+case split-horizontal-basic split
+box 300 200 0 0 0 0 none
+split horizontal none 60 4 25 25 false false
+
+# Below Panel1MinSize.
+case split-clamp-low split
+box 300 200 0 0 0 0 none
+split vertical none 10 4 25 25 false false
+
+# Past Width - SplitterWidth - Panel2MinSize (= 271).
+case split-clamp-high split
+box 300 200 0 0 0 0 none
+split vertical none 290 4 25 25 false false
+
+# Minimums that leave almost nothing once the container shrinks.
+case split-clamp-tight split
+box 300 200 0 0 0 0 none
+split vertical none 60 8 60 80 false false
+resize 150 200
+
+case split-collapse-panel1 split
+box 300 200 0 0 0 0 none
+split vertical none 60 4 25 25 true false
+
+case split-collapse-panel2 split
+box 300 200 0 0 0 0 none
+split vertical none 60 4 25 25 false true
+
+case split-resize-fixed-none split
+box 300 200 0 0 0 0 none
+split vertical none 60 4 25 25 false false
+resize 500 200
+
+# Discriminates the two plausible readings of FixedPanel = None: does the
+# distance scale with the container's WHOLE extent, or with the extent LESS the
+# splitter? A 20 DIP splitter makes the two answers 116.67 and 120.
+case split-resize-none-wide split
+box 300 200 0 0 0 0 none
+split vertical none 70 20 25 25 false false
+resize 500 200
+
+case split-resize-fixed-panel1 split
+box 300 200 0 0 0 0 none
+split vertical panel1 60 4 25 25 false false
+resize 500 200
+
+case split-resize-fixed-panel2 split
+box 300 200 0 0 0 0 none
+split vertical panel2 60 4 25 25 false false
+resize 500 200
+
+case split-horizontal-resize-panel2 split
+box 300 200 0 0 0 0 none
+split horizontal panel2 60 4 25 25 false false
+resize 300 400
+
+case split-border-fixed3d split
+box 300 200 0 0 0 0 fixed3d
+split vertical none 60 4 25 25 false false
+
+case split-wide-splitter split
+box 300 200 0 0 0 0 none
+split horizontal none 90 12 25 25 false false
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TabControl — Alignment × Multiline × SizeMode, and the page display rectangle.
+#
+# The `fixed` cases pin ItemSize so the strip metric is arithmetic rather than a
+# function of the system font; the `normal` case is kept precisely to MEASURE the
+# font-derived metric rather than assume it.
+# ═══════════════════════════════════════════════════════════════════════════
+
+case tab-top-fixed tab
+box 300 200 0 0 0 0 none
+tabs top false fixed 80 20 6 3
+page Alpha
+page Beta
+page Gamma
+
+case tab-bottom-fixed tab
+box 300 200 0 0 0 0 none
+tabs bottom false fixed 80 20 6 3
+page Alpha
+page Beta
+page Gamma
+
+case tab-left-fixed tab
+box 300 200 0 0 0 0 none
+tabs left true fixed 80 20 6 3
+page Alpha
+page Beta
+page Gamma
+
+case tab-right-fixed tab
+box 300 200 0 0 0 0 none
+tabs right true fixed 80 20 6 3
+page Alpha
+page Beta
+page Gamma
+
+case tab-multiline-fixed tab
+box 300 200 0 0 0 0 none
+tabs top true fixed 120 20 6 3
+page Alpha
+page Beta
+page Gamma
+page Delta
+page Epsilon
+
+case tab-top-normal tab
+box 300 200 0 0 0 0 none
+tabs top false normal 0 0 6 3
+page Alpha
+page Beta
+page Gamma
+
+case tab-filltoright tab
+box 300 200 0 0 0 0 none
+tabs top true filltoright 0 0 6 3
+page Alpha
+page Beta
+page Gamma

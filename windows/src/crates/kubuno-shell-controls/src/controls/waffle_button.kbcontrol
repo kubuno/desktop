@@ -1,0 +1,7 @@
+<!--
+  The header's waffle: a 36 round button that opens the app launcher (WaffleMenu) in a floating panel of its
+  own — not clipped by the window that holds the button. Its data come from the app's LauncherService.
+-->
+<UserControl x:Class="WaffleButton" DesignWidth="36" DesignHeight="36">
+  <IconButton x:Name="button" Icon="LayoutGrid" Diameter="{Binding ButtonDiameter}" Glyph="{Binding ButtonGlyph}" ToolTip="{Res launcher_apps, Source=shell_controls}" Dock="Fill" OnClick="button_click"/>
+</UserControl>

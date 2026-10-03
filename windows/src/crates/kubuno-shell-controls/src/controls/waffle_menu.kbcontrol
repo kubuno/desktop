@@ -1,0 +1,16 @@
+<!--
+  The app launcher (the web's WaffleMenu, in every module's header): the favourites card and the other apps
+  (AppTileGrid), scrolling as one, with the card's header band holding « Vos favoris » and its pencil — or,
+  while editing, « Annuler », « OK » and the help line. 360 wide; the host sizes it to ContentHeight (at most
+  580 outside the edit mode, as on the web) and puts it in a flyout (the shell's waffle_flyout.kbview).
+-->
+<UserControl x:Class="WaffleMenu" DesignWidth="360" DesignHeight="580" d:BackColor="#E9EEF6" OnLoad="waffle_menu_load">
+  <Panel x:Name="body" Dock="Fill" AutoScroll="true">
+    <AppTileGrid x:Name="grid" Apps="{Binding Apps}" Favorites="{Binding Favorites}" Editing="{Binding Editing}" AutoSize="true" AccessibleName="{Res launcher_apps, Source=shell_controls}" AccessibleRole="List" X="8.6" Y="0" Width="342.8" Height="60" OnTileInvoked="grid_tile_invoked" OnFavoritesEdited="grid_favorites_edited"/>
+    <Label x:Name="title" Text="{Res launcher_title, Source=shell_controls}" Role="Heading" Visible="{Binding Viewing}" X="30.6" Y="26.6" Width="240" Height="40"/>
+    <IconButton x:Name="edit_button" Icon="PenLine" Diameter="40" Glyph="16" Filled="true" ToolTip="{Res launcher_edit_tip, Source=shell_controls}" Visible="{Binding Viewing}" X="289.4" Y="26.6" Width="40" Height="40" OnClick="edit_button_click"/>
+    <Button x:Name="cancel_button" Text="{Res launcher_cancel, Source=shell_controls}" Variant="Ghost" Visible="{Binding Editing}" d:Visible="false" X="30.6" Y="26.6" Width="88.9" Height="36" OnClick="cancel_button_click"/>
+    <Button x:Name="ok_button" Text="{Res launcher_ok, Source=shell_controls}" Visible="{Binding Editing}" d:Visible="false" X="262.1" Y="26.6" Width="67.3" Height="36" OnClick="ok_button_click"/>
+    <Label x:Name="help" Text="{Res launcher_drag_help, Source=shell_controls}" ForeColor="TextSecondary" TextAlign="MiddleCenter" Visible="{Binding Editing}" d:Visible="false" X="10.6" Y="70.6" Width="338.8" Height="20"/>
+  </Panel>
+</UserControl>

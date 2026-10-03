@@ -1,0 +1,5 @@
+<!-- A user control with its own default button: Enter in its field clicks `ok` (test fixture). -->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="ConfirmBox" DesignWidth="300" DesignHeight="40" AcceptButton="ok">
+  <TextField x:Name="field" X="0" Y="0" Width="200" Height="36"/>
+  <Button x:Name="ok" Text="OK" OnClick="ok_click" X="210" Y="0" Width="80" Height="36"/>
+</UserControl>

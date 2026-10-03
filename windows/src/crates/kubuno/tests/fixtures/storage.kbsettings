@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings Version="2" App="kubuno-facade-test">
+  <Setting Name="Theme" Type="String" Default="System" Values="System|Light|Dark" Description="The colour theme."/>
+  <Setting Name="SyncIntervalMinutes" Type="Int" Default="5" PreviousNames="SyncInterval"/>
+  <Setting Name="Zoom" Type="Float" Default="1.0"/>
+  <Setting Name="ShowHidden" Type="Bool" Default="false"/>
+  <Setting Name="UpdateChannel" Type="String" Scope="Application" Default="stable"/>
+  <Setting Name="RecentFiles" Type="StringList" Roaming="false">
+    <Item>welcome.kbdoc</Item>
+  </Setting>
+</Settings>

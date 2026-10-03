@@ -1,0 +1,21 @@
+<!--
+  The directory's users (the web's « Utilisateurs »): a search over the accounts, how many there are, « Nouvel
+  utilisateur » (the web console), then the accounts fifty to a page — who (name over address), their
+  organisational unit, their role and their state as badges, their storage, their last login, and a pencil
+  that edits the account in the web console. The server pages and searches; this section only asks.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="UsersSection" DesignWidth="936" DesignHeight="688" OnLoad="users_section_load">
+  <AdminSectionHeader x:Name="header" Parent="{Res adm_directory}" Title="{Res adm_users}" X="0" Y="0" Width="936" Height="60" Anchor="Top, Left, Right"/>
+  <SearchField x:Name="search" Placeholder="{Res users_search}" X="0" Y="76" Width="360" Height="32" OnTextChanged="search_text_changed"/>
+  <Label x:Name="count" Text="{Binding CountText}" d:Text="248 utilisateurs" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="376" Y="72" Width="200" Height="40"/>
+  <Button x:Name="new_user" Text="{Res users_new}" Icon="UserPlus" X="770" Y="74" Width="166" Height="36" Anchor="Top, Right" OnClick="new_user_click"/>
+  <DataTable x:Name="table" AccessibleName="{Res adm_users}" ItemsSource="{Binding Rows}" d:ItemsSource="design/users.json" ReadOnly="true" OwnerDraw="true" Density="Comfortable" PageSize="50" TotalRows="{Binding Total}" PageIndex="{Binding Page}" Loading="{Binding Loading}" ErrorText="{Binding ErrorText}" EmptyTitle="{Res users_empty_title}" EmptyText="{Res users_empty_text}" X="0" Y="124" Width="936" Height="564" Anchor="Top, Bottom, Left, Right" OnDrawItem="table_draw_item" OnCellClick="table_cell_click" OnPageChanged="table_page_changed">
+    <Column Header="{Res users_col_user}" Binding="{Binding Name}" Width="178" AutoSizeMode="Fill"/>
+    <Column Header="{Res users_col_unit}" Binding="{Binding Unit}" Width="184"/>
+    <Column Header="{Res users_col_role}" Binding="{Binding Role}" Width="116"/>
+    <Column Header="{Res users_col_quota}" Binding="{Binding Quota}" Width="152"/>
+    <Column Header="{Res users_col_login}" Binding="{Binding LastLogin}" Width="170"/>
+    <Column Header="{Res users_col_status}" Binding="{Binding Status}" Width="90"/>
+    <Column Header="" Binding="{Binding Id}" Width="44"/>
+  </DataTable>
+</UserControl>

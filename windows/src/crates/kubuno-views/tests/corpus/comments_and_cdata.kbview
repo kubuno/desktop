@@ -1,0 +1,8 @@
+<!-- A file exercising comments, CDATA and single-quoted attributes together. -->
+<Stack xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" Direction='TopDown' Gap='8'>
+  <!-- a leading comment -->
+  <TextField Text="hello"/>
+  <Script><![CDATA[not really script, just exercising CDATA: a < b && c > d]]></Script>
+  <!-- a trailing comment -->
+</Stack>
+<!-- trailing comment after the root -->

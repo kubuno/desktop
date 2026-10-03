@@ -1,0 +1,18 @@
+[package]
+name = "drive-shared"
+description = "Shared attributes, extensions, and common code (port of Files.Shared)"
+version = "0.1.0"   # Drive's own version, not the desktop workspace's
+edition.workspace = true
+license = "MIT"     # Drive's own licence (see the desktop README)
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+crc32fast.workspace = true
+md-5.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+hex.workspace = true
+chrono.workspace = true

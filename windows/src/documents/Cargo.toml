@@ -1,0 +1,74 @@
+[package]
+name        = "kubuno-documents"
+description = "Kubuno Documents — native word processor of the Office module, written like a Windows Forms application (.kbview views, declarative ribbon)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The library holds everything the Visual Studio designer must link to render the views: the main
+# form (`DocumentWindow`), the Backstage's user control (`BackstageInfo`) and the custom controls
+# (`PageCanvas`, `HorizontalRuler`, `VerticalRuler`, `RulerCorner`, `ZoomSlider`), with the document
+# engine they draw. The binary is the short `Program.cs` (`main.rs`): the splash screen, then
+# `Application::run(DocumentWindow)`.
+[lib]
+name = "kubuno_documents"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kubuno-documents"
+path = "src/main.rs"
+
+[dependencies]
+# The Kubuno desktop programming model (Application::run, #[kubuno::view], custom and user controls,
+# resources): it re-exports kubuno-views, kubuno-controls and kubuno-ui.
+kubuno = { path = "../crates/kubuno" }
+# The title bar's waffle and avatar (`ShowWaffle` / `ShowAccount` place the shared `HeaderActions`), and their
+# data: the account's apps and favourites through the shell's token broker.
+kubuno-shell-controls = { path = "../crates/kubuno-shell-controls" }
+kubuno-header-data    = { path = "../crates/kubuno-header-data" }
+# The canvas contract and the Direct2D `Renderer` the page painter draws through (the design
+# system's base, also re-exported by kubuno-ui).
+drive-app-controls = { path = "../drive/crates/drive-app-controls" }
+# The matrices the painter and the page transform hand to Direct2D.
+windows-numerics = "0.3"
+# The platform-neutral core: the stored document, the layout and pagination engine ported from
+# the web editor, the caret geometry and the editing operations (vskubuno docs/DOCUMENTS-EDITING.md).
+kubuno-docs-core = { path = "../../../common/kubuno-docs-core" }
+# The HTTP client to the Kubuno core: instance discovery, auth and token
+# rotation. The office routes are called through its generic helpers.
+kubuno-sync = { path = "../../../common/kubuno-sync" }
+kubuno-account = { path = "../../../common/kubuno-account" }
+serde = { version = "1", features = ["derive"] }
+# `raw_value` is what makes the round trip lossless: every subtree this app does
+# not model is carried as the original bytes. `float_roundtrip` alone does NOT
+# buy byte-exactness — a stored 47.999999999999996 (what the DOCX importer's
+# twips-to-px conversion produces) can reparse to a different f64 — but without
+# it the numbers we DO parse degrade, so both are on.
+serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
+
+[dependencies.windows]
+version  = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Imaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_UI_Input_Ime",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_Globalization",
+    "Win32_System_Threading",
+]
+
+[build-dependencies]
+embed-manifest = "1.4"
+winresource    = "0.1"

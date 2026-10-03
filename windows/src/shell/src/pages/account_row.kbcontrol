@@ -1,0 +1,14 @@
+<!--
+  One configured account of the accounts page: the item template of its Repeater. The radio says
+  which one the launcher shows; who is signed in and on which server, then the local folder; « Déplacer… »
+  relocates the folder, « Déconnecter » drops the account (its files stay on disk). What it shows are its
+  properties, which the page sets from the item's row (view_model::account_rows); its buttons raise
+  MoveRequested / DisconnectRequested, which the page handles with the item that raised them.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="AccountRow" DesignWidth="888" DesignHeight="56" OnLoad="account_row_load">
+  <RadioButton x:Name="current" Value="{Binding AccountId}" d:Value="a" SelectedValue="{Binding ActiveId}" d:SelectedValue="a" Group="accounts" AccessibleName="{Binding Title}" X="12" Y="19" Width="18" Height="18"/>
+  <Label x:Name="title" Text="{Binding Title}" d:Text="Camille Martin — cloud.exemple.fr" TextAlign="MiddleLeft" X="42" Y="8" Width="588" Height="22" Anchor="Top, Left, Right"/>
+  <Label x:Name="folder" Text="{Binding Folder}" d:Text="C:\Users\Camille\Kubuno" Role="Meta" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="42" Y="30" Width="588" Height="26" Anchor="Top, Left, Right"/>
+  <Button x:Name="move" Text="{Res move_folder}" Variant="Secondary" X="638" Y="10" Width="110" Height="36" Anchor="Top, Right" OnClick="move_click"/>
+  <Button x:Name="disconnect" Text="{Res disconnect}" Variant="TextDanger" X="756" Y="10" Width="120" Height="36" Anchor="Top, Right" OnClick="disconnect_click"/>
+</UserControl>

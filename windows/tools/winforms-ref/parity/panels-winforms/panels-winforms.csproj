@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Console subsystem: this is a measuring tool, not an application. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>panels-winforms</AssemblyName>
+    <RootNamespace>PanelsWinForms</RootNamespace>
+    <!--
+      DPI-UNAWARE ON PURPOSE. The port's Direct2D space is already DIP (the
+      renderer calls SetDpi), so a DIP is the unit both sides must speak. Under
+      PerMonitorV2 every WinForms number here would come back multiplied by the
+      monitor's scale factor and the diff would report a fact about this machine
+      rather than about the port. Combined with AutoScaleMode.None on the form,
+      one WinForms pixel is exactly one DIP.
+    -->
+    <ApplicationHighDpiMode>DpiUnaware</ApplicationHighDpiMode>
+  </PropertyGroup>
+</Project>

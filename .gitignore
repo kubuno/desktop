@@ -1,14 +1,17 @@
-/target
+target/
 **/*.rs.bk
-Cargo.lock
 
 # Build artifacts (binaries)
-/dist/
-/packaging/*.exe
-/packaging/layout/
-/packaging/*.msix
+dist/
+packaging/*.exe
+packaging/layout/
+packaging/*.msix
 
-# Claude Code working files (agent instructions & memory) — never published
-CLAUDE.md
-AGENTS.md
-.claude/
+
+# Visual Studio local state and MSBuild intermediates
+.vs/
+obj/
+*.user
+*.slnLaunch.user
+windows/tools/**/bin/Debug/
+windows/tools/**/bin/Release/

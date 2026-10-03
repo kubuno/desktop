@@ -1,0 +1,17 @@
+[package]
+name        = "kubuno-resources-macros"
+description = "The resources! procedural macro of kubuno-resources (vskubuno docs/RESOURCES.md): a .kbres file becomes a strongly typed, culture-aware class at compile time. Use it through kubuno::resources! (or kubuno_resources::resources!)."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+# The versions already locked by this workspace (no new download).
+[dependencies]
+proc-macro2 = "1"
+quote       = "1"
+syn         = { version = "2", features = ["full"] }
+kubuno-resources-model = { workspace = true }

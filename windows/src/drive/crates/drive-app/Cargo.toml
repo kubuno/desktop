@@ -1,0 +1,108 @@
+[package]
+name = "drive-app"
+description = "Kubuno Drive desktop — a modern file manager with a pure Win32 UI"
+version = "0.1.0"   # Drive's own version, not the desktop workspace's
+edition.workspace = true
+license = "MIT"     # Drive's own licence (see the desktop README)
+
+[[bin]]
+name = "drive"
+path = "src/main.rs"
+
+[dependencies]
+drive-shared.workspace = true
+drive-core-storage.workspace = true
+drive-app-storage.workspace = true
+drive-app-controls.workspace = true
+kubuno-ui.workspace = true
+kubuno-controls.workspace = true
+drive-localization.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+git2.workspace = true
+tracing.workspace = true
+# The settings store (vskubuno docs/STORAGE-COMPONENTS.md, lot ST-2).
+kubuno-app-storage = { path = "../../../../../common/kubuno-app-storage" }
+chrono.workspace = true
+windows-numerics.workspace = true
+# The WinRT collection / async plumbing the `windows` crate itself is built on:
+# `IIterable<IStorageItem>` for the share sheet's DataPackage, and `Async::join`
+# to block on `StorageFile::GetFileFromPathAsync`.
+windows-collections = "0.3.2"
+windows-future = "0.3.2"
+# Onglet « Hachages » de la feuille de propriétés (ChecksumHelpers) : CRC32,
+# MD5, SHA1, SHA256. Déjà présentes dans Cargo.lock (dépendances transitives).
+crc32fast = "1.5.0"
+md-5 = "0.10.6"
+sha1 = "0.10.7"
+sha2 = "0.10.9"
+hex = "0.4.3"
+
+[dependencies.windows]
+workspace = true
+features = [
+    "Win32_NetworkManagement_WNet",
+    # Canal SIDELOAD du service de mise à jour (services/app_update.rs) : requête
+    # HTTPS sur le .appinstaller via WinHTTP, faute de caisse HTTP dans le workspace.
+    "Win32_Networking_WinHttp",
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Controls",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_System_SystemServices",
+    "Win32_UI_Shell_Common",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_DirectComposition",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Imaging",
+    "Win32_System_Com",
+    "Win32_System_DataExchange",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_IO",
+    "Win32_System_Registry",
+    "Win32_Globalization",
+    "Win32_Storage_FileSystem",
+    # Onglet « Sécurité » de la feuille de propriétés : GetNamedSecurityInfo,
+    # GetAcl/GetAce, ConvertSidToStringSid, LookupAccountSid.
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    # utils/credential.rs : saisie d'identifiants réseau (partages \\serveur
+    # protégés) via CredUIPromptForWindowsCredentialsW + Cred(Un)PackAuthenticationBufferW.
+    "Win32_Security_Credentials",
+    # StorageSecurity.mount_iso/unmount_iso : API VirtualDisk (virtdisk.dll)
+    # pour monter/démonter une image .iso — OpenVirtualDisk / AttachVirtualDisk.
+    "Win32_Storage_Vhd",
+    "UI_ViewManagement",
+    # ShareItemHelpers.ShareItemsAsync: the Windows share sheet.
+    "ApplicationModel_DataTransfer",
+    "Storage",
+    "Storage_Streams",
+    "Storage_Search",
+    "Foundation_Collections",
+    # BitmapHelper.RotateAsync : décodeur/encodeur d'images WinRT.
+    "Graphics_Imaging",
+    # WindowsWallpaperService.SetLockScreenWallpaper : LockScreen.SetImageFileAsync.
+    "System_UserProfile",
+]
+
+[build-dependencies]
+# embed manifest for DPI awareness + common controls v6
+embed-manifest = "1.4"
+# embed the app icon (assets/drive.ico, the Drive web logo) into the exe
+winresource = "0.1"

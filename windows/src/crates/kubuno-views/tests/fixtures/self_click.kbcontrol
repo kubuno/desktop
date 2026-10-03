@@ -1,0 +1,4 @@
+<!-- A user control subscribed to its own Click from its view's root (tests/custom_controls.rs). -->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="SelfClick" DesignWidth="300" DesignHeight="100" OnClick="self_click">
+  <Label x:Name="caption" Text="Self" X="0" Y="0" Width="100" Height="30"/>
+</UserControl>

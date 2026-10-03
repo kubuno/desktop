@@ -1,0 +1,12 @@
+<!--
+  The instance's settings (the console's « Instance » section), read only: the settings the server returns,
+  grouped by category — one SettingsCategory card per category, each as tall as its rows (a Repeater whose rows
+  name their height).
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="InstanceSettingsSection" DesignWidth="936" DesignHeight="688" OnLoad="instance_settings_section_load">
+  <AdminSectionHeader x:Name="header" Title="{Res adm_account}" Intro="{Res isettings_intro}" X="0" Y="0" Width="936" Height="86" Anchor="Top, Left, Right"/>
+  <StatusPresenter x:Name="status" Mode="{Binding StatusMode}" d:Visible="false" EmptyIcon="SlidersHorizontal" EmptyTitle="{Res isettings_empty_title}" EmptyText="{Res isettings_empty_text}" ErrorText="{Binding ErrorText}" X="0" Y="98" Width="936" Height="590" Anchor="Top, Bottom, Left, Right"/>
+  <Repeater x:Name="categories" ItemsSource="{Binding Categories}" ItemKey="Title" ItemHeightField="Height" Spacing="12" d:ItemsSource="design/settings.json" X="0" Y="98" Width="936" Height="590" Anchor="Top, Bottom, Left, Right">
+    <SettingsCategory CategoryTitle="{Binding Title}" Settings="{Binding Settings}"/>
+  </Repeater>
+</UserControl>

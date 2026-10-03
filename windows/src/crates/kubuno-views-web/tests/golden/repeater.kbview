@@ -1,0 +1,11 @@
+<Stack xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x">
+  <Repeater ItemsSource="{Binding notes}" ItemKey="id">
+    <Stack Direction="LeftToRight">
+      <CheckBox Checked="{Binding done, Mode=TwoWay}" Text="{Binding title}"/>
+      <Repeater ItemsSource="{Binding tags}">
+        <Badge Text="{Binding label}"/>
+      </Repeater>
+      <Button Text="Delete" OnClick="delete_click" Enabled="{Binding canDelete}"/>
+    </Stack>
+  </Repeater>
+</Stack>

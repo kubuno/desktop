@@ -1,0 +1,42 @@
+[package]
+name        = "kubuno"
+description = "The one dependency of a Kubuno desktop application: a Windows Forms-like programming model (Application::run, #[kubuno::view] form classes over .kbview views, code-first forms and controls, MessageBox) over kubuno-views, kubuno-controls and kubuno-ui, which it re-exports."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+# The layers this crate re-exports (`kubuno::views`, `kubuno::controls`, `kubuno::ui`): an
+# application's Cargo.toml names `kubuno` only.
+kubuno-ui           = { workspace = true }
+kubuno-controls     = { workspace = true }
+kubuno-views        = { workspace = true }
+# `#[kubuno::view]` (and the other macros, re-exported).
+kubuno-views-macros = { workspace = true }
+# Logging, re-exported as `kubuno::tracing` (the templates log with it).
+tracing             = { workspace = true }
+# The printing stack (`kubuno::printing`): PrintDocument, the preview and the print dialogs — part of
+# Windows Forms itself, so always there (it adds no `windows` feature: see its Cargo.toml).
+kubuno-print        = { workspace = true }
+# Resources (`kubuno::resources!`, the UI culture): `.kbres` files embedded at compile time.
+kubuno-resources    = { workspace = true }
+# Storage (`kubuno::storage`, `kubuno::settings!`): typed settings, the app's secrets and the Windows Registry, as
+# components of a view and from code (vskubuno docs/STORAGE-COMPONENTS.md). Like printing, always there: it adds no
+# `windows` feature (the engine uses `windows-sys`).
+kubuno-app-storage-components = { workspace = true }
+# The `settings!` macro (in the resources macro crate, next to `resources!`).
+kubuno-resources-macros = { workspace = true }
+# The values of `kubuno::storage::KeyValueStore`.
+serde_json = { workspace = true }
+# Data access components (`kubuno::data`), opt-in: they bring SQLx and a Tokio runtime.
+kubuno-data         = { workspace = true, optional = true }
+
+[features]
+default = []
+# `kubuno::data`: `kubuno-data`'s connections, commands, table adapters and binding sources.
+data = ["dep:kubuno-data"]
+
+[dev-dependencies]
+# The element tables `#[kubuno::view]` uses, checked against the registry and this crate's handles.
+kubuno-views-meta = { workspace = true }

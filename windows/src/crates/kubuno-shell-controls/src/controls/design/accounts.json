@@ -1,0 +1,8 @@
+{
+  "user": { "name": "Camille Martin", "email": "camille.martin@exemple.fr", "initials": "CM" },
+  "accounts": [
+    { "id": "sample-asso", "name": "Association", "email": "camille@asso-exemple.org", "server": "kubuno.asso-exemple.org" },
+    { "id": "sample-mairie", "name": "Mairie de Beaulieu", "email": "c.martin@beaulieu.fr", "server": "cloud.beaulieu.fr" }
+  ],
+  "show_admin": true
+}

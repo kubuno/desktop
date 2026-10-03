@@ -1,0 +1,6 @@
+[
+  { "Name": "Agenda", "Status": "Activé pour tout le monde" },
+  { "Name": "Contacts", "Status": "Activé pour tout le monde" },
+  { "Name": "Drive", "Status": "Activé pour tout le monde" },
+  { "Name": "Formulaires", "Status": "Désactivé pour tout le monde" }
+]

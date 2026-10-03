@@ -1,0 +1,1294 @@
+# Vector icon paths for module/section glyphs, one section per icon.
+#
+# Format: `=== <Name> @24 stroke:2` followed by one SVG path per line, no
+# prefix. Unlike themed-icons.txt these are STROKED outlines: draw them with a
+# 2 unit wide stroke, round caps and round joins, and no fill, on a 24x24 grid.
+#
+# Source: lucide-react v1.17.0 (https://lucide.dev), licensed under the ISC
+# license. Copyright (c) for portions of Lucide are held by Cole Bemis
+# 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are
+# held by Lucide Contributors 2022.
+#
+# The geometry is extracted verbatim from the package's `__iconNode` data:
+# `path` elements keep their `d` attribute untouched, and the primitive
+# elements (line, polyline, polygon, rect, circle, ellipse) are rewritten as
+# the equivalent path data without changing the shape.
+#
+# Section names are the PascalCase component names exported by lucide-react
+# (which may be aliases of a differently named source file, noted in the
+# comment above each section).
+
+# FolderOpen — lucide-react icon "folder-open"
+=== FolderOpen @24 stroke:2
+m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2
+
+# Inbox — lucide-react icon "inbox"
+=== Inbox @24 stroke:2
+M22 12L16 12L14 15L10 15L8 12L2 12
+M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z
+
+# Calendar — lucide-react icon "calendar"
+=== Calendar @24 stroke:2
+M8 2v4
+M16 2v4
+M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M3 10h18
+
+# Map — lucide-react icon "map"
+=== Map @24 stroke:2
+M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z
+M15 5.764v15
+M9 3.236v15
+
+# Users — lucide-react icon "users"
+=== Users @24 stroke:2
+M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2
+M16 3.128a4 4 0 0 1 0 7.744
+M22 21v-2a4 4 0 0 0-3-3.87
+M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0
+
+# StickyNote — lucide-react icon "sticky-note"
+=== StickyNote @24 stroke:2
+M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z
+M15 3v5a1 1 0 0 0 1 1h5
+
+# CheckSquare — lucide-react icon "square-check-big"
+=== CheckSquare @24 stroke:2
+M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344
+m9 11 3 3L22 4
+
+# Image — lucide-react icon "image"
+=== Image @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M7 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21
+
+# MessageSquare — lucide-react icon "message-square"
+=== MessageSquare @24 stroke:2
+M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z
+
+# Tv — lucide-react icon "tv"
+=== Tv @24 stroke:2
+m17 2-5 5-5-5
+M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2z
+
+# Music — lucide-react icon "music"
+=== Music @24 stroke:2
+M9 18V5l12-2v13
+M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M15 16a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+
+# Briefcase — lucide-react icon "briefcase"
+=== Briefcase @24 stroke:2
+M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16
+M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2z
+
+# BookMarked — lucide-react icon "book-marked"
+=== BookMarked @24 stroke:2
+M10 2v8l3-3 3 3V2
+M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20
+
+# ClipboardList — lucide-react icon "clipboard-list"
+=== ClipboardList @24 stroke:2
+M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1z
+M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2
+M12 11h4
+M12 16h4
+M8 11h.01
+M8 16h.01
+
+# MessagesSquare — lucide-react icon "messages-square"
+=== MessagesSquare @24 stroke:2
+M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z
+M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1
+
+# BookOpen — lucide-react icon "book-open"
+=== BookOpen @24 stroke:2
+M12 7v14
+M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z
+
+# Code2 — lucide-react icon "code-xml"
+=== Code2 @24 stroke:2
+m18 16 4-4-4-4
+m6 8-4 4 4 4
+m14.5 4-5 16
+
+# Workflow — lucide-react icon "workflow"
+=== Workflow @24 stroke:2
+M5 3h4a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z
+M7 11v4a2 2 0 0 0 2 2h4
+M15 13h4a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z
+
+# Sparkles — lucide-react icon "sparkles"
+=== Sparkles @24 stroke:2
+M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z
+M20 2v4
+M22 4h-4
+M2 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+
+# KeyRound — lucide-react icon "key-round"
+=== KeyRound @24 stroke:2
+M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z
+M16 7.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+
+# Palette — lucide-react icon "palette"
+=== Palette @24 stroke:2
+M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z
+M13 6.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+M17 10.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+M6 12.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+M8 7.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+
+# AppWindow — lucide-react icon "app-window"
+=== AppWindow @24 stroke:2
+M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2z
+M10 4v4
+M2 8h20
+M6 4v4
+
+# Share2 — lucide-react icon "share-2"
+=== Share2 @24 stroke:2
+M15 5a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M15 19a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M8.59 13.51L15.42 17.49
+M15.41 6.51L8.59 10.49
+
+# Clock — lucide-react icon "clock"
+=== Clock @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 6v6l4 2
+
+# Star — lucide-react icon "star"
+=== Star @24 stroke:2
+M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z
+
+# Trash2 — lucide-react icon "trash-2"
+=== Trash2 @24 stroke:2
+M10 11v6
+M14 11v6
+M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6
+M3 6h18
+M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2
+
+# Send — lucide-react icon "send"
+=== Send @24 stroke:2
+M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z
+m21.854 2.147-10.94 10.939
+
+# FileText — lucide-react icon "file-text"
+=== FileText @24 stroke:2
+M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z
+M14 2v5a1 1 0 0 0 1 1h5
+M10 9H8
+M16 13H8
+M16 17H8
+
+# ShieldAlert — lucide-react icon "shield-alert"
+=== ShieldAlert @24 stroke:2
+M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z
+M12 8v4
+M12 16h.01
+
+# Archive — lucide-react icon "archive"
+=== Archive @24 stroke:2
+M3 3h18a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-18a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1z
+M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8
+M10 12h4
+
+# Heart — lucide-react icon "heart"
+=== Heart @24 stroke:2
+M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5
+
+# BookImage — lucide-react icon "book-image"
+=== BookImage @24 stroke:2
+m20 13.7-2.1-2.1a2 2 0 0 0-2.8 0L9.7 17
+M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20
+M8 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+
+# Columns3 — lucide-react icon "columns-3"
+=== Columns3 @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M9 3v18
+M15 3v18
+
+# TableProperties — lucide-react icon "table-properties"
+=== TableProperties @24 stroke:2
+M15 3v18
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M21 9H3
+M21 15H3
+
+# Network — lucide-react icon "network"
+=== Network @24 stroke:2
+M17 16h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z
+M3 16h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z
+M10 2h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z
+M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3
+M12 12V8
+
+# LayoutTemplate — lucide-react icon "layout-template"
+=== LayoutTemplate @24 stroke:2
+M4 3h16a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M4 14h7a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-7a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M17 14h3a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-3a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+
+# FolderKanban — lucide-react icon "folder-kanban"
+=== FolderKanban @24 stroke:2
+M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z
+M8 10v4
+M12 10v2
+M16 10v6
+
+# BarChart3 — lucide-react icon "chart-column"
+=== BarChart3 @24 stroke:2
+M3 3v16a2 2 0 0 0 2 2h16
+M18 17V9
+M13 17V5
+M8 17v-3
+
+# Box — lucide-react icon "box"
+=== Box @24 stroke:2
+M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z
+m3.3 7 8.7 5 8.7-5
+M12 22V12
+
+# PenTool — lucide-react icon "pen-tool"
+=== PenTool @24 stroke:2
+M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z
+m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18
+m2.3 2.3 7.286 7.286
+M9 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+
+# Film — lucide-react icon "film"
+=== Film @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M7 3v18
+M3 7.5h4
+M3 12h18
+M3 16.5h4
+M17 3v18
+M17 7.5h4
+M17 16.5h4
+
+# Clapperboard — lucide-react icon "clapperboard"
+=== Clapperboard @24 stroke:2
+m12.296 3.464 3.02 3.956
+M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z
+M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z
+m6.18 5.276 3.1 3.899
+
+# FileEdit — lucide-react icon "file-pen"
+=== FileEdit @24 stroke:2
+M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34
+M14 2v5a1 1 0 0 0 1 1h5
+M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z
+
+# Type — lucide-react icon "type"
+=== Type @24 stroke:2
+M12 4v16
+M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2
+M9 20h6
+
+# Zap — lucide-react icon "zap"
+=== Zap @24 stroke:2
+M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z
+
+# Sigma — lucide-react icon "sigma"
+=== Sigma @24 stroke:2
+M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2
+
+# LayoutGrid — lucide-react icon "layout-grid"
+=== LayoutGrid @24 stroke:2
+M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+
+# Bot — lucide-react icon "bot"
+=== Bot @24 stroke:2
+M12 8V4H8
+M6 8h12a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-8a2 2 0 0 1 2 -2z
+M2 14h2
+M20 14h2
+M15 13v2
+M9 13v2
+
+# Cloud — lucide-react icon "cloud"
+=== Cloud @24 stroke:2
+M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z
+
+# Activity — lucide-react icon "activity"
+=== Activity @24 stroke:2
+M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2
+
+# ArrowDownUp — lucide-react icon "arrow-down-up"
+=== ArrowDownUp @24 stroke:2
+m3 16 4 4 4-4
+M7 20V4
+m21 8-4-4-4 4
+M17 4v16
+
+# AtSign — lucide-react icon "at-sign"
+=== AtSign @24 stroke:2
+M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0
+M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8
+
+# Award — lucide-react icon "award"
+=== Award @24 stroke:2
+m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526
+M6 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0
+
+# Building2 — lucide-react icon "building-2"
+=== Building2 @24 stroke:2
+M10 12h4
+M10 8h4
+M14 21v-3a2 2 0 0 0-4 0v3
+M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2
+M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16
+
+# ClipboardCheck — lucide-react icon "clipboard-check"
+=== ClipboardCheck @24 stroke:2
+M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1z
+M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2
+m9 14 2 2 4-4
+
+# Code — lucide-react icon "code"
+=== Code @24 stroke:2
+m16 18 6-6-6-6
+m8 6-6 6 6 6
+
+# Contact — lucide-react icon "contact"
+=== Contact @24 stroke:2
+M16 2v2
+M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2
+M8 2v2
+M9 11a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+
+# Cpu — lucide-react icon "cpu"
+=== Cpu @24 stroke:2
+M12 20v2
+M12 2v2
+M17 20v2
+M17 2v2
+M2 12h2
+M2 17h2
+M2 7h2
+M20 12h2
+M20 17h2
+M20 7h2
+M7 20v2
+M7 2v2
+M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2z
+M9 8h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1z
+
+# Database — lucide-react icon "database"
+=== Database @24 stroke:2
+M3 5a9 3 0 1 0 18 0a9 3 0 1 0 -18 0
+M3 5V19A9 3 0 0 0 21 19V5
+M3 12A9 3 0 0 0 21 12
+
+# DraftingCompass — lucide-react icon "drafting-compass"
+=== DraftingCompass @24 stroke:2
+m12.99 6.74 1.93 3.44
+M19.136 12a10 10 0 0 1-14.271 0
+m21 21-2.16-3.84
+m3 21 8.02-14.26
+M10 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+
+# Filter — lucide-react icon "funnel"
+=== Filter @24 stroke:2
+M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z
+
+# FolderTree — lucide-react icon "folder-tree"
+=== FolderTree @24 stroke:2
+M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z
+M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z
+M3 5a2 2 0 0 0 2 2h3
+M3 3v13a2 2 0 0 0 2 2h3
+
+# Gauge — lucide-react icon "gauge"
+=== Gauge @24 stroke:2
+m12 14 4-4
+M3.34 19a10 10 0 1 1 17.32 0
+
+# GitBranch — lucide-react icon "git-branch"
+=== GitBranch @24 stroke:2
+M15 6a9 9 0 0 0-9 9V3
+M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+
+# Globe — lucide-react icon "globe"
+=== Globe @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20
+M2 12h20
+
+# HardDrive — lucide-react icon "hard-drive"
+=== HardDrive @24 stroke:2
+M10 16h.01
+M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z
+M21.946 12.013H2.054
+M6 16h.01
+
+# History — lucide-react icon "history"
+=== History @24 stroke:2
+M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8
+M3 3v5h5
+M12 7v5l4 2
+
+# Layers — lucide-react icon "layers"
+=== Layers @24 stroke:2
+M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z
+M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12
+M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17
+
+# Library — lucide-react icon "library"
+=== Library @24 stroke:2
+m16 6 4 14
+M12 6v14
+M8 8v12
+M4 4v16
+
+# Link2 — lucide-react icon "link-2"
+=== Link2 @24 stroke:2
+M9 17H7A5 5 0 0 1 7 7h2
+M15 7h2a5 5 0 1 1 0 10h-2
+M8 12L16 12
+
+# Lock — lucide-react icon "lock"
+=== Lock @24 stroke:2
+M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-7a2 2 0 0 1 2 -2z
+M7 11V7a5 5 0 0 1 10 0v4
+
+# Paperclip — lucide-react icon "paperclip"
+=== Paperclip @24 stroke:2
+m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551
+
+# PenLine — lucide-react icon "pen-line"
+=== PenLine @24 stroke:2
+M13 21h8
+M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z
+
+# PlayCircle — lucide-react icon "circle-play"
+=== PlayCircle @24 stroke:2
+M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+
+# Presentation — lucide-react icon "presentation"
+=== Presentation @24 stroke:2
+M2 3h20
+M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3
+m7 21 5-5 5 5
+
+# Radar — lucide-react icon "radar"
+=== Radar @24 stroke:2
+M19.07 4.93A10 10 0 0 0 6.99 3.34
+M4 6h.01
+M2.29 9.62A10 10 0 1 0 21.31 8.35
+M16.24 7.76A6 6 0 1 0 8.23 16.67
+M12 18h.01
+M17.99 11.66A6 6 0 0 1 15.77 16.67
+M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0
+m13.41 10.59 5.66-5.66
+
+# RefreshCw — lucide-react icon "refresh-cw"
+=== RefreshCw @24 stroke:2
+M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8
+M21 3v5h-5
+M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16
+M8 16H3v5
+
+# Ruler — lucide-react icon "ruler"
+=== Ruler @24 stroke:2
+M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z
+m14.5 12.5 2-2
+m11.5 9.5 2-2
+m8.5 6.5 2-2
+m17.5 15.5 2-2
+
+# Search — lucide-react icon "search"
+=== Search @24 stroke:2
+m21 21-4.34-4.34
+M3 11a8 8 0 1 0 16 0a8 8 0 1 0 -16 0
+
+# Server — lucide-react icon "server"
+=== Server @24 stroke:2
+M4 2h16a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z
+M4 14h16a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z
+M6 6L6.01 6
+M6 18L6.01 18
+
+# Shield — lucide-react icon "shield"
+=== Shield @24 stroke:2
+M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z
+
+# ShieldCheck — lucide-react icon "shield-check"
+=== ShieldCheck @24 stroke:2
+M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z
+m9 12 2 2 4-4
+
+# SlidersHorizontal — lucide-react icon "sliders-horizontal"
+=== SlidersHorizontal @24 stroke:2
+M10 5H3
+M12 19H3
+M14 3v4
+M16 17v4
+M21 12h-9
+M21 19h-5
+M21 5h-7
+M8 10v4
+M8 12H3
+
+# Table — lucide-react icon "table"
+=== Table @24 stroke:2
+M12 3v18
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M3 9h18
+M3 15h18
+
+# Tags — lucide-react icon "tags"
+=== Tags @24 stroke:2
+M13.172 2a2 2 0 0 1 1.414.586l6.71 6.71a2.4 2.4 0 0 1 0 3.408l-4.592 4.592a2.4 2.4 0 0 1-3.408 0l-6.71-6.71A2 2 0 0 1 6 9.172V3a1 1 0 0 1 1-1z
+M2 7v6.172a2 2 0 0 0 .586 1.414l6.71 6.71a2.4 2.4 0 0 0 3.191.193
+M10 6.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+
+# ToggleLeft — lucide-react icon "toggle-left"
+=== ToggleLeft @24 stroke:2
+M6 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M9 5h6a7 7 0 0 1 7 7v0a7 7 0 0 1 -7 7h-6a7 7 0 0 1 -7 -7v0a7 7 0 0 1 7 -7z
+
+# ToggleRight — lucide-react icon "toggle-right"
+=== ToggleRight @24 stroke:2
+M12 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M9 5h6a7 7 0 0 1 7 7v0a7 7 0 0 1 -7 7h-6a7 7 0 0 1 -7 -7v0a7 7 0 0 1 7 -7z
+
+# Upload — lucide-react icon "upload"
+=== Upload @24 stroke:2
+M12 3v12
+m17 8-5-5-5 5
+M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4
+
+# UserRound — lucide-react icon "user-round"
+=== UserRound @24 stroke:2
+M7 8a5 5 0 1 0 10 0a5 5 0 1 0 -10 0
+M20 21a8 8 0 0 0-16 0
+
+# ChartColumn is lucide-react's current name for the same drawing as
+# BarChart3; modules use both spellings, so it aliases rather than repeating
+# the geometry.
+=== ChartColumn -> BarChart3
+
+# X — lucide-react icon "x". Used for the window close button.
+=== X @24 stroke:2
+M18 6 6 18
+M6 6l12 12
+
+# Bell — lucide-react icon "bell". The header's notification button.
+=== Bell @24 stroke:2
+M10.268 21a2 2 0 0 0 3.464 0
+M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326
+
+# HelpCircle — lucide-react icon "circle-question-mark" (the name the web uses
+# is the older alias). The header's help button.
+=== HelpCircle @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3
+M12 17h.01
+
+# UserPlus — lucide-react icon "user-plus" (v1.17.0), copied from the package's
+# own icon node. Its `circle` becomes the two-arc form this file uses
+# throughout, and its two `line`s become explicit move+line commands.
+=== UserPlus @24 stroke:2
+M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2
+M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0
+M19 8V14
+M22 11H16
+
+# LogOut — lucide-react icon "log-out" (v1.17.0), verbatim.
+=== LogOut @24 stroke:2
+m16 17 5-5-5-5
+M21 12H9
+M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4
+
+# ChevronDown / ChevronRight — lucide-react, for the admin nav tree's expand
+# state (down = open, right = collapsed).
+=== ChevronDown @24 stroke:2
+m6 9 6 6 6-6
+
+=== ChevronRight @24 stroke:2
+m9 18 6-6-6-6
+
+# ChevronLeft — the mirror of ChevronRight: a scroll bar's left arrow and a
+# calendar's previous-month button. Both need it, and `vector_icon` silently
+# draws nothing for a name it does not know, so a missing geometry shows up as
+# an empty button rather than an error.
+=== ChevronLeft @24 stroke:2
+m15 18-6-6 6-6
+
+# ChevronUp — lucide-react, for a column's ascending-sort indicator.
+=== ChevronUp @24 stroke:2
+m18 15-6-6-6 6
+
+# Plus — lucide-react, for « create » buttons.
+=== Plus @24 stroke:2
+M5 12h14M12 5v14
+
+# Check / Minus — lucide-react. The tick and the indeterminate bar a check box
+# paints. Geometry, not a font glyph: a « ✓ » drawn as text is at the mercy of
+# whichever family resolves it, and would not match the toolkit at any size.
+=== Check @24 stroke:2
+M20 6 9 17l-5-5
+
+=== Minus @24 stroke:2
+M5 12h14
+
+# ArrowUp / ArrowDown / ChevronsUpDown — lucide-react "arrow-up", "arrow-down",
+# "chevrons-up-down". The three sort indicators `@ui/DataTable` puts in a
+# sortable column header: the two arrows for the active direction, the double
+# chevron as the (hover-only) hint on a column that is sortable but not sorted.
+=== ArrowUp @24 stroke:2
+m5 12 7-7 7 7
+M12 19V5
+
+=== ArrowDown @24 stroke:2
+M12 5v14
+m19 12-7 7-7-7
+
+=== ChevronsUpDown @24 stroke:2
+m7 15 5 5 5-5
+m7 9 5-5 5 5
+
+# ChevronsLeft / ChevronsRight — lucide-react "chevrons-left" /
+# "chevrons-right". The « first page » / « last page » jumps of the data
+# table's pagination bar (the single chevrons are already above).
+=== ChevronsLeft @24 stroke:2
+m11 17-5-5 5-5
+m18 17-5-5 5-5
+
+=== ChevronsRight @24 stroke:2
+m6 17 5-5-5-5
+m13 17 5-5-5-5
+
+# AlertCircle — lucide-react "circle-alert". The medallion of an
+# `EmptyState variant="error"`. The circle is the primitive rewritten as two
+# half-arcs, like every other circle in this file.
+=== AlertCircle @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 8v4
+M12 16h.01
+
+# SearchX — lucide-react "search-x". The medallion of an
+# `EmptyState variant="no-results"`: the search lens with a cross in it.
+=== SearchX @24 stroke:2
+m13.5 8.5-5 5
+m8.5 8.5 5 5
+M3 11a8 8 0 1 0 16 0a8 8 0 1 0 -16 0
+m21 21-4.3-4.3
+
+# MoreHorizontal / MoreVertical — lucide-react "ellipsis" /
+# "ellipsis-vertical". The overflow controls: horizontal on the bulk-action
+# bar, vertical on a table row and on a card.
+=== MoreHorizontal @24 stroke:2
+M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+
+=== MoreVertical @24 stroke:2
+M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M11 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M11 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+
+# Settings2 — lucide-react "settings-2". The data table's column chooser
+# button (two sliders), NOT the app's settings gear.
+=== Settings2 @24 stroke:2
+M14 17H5
+M19 7h-9
+M14 17a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M4 7a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+
+# AlertTriangle — lucide-react "triangle-alert" (v1.17.0; the web imports it
+# under its older `AlertTriangle` alias, which is the name kept here). The
+# glyph of a warning ConfirmDialog and of a warning toast.
+=== AlertTriangle @24 stroke:2
+m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3
+M12 9v4
+M12 17h.01
+
+# AlertCircle — lucide-react "circle-alert" (older alias `AlertCircle`, the
+# name `@ui/Toast` imports). A danger toast. Its `circle` becomes the
+# two-arc form this file uses throughout and its two `line`s explicit commands.
+=== AlertCircle @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 8V12
+M12 16h.01
+
+# Info — lucide-react "info". An info toast.
+=== Info @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 16v-4
+M12 8h.01
+
+# CheckCircle2 — lucide-react "circle-check-big" (older alias `CheckCircle2`,
+# the name `@ui/Toast` imports). A success toast.
+=== CheckCircle2 @24 stroke:2
+M21.801 10A10 10 0 1 1 17 3.335
+m9 11 3 3L22 4
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rich-text formatting glyphs — the very icons `core/frontend/src/ui/RichText.tsx`
+# imports from lucide-react, plus the four text-alignment icons an editor's
+# alignment group needs. Geometry verbatim from the package's `__iconNode`:
+# `path` elements keep their `d`, and each `line` is rewritten as the equivalent
+# `M…L…` without changing the shape.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Bold — lucide-react icon "bold"
+=== Bold @24 stroke:2
+M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8
+
+# Italic — lucide-react icon "italic"
+=== Italic @24 stroke:2
+M19 4L10 4
+M14 20L5 20
+M15 4L9 20
+
+# Underline — lucide-react icon "underline"
+=== Underline @24 stroke:2
+M6 4v6a6 6 0 0 0 12 0V4
+M4 20L20 20
+
+# List — lucide-react icon "list" (a bulleted list)
+=== List @24 stroke:2
+M3 6h.01
+M3 12h.01
+M3 18h.01
+M8 6h13
+M8 12h13
+M8 18h13
+
+# ListOrdered — lucide-react icon "list-ordered" (a numbered list)
+=== ListOrdered @24 stroke:2
+M10 6h11
+M10 12h11
+M10 18h11
+M4 10h2
+M4 6h1v4
+M6 18H4c0-1 2-2 2-3s-1-1.5-2-1
+
+# Eraser — lucide-react icon "eraser" (clear formatting)
+=== Eraser @24 stroke:2
+M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21
+m5.082 11.09 8.828 8.828
+
+# AlignLeft — lucide-react icon "align-left"
+=== AlignLeft @24 stroke:2
+M21 6H3
+M15 12H3
+M17 18H3
+
+# AlignCenter — lucide-react icon "align-center"
+=== AlignCenter @24 stroke:2
+M21 6H3
+M17 12H7
+M19 18H5
+
+# AlignRight — lucide-react icon "align-right"
+=== AlignRight @24 stroke:2
+M21 6H3
+M21 12H9
+M21 18H7
+
+# AlignJustify — lucide-react icon "align-justify"
+=== AlignJustify @24 stroke:2
+M3 6h18
+M3 12h18
+M3 18h18
+
+# CaretDown — NOT a lucide icon: `core/frontend/src/ui/CaretDown.tsx`, the solid
+# drop-down caret every list-style selector in the design system wears. Its own
+# doc rejects lucide's `ChevronDown` ("a thin V, which reads as 'expand' rather
+# than 'choose from a list'") and the `▼` character ("whose shape and baseline
+# change from one font to the next"), which is why it is geometry and lives
+# here. Path verbatim, on the component's own 10x10 viewBox; FILLED, so the
+# section declares no `stroke:`.
+=== CaretDown @10
+M1 3.5h8L5 8.5z
+
+# The four severity marks `core/frontend/src/ui/Callout.tsx` imports from
+# lucide-react (`Info`, `CheckCircle2`, `AlertTriangle`, `AlertCircle`) and the
+# one `core/frontend/src/ui/Stepper.tsx` puts in a failed bullet
+# (`AlertTriangle`). Their circles are written in the same arc form the sections
+# above use for `Clock`, `HelpCircle` and `PlayCircle`.
+
+# Info — lucide-react icon "info"
+=== Info @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 16v-4
+M12 8h.01
+
+# CheckCircle2 — lucide-react icon "circle-check" (exported as CheckCircle2)
+=== CheckCircle2 @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+m9 12 2 2 4-4
+
+# AlertCircle — lucide-react icon "circle-alert" (exported as AlertCircle)
+=== AlertCircle @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+M12 8v4
+M12 16h.01
+
+# AlertTriangle — lucide-react icon "triangle-alert" (exported as AlertTriangle)
+=== AlertTriangle @24 stroke:2
+m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3
+M12 9v4
+M12 17h.01
+
+# ── Ribbon commands (the office ribbon's clipboard, font, paragraph, file and view
+# groups), from lucide-react v1.18.0, same extraction rules as above.
+
+# Copy — lucide-react icon "copy"
+=== Copy @24 stroke:2
+M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2z
+M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2
+
+# Scissors — lucide-react icon "scissors"
+=== Scissors @24 stroke:2
+M3 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M8.12 8.12 12 12
+M20 4 8.12 15.88
+M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+M14.8 14.8 20 20
+
+# ClipboardPaste — lucide-react icon "clipboard-paste"
+=== ClipboardPaste @24 stroke:2
+M11 14h10
+M16 4h2a2 2 0 0 1 2 2v1.344
+m17 18 4-4-4-4
+M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113
+M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1z
+
+# Paintbrush — lucide-react icon "paintbrush"
+=== Paintbrush @24 stroke:2
+m14.622 17.897-10.68-2.913
+M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z
+M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15
+
+# Strikethrough — lucide-react icon "strikethrough"
+=== Strikethrough @24 stroke:2
+M16 4H9a3 3 0 0 0-2.83 4
+M14 12a4 4 0 0 1 0 8H6
+M4 12L20 12
+
+# Subscript — lucide-react icon "subscript"
+=== Subscript @24 stroke:2
+m4 5 8 8
+m12 5-8 8
+M20 19h-4c0-1.5.44-2 1.5-2.5S20 15.33 20 14c0-.47-.17-.93-.48-1.29a2.11 2.11 0 0 0-2.62-.44c-.42.24-.74.62-.9 1.07
+
+# Superscript — lucide-react icon "superscript"
+=== Superscript @24 stroke:2
+m4 19 8-8
+m12 19-8-8
+M20 12h-4c0-1.5.442-2 1.5-2.5S20 8.334 20 7.002c0-.472-.17-.93-.484-1.29a2.105 2.105 0 0 0-2.617-.436c-.42.239-.738.614-.899 1.06
+
+# Save — lucide-react icon "save"
+=== Save @24 stroke:2
+M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z
+M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7
+M7 3v4a1 1 0 0 0 1 1h7
+
+# Undo2 — lucide-react icon "undo-2"
+=== Undo2 @24 stroke:2
+M9 14 4 9l5-5
+M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11
+
+# Redo2 — lucide-react icon "redo-2"
+=== Redo2 @24 stroke:2
+m15 14 5-5-5-5
+M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13
+
+# Printer — lucide-react icon "printer"
+=== Printer @24 stroke:2
+M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2
+M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6
+M7 14h10a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1z
+
+# House — lucide-react icon "house"
+=== House @24 stroke:2
+M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8
+M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z
+
+# FileDown — lucide-react icon "file-down"
+=== FileDown @24 stroke:2
+M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z
+M14 2v5a1 1 0 0 0 1 1h5
+M12 18v-6
+m9 15 3 3 3-3
+
+# FilePlus — lucide-react icon "file-plus"
+=== FilePlus @24 stroke:2
+M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z
+M14 2v5a1 1 0 0 0 1 1h5
+M9 15h6
+M12 18v-6
+
+# CopyPlus — lucide-react icon "copy-plus"
+=== CopyPlus @24 stroke:2
+M15 12L15 18
+M12 15L18 15
+M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2z
+M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2
+
+# Replace — lucide-react icon "replace"
+=== Replace @24 stroke:2
+M14 4a1 1 0 0 1 1-1
+M15 10a1 1 0 0 1-1-1
+M21 4a1 1 0 0 0-1-1
+M21 9a1 1 0 0 1-1 1
+m3 7 3 3 3-3
+M6 10V5a2 2 0 0 1 2-2h2
+M4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+
+# Highlighter — lucide-react icon "highlighter"
+=== Highlighter @24 stroke:2
+m9 11-6 6v3h9l3-3
+m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4
+
+# Baseline — lucide-react icon "baseline"
+=== Baseline @24 stroke:2
+M4 20h16
+m6 16 6-12 6 12
+M8 12h8
+
+# Link — lucide-react icon "link"
+=== Link @24 stroke:2
+M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71
+M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71
+
+# Shapes — lucide-react icon "shapes"
+=== Shapes @24 stroke:2
+M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z
+M4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1 -1 1h-5a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1z
+M14 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0
+
+# IndentIncrease — lucide-react icon "indent-increase"
+=== IndentIncrease @24 stroke:2
+M21 5H11
+M21 12H11
+M21 19H11
+m3 8 4 4-4 4
+
+# IndentDecrease — lucide-react icon "indent-decrease"
+=== IndentDecrease @24 stroke:2
+M21 5H11
+M21 12H11
+M21 19H11
+m7 8-4 4 4 4
+
+# Pilcrow — lucide-react icon "pilcrow"
+=== Pilcrow @24 stroke:2
+M13 4v16
+M17 4v16
+M19 4H9.5a4.5 4.5 0 0 0 0 9H13
+
+# CaseSensitive — lucide-react icon "case-sensitive"
+=== CaseSensitive @24 stroke:2
+m2 16 4.039-9.69a.5.5 0 0 1 .923 0L11 16
+M22 9v7
+M3.304 13h6.392
+M15 12.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0
+
+# Eye — lucide-react icon "eye"
+=== Eye @24 stroke:2
+M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0
+M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0
+
+# ZoomIn — lucide-react icon "zoom-in"
+=== ZoomIn @24 stroke:2
+M3 11a8 8 0 1 0 16 0a8 8 0 1 0 -16 0
+M21 21L16.65 16.65
+M11 8L11 14
+M8 11L14 11
+
+# Columns2 — lucide-react icon "columns-2"
+=== Columns2 @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M12 3v18
+
+# Crop — lucide-react icon "crop"
+=== Crop @24 stroke:2
+M6 2v14a2 2 0 0 0 2 2h14
+M18 22V8a2 2 0 0 0-2-2H2
+
+# RotateCw — lucide-react icon "rotate-cw"
+=== RotateCw @24 stroke:2
+M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8
+M21 3v5h-5
+
+# MousePointer2 — lucide-react icon "mouse-pointer-2"
+=== MousePointer2 @24 stroke:2
+M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z
+
+# SpellCheck — lucide-react icon "spell-check"
+=== SpellCheck @24 stroke:2
+m6 16 6-12 6 12
+M8 12h8
+m16 20 2 2 4-4
+
+# SquareDashed — lucide-react icon "square-dashed"
+=== SquareDashed @24 stroke:2
+M5 3a2 2 0 0 0-2 2
+M19 3a2 2 0 0 1 2 2
+M21 19a2 2 0 0 1-2 2
+M5 21a2 2 0 0 1-2-2
+M9 3h1
+M9 21h1
+M14 3h1
+M14 21h1
+M3 9v1
+M21 9v1
+M3 14v1
+M21 14v1
+
+# PanelTop — lucide-react icon "panel-top"
+=== PanelTop @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M3 9h18
+
+
+# ── Documents ribbon (the web `buildDocumentRibbon`), lucide-react v1.18.0.
+
+# SquareCheck — lucide-react icon "square-check"
+=== SquareCheck @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+m9 12 2 2 4-4
+
+# SquareSplitVertical — lucide-react icon "square-split-vertical"
+=== SquareSplitVertical @24 stroke:2
+M5 8V5c0-1 1-2 2-2h10c1 0 2 1 2 2v3
+M19 16v3c0 1-1 2-2 2H7c-1 0-2-1-2-2v-3
+M4 12L20 12
+
+# ArrowDownAZ — lucide-react icon "arrow-down-a-z"
+=== ArrowDownAZ @24 stroke:2
+m3 16 4 4 4-4
+M7 20V4
+M20 8h-5
+M15 10V6.5a2.5 2.5 0 0 1 5 0V10
+M15 14h5l-5 6h5
+
+# ArrowUpAZ — lucide-react icon "arrow-up-a-z"
+=== ArrowUpAZ @24 stroke:2
+m3 8 4-4 4 4
+M7 4v16
+M20 8h-5
+M15 10V6.5a2.5 2.5 0 0 1 5 0V10
+M15 14h5l-5 6h5
+
+# ListTree — lucide-react icon "list-tree"
+=== ListTree @24 stroke:2
+M8 5h13
+M13 12h8
+M13 19h8
+M3 10a2 2 0 0 0 2 2h3
+M3 5v12a2 2 0 0 0 2 2h3
+
+# PaintBucket — lucide-react icon "paint-bucket"
+=== PaintBucket @24 stroke:2
+M11 7 6 2
+M18.992 12H2.041
+M21.145 18.38A3.34 3.34 0 0 1 20 16.5a3.3 3.3 0 0 1-1.145 1.88c-.575.46-.855 1.02-.855 1.595A2 2 0 0 0 20 22a2 2 0 0 0 2-2.025c0-.58-.285-1.13-.855-1.595
+m8.5 4.5 2.148-2.148a1.205 1.205 0 0 1 1.704 0l7.296 7.296a1.205 1.205 0 0 1 0 1.704l-7.592 7.592a3.615 3.615 0 0 1-5.112 0l-3.888-3.888a3.615 3.615 0 0 1 0-5.112L5.67 7.33
+
+# WrapText — lucide-react icon "wrap-text"
+=== WrapText @24 stroke:2
+m16 16-3 3 3 3
+M3 12h14.5a1 1 0 0 1 0 7H13
+M3 19h6
+M3 5h18
+
+# Bookmark — lucide-react icon "bookmark"
+=== Bookmark @24 stroke:2
+M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z
+
+# CornerDownRight — lucide-react icon "corner-down-right"
+=== CornerDownRight @24 stroke:2
+m15 10 5 5-5 5
+M4 4v7a4 4 0 0 0 4 4h12
+
+# Hash — lucide-react icon "hash"
+=== Hash @24 stroke:2
+M4 9L20 9
+M4 15L20 15
+M10 3L8 21
+M16 3L14 21
+
+# SeparatorHorizontal — lucide-react icon "separator-horizontal"
+=== SeparatorHorizontal @24 stroke:2
+m16 16-4 4-4-4
+M3 12h18
+m8 8 4-4 4 4
+
+# TextCursorInput — lucide-react icon "text-cursor-input"
+=== TextCursorInput @24 stroke:2
+M12 20h-1a2 2 0 0 1-2-2 2 2 0 0 1-2 2H6
+M13 8h7a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-7
+M5 16H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1
+M6 4h1a2 2 0 0 1 2 2 2 2 0 0 1 2-2h1
+M9 6v12
+
+# PanelBottom — lucide-react icon "panel-bottom"
+=== PanelBottom @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M3 15h18
+
+# Omega — lucide-react icon "omega"
+=== Omega @24 stroke:2
+M3 20h4.5a.5.5 0 0 0 .5-.5v-.282a.52.52 0 0 0-.247-.437 8 8 0 1 1 8.494-.001.52.52 0 0 0-.247.438v.282a.5.5 0 0 0 .5.5H21
+
+# CalendarClock — lucide-react icon "calendar-clock"
+=== CalendarClock @24 stroke:2
+M16 14v2.2l1.6 1
+M16 2v4
+M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5
+M3 10h5
+M8 2v4
+M10 16a6 6 0 1 0 12 0a6 6 0 1 0 -12 0
+
+# Captions — lucide-react icon "captions"
+=== Captions @24 stroke:2
+M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2z
+M7 15h4M15 15h2M7 11h2M13 11h4
+
+# Quote — lucide-react icon "quote"
+=== Quote @24 stroke:2
+M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z
+M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z
+
+# Pencil — lucide-react icon "pencil"
+=== Pencil @24 stroke:2
+M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z
+m15 5 4 4
+
+# Tag — lucide-react icon "tag"
+=== Tag @24 stroke:2
+M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z
+M7 7.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0
+
+# TextQuote — lucide-react icon "text-quote"
+=== TextQuote @24 stroke:2
+M17 5H3
+M21 12H8
+M21 19H8
+M3 12v7
+
+# PanelLeft — lucide-react icon "panel-left"
+=== PanelLeft @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M9 3v18
+
+# Frame — lucide-react icon "frame"
+=== Frame @24 stroke:2
+M22 6L2 6
+M22 18L2 18
+M6 2L6 22
+M18 2L18 22
+
+# Files — lucide-react icon "files"
+=== Files @24 stroke:2
+M15 2h-4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8
+M16.706 2.706A2.4 2.4 0 0 0 15 2v5a1 1 0 0 0 1 1h5a2.4 2.4 0 0 0-.706-1.706z
+M5 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 1.732-1
+
+# MoveHorizontal — lucide-react icon "move-horizontal"
+=== MoveHorizontal @24 stroke:2
+m18 8 4 4-4 4
+M2 12h20
+m6 8-4 4 4 4
+
+# SquarePlay — lucide-react icon "square-play"
+=== SquarePlay @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z
+
+# ListChecks — lucide-react icon "list-checks"
+=== ListChecks @24 stroke:2
+M13 5h8
+M13 12h8
+M13 19h8
+m3 17 2 2 4-4
+m3 7 2 2 4-4
+
+# MessageSquarePlus — lucide-react icon "message-square-plus"
+=== MessageSquarePlus @24 stroke:2
+M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z
+M12 8v6
+M9 11h6
+
+# Droplet — lucide-react icon "droplet"
+=== Droplet @24 stroke:2
+M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z
+
+# AArrowUp — lucide-react icon "a-arrow-up"
+=== AArrowUp @24 stroke:2
+m14 11 4-4 4 4
+M18 16V7
+m2 16 4.039-9.69a.5.5 0 0 1 .923 0L11 16
+M3.304 13h6.392
+
+# AArrowDown — lucide-react icon "a-arrow-down"
+=== AArrowDown @24 stroke:2
+m14 12 4 4 4-4
+M18 16V7
+m2 16 4.039-9.69a.5.5 0 0 1 .923 0L11 16
+M3.304 13h6.392
+
+# Square — lucide-react icon "square" (added for the dock's float maximise button)
+=== Square @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+
+# GripVertical — lucide-react icon "grip-vertical" (dock column resize grip)
+=== GripVertical @24 stroke:2
+M8 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M8 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M8 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M14 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M14 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M14 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+
+# GripHorizontal — lucide-react icon "grip-horizontal" (dock row resize grip)
+=== GripHorizontal @24 stroke:2
+M11 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M18 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M4 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M11 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M18 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+M4 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0
+
+# PanelRightOpen — lucide-react icon "panel-right-open" (reopen closed dock panels)
+=== PanelRightOpen @24 stroke:2
+M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z
+M15 3v18
+m10 15-3-3 3-3
+
+# ArrowLeft — lucide-react icon "arrow-left" (workspace shell back button)
+=== ArrowLeft @24 stroke:2
+m12 19-7-7 7-7
+M19 12H5
+
+
+# Triangle — lucide-react icon "triangle" (colour picker: triangular SV area)
+=== Triangle @24 stroke:2
+M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z
+
+# Circle — lucide-react icon "circle" (colour picker: circular SV area)
+=== Circle @24 stroke:2
+M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0
+
+# Pipette — lucide-react icon "pipette" (colour picker: screen eyedropper)
+=== Pipette @24 stroke:2
+m12 9-8.414 8.414A2 2 0 0 0 3 18.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 3.828 21h1.344a2 2 0 0 0 1.414-.586L15 12
+m18 9 .4.4a1 1 0 1 1-3 3l-3.8-3.8a1 1 0 1 1 3-3l.4.4 3.4-3.4a1 1 0 1 1 3 3z
+m2 22 .414-.414

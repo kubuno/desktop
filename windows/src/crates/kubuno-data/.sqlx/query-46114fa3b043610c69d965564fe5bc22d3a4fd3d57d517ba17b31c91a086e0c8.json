@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO \"orders\" (\"customer_id\", \"label\", \"amount\") VALUES (?1, ?2, ?3) RETURNING \"id\" AS \"id!: i64\", \"customer_id\" AS \"customer_id!: i64\", \"label\" AS \"label!: String\", \"amount\" AS \"amount!: f64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "customer_id!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "label!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "amount!: f64",
+        "ordinal": 3,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "46114fa3b043610c69d965564fe5bc22d3a4fd3d57d517ba17b31c91a086e0c8"
+}

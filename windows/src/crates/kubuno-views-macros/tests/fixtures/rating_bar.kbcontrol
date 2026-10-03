@@ -1,0 +1,4 @@
+<!-- The view of the `RatingBar` user control of `#[derive(UserControl)]`'s documentation example. -->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="RatingBar" DesignWidth="160" DesignHeight="36">
+  <Button x:Name="star" Text="{Binding Value}" OnClick="star_click" X="0" Y="0" Width="160" Height="36"/>
+</UserControl>

@@ -1,0 +1,17 @@
+[package]
+name        = "kubuno-views-web"
+description = "The web target's .kbview compiler: validates a view against a web element registry (kbview-registry.web.json + project controls) and produces the render plan of @kubuno/views, the generated ViewBase declarations (.d.ts) and the binding check files read by kbview-tsc. Platform-neutral (no UI, no Windows API): compiled to WebAssembly by @kubuno/views-compiler (core/frontend/packages/views-compiler) and shared with the language server's web profile."
+# Own version (not the workspace's): the web compiler is consumed by the core repository through the git
+# tag `views-web-v<version>` (CLAUDE.md §3, "published" mode), so its version must move with that tag.
+version     = "0.1.0"
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# Platform-neutral on purpose (`vskubuno/docs/WEB-VIEWS.md` WV-2): it must keep building for
+# `wasm32-unknown-unknown`, Linux and macOS. Never add a UI, Windows or C dependency here.
+[dependencies]
+kubuno-views-syntax = { workspace = true }
+kubuno-views-model  = { workspace = true }
+serde      = { workspace = true }
+serde_json = { workspace = true }

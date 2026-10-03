@@ -1,0 +1,5 @@
+<!-- A dialog-like view read by tests/views.rs through #[kubuno::view("fixtures/settings_view.kbview")]. -->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="320" DesignHeight="120" Title="Settings" AcceptButton="ok">
+  <TextField x:Name="name" Placeholder="Your name" X="16" Y="16" Width="288" Height="36" Anchor="Top, Left, Right"/>
+  <Button x:Name="ok" Text="OK" Variant="Primary" X="216" Y="68" Width="88" Height="36" Anchor="Bottom, Right"/>
+</Panel>

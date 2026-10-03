@@ -1,0 +1,7 @@
+[
+  { "Title": "Courriel", "Height": 119, "Settings": [
+    { "Label": "Expéditeur des notifications", "Value": "no-reply@exemple.fr", "Description": "Adresse des courriels envoyés par l'instance", "Ruled": false } ] },
+  { "Title": "Général", "Height": 175, "Settings": [
+    { "Label": "Langue par défaut", "Value": "fr", "Description": "Pour les nouveaux comptes", "Ruled": true },
+    { "Label": "Nom de l'instance", "Value": "Kubuno Exemple", "Description": "Affiché dans l'en-tête et les courriels", "Ruled": false } ] }
+]

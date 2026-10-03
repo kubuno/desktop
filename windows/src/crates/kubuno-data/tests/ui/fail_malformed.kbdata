@@ -1,0 +1,4 @@
+name = "Broken"
+connection = "Shop"
+provider = "sqlite"
+password = "never here"

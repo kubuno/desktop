@@ -1,0 +1,32 @@
+<!--
+  The home page: three cards, the one the Tauri build had — the sync state (a dot, what it says, the
+  last summary, « Synchroniser maintenant »), the connection (the server and the switch that cuts the
+  network on purpose) and the quick links. The application tiles are not here: they live in the
+  waffle, as on the web. Every action is raised as Command (sync_now, open_folder, open_web,
+  toggle_offline); the window carries it out.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="LauncherPage" DesignWidth="984" DesignHeight="736" BackColor="Background" OnLoad="launcher_page_load">
+  <Label x:Name="title" Text="{Res launcher_title}" Role="Page" TextAlign="MiddleLeft" X="24" Y="24" Width="936" Height="40" Anchor="Top, Left, Right"/>
+  <Card x:Name="sync_card" Title="{Res card_sync}" Surface="Layer" X="24" Y="72" Width="936" Height="179" Anchor="Top, Left, Right">
+    <Panel x:Name="sync_body" Width="902" Height="100">
+      <StatusDot x:Name="sync_dot" Color="{Binding SyncTone}" d:Color="Success" Diameter="12" X="0" Y="4" Width="12" Height="12"/>
+      <Label x:Name="sync_state" Text="{Binding SyncState}" d:Text="Vos fichiers sont à jour" TextAlign="MiddleLeft" X="24" Y="0" Width="878" Height="20" Anchor="Top, Left, Right"/>
+      <Label x:Name="sync_detail" Text="{Binding SyncDetail}" d:Text="C:\Users\Camille\Kubuno" Role="Meta" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="20" Width="878" Height="20" Anchor="Top, Left, Right"/>
+      <Button x:Name="sync_button" Text="{Binding SyncButtonText}" d:Text="Synchroniser maintenant" Size="Lg" Enabled="{Binding CanSync}" X="0" Y="56" Width="220" Height="44" OnClick="sync_button_click"/>
+    </Panel>
+  </Card>
+  <Card x:Name="connection_card" Title="{Res card_connection}" Surface="Layer" X="24" Y="267" Width="936" Height="155" Anchor="Top, Left, Right">
+    <Panel x:Name="connection_body" Width="902" Height="76">
+      <StatusDot x:Name="server_dot" Color="{Binding ServerTone}" d:Color="Success" Diameter="10" X="0" Y="5" Width="10" Height="10"/>
+      <Label x:Name="server" Text="{Binding ServerText}" d:Text="https://cloud.exemple.fr" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="22" Y="0" Width="880" Height="20" Anchor="Top, Left, Right"/>
+      <Switch x:Name="online_switch" On="{Binding Online}" d:On="true" Label="{Binding OnlineLabel}" d:Label="En ligne" Description="{Binding OnlineDescription}" d:Description="Communication avec le serveur activée." CheckAlign="MiddleRight" X="0" Y="28" Width="902" Height="48" Anchor="Top, Left, Right" OnCheckedChanged="online_switch_checked_changed"/>
+    </Panel>
+  </Card>
+  <Card x:Name="links_card" Title="{Res card_links}" Surface="Layer" X="24" Y="438" Width="936" Height="115" Anchor="Top, Left, Right">
+    <Stack x:Name="links" Direction="LeftToRight" Gap="8">
+      <Button x:Name="link_sync" Text="{Res link_sync}" Variant="Secondary" Icon="Refresh" Height="36" Stack.Fill="true" OnClick="link_sync_click"/>
+      <Button x:Name="link_folder" Text="{Res link_folder}" Variant="Secondary" Icon="Folder" Height="36" Stack.Fill="true" OnClick="link_folder_click"/>
+      <Button x:Name="link_web" Text="{Res link_web}" Variant="Secondary" Icon="Globe" Height="36" Stack.Fill="true" OnClick="link_web_click"/>
+    </Stack>
+  </Card>
+</UserControl>

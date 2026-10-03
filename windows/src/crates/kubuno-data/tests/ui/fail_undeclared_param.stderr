@@ -1,0 +1,5 @@
+error: `fail_undeclared_param.kbdata`: query `by_city`: `@city` is not declared in its [[queries.params]]
+ --> tests/ui/fail_undeclared_param.rs:1:27
+  |
+1 | kubuno_data::data_source!("fail_undeclared_param.kbdata");
+  |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

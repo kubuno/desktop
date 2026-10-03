@@ -1,0 +1,66 @@
+[package]
+name    = "kubuno-ui"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+description = "Kubuno's desktop design system, built on the WinForms control replicas."
+
+# Shipped as ONE shared library, `kubuno_ui.dll`, that every Kubuno desktop app
+# of this workspace loads — the component families, the host (kubuno-controls)
+# and the painting surface (drive-app-controls) included, so the global state
+# they keep (input queue, focus ring, floating surfaces) exists exactly once per
+# process. A Rust `dylib` has no stable ABI: it and the apps are built together,
+# by the same compiler, with `-C prefer-dynamic` (see `.cargo/config.toml`).
+# `dylib` ONLY: with an `rlib` beside it, Cargo links the package's own
+# examples — the component gallery — statically, and the gallery would stop
+# exercising the very DLL the apps load.
+[lib]
+crate-type = ["dylib"]
+
+# Every build of the DLL gets its own file name, `kubuno_ui-<hash>.dll`, and every program linked
+# against it imports that exact name: `build.rs` routes this package's link through a shim that
+# renames the output (the only point where the name the import library records can change). Two
+# builds then coexist in one folder, and a program never loads a DLL of another build.
+# `find-msvc-tools` is the crate rustc itself uses to find MSVC's `link.exe`.
+[build-dependencies]
+find-msvc-tools = "0.1"
+
+[dependencies]
+# The replica layer: property surface, defaults, state machines, layout engines.
+kubuno-controls    = { path = "../kubuno-controls" }
+# The painting surface every Kubuno app already draws through.
+drive-app-controls = { path = "../../drive/crates/drive-app-controls" }
+windows-numerics   = "0.3"
+# Warnings of the drawing layer (an image that cannot be decoded).
+tracing            = { workspace = true }
+# The dock's layout (`dock::DockLayout`) is persisted as JSON, in the web's own shape.
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+# The splash screen (`splash`) publishes its product name, status line and progress to UI
+# Automation (Narrator announces the status as a live region). Same versions as kubuno-controls.
+accesskit          = "0.25"
+accesskit_windows  = "0.35"
+
+[dependencies.windows]
+version  = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_DirectWrite",
+    # The colour picker's rasters (`color::raster`) and its screen eyedropper.
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    # The splash screen (`splash`): its own layered window on its own thread, placed on the
+    # launch monitor at that monitor's DPI, the process start time (time to first paint), the
+    # per-user switch that turns it off, and the cloaked state of the window it waits for.
+    "Win32_UI_HiDpi",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Registry",
+    "Win32_Graphics_Dwm",
+    "Win32_System_LibraryLoader",
+]

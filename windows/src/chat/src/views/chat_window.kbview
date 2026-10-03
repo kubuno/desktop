@@ -1,0 +1,38 @@
+<!--
+  Kubuno Chat's window, laid out like a desktop messenger: the title bar (the default height, the apps waffle
+  and the account avatar left of the window buttons: ShowWaffle / ShowAccount), a navigation rail (chats,
+  meetings; settings and account at the bottom), the conversation list, and the open conversation.
+  ChatWindow (chat_window.rs) keeps the data (model::ChatState) and fills the panes through typed access.
+-->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="1180" DesignHeight="800" Title="{Res app_title}" Icon="{Res app_icon}" Backdrop="MicaAlt"
+       TitleBarBackground="TitleBarBackground" TitleBarForeground="TextPrimary" CaptionButtonStyle="Windows"
+       ShowWaffle="true" ShowAccount="true"
+       MinimumSize="760, 480" OnLoad="chat_window_load" OnShown="chat_window_shown">
+  <Panel x:Name="rail" Dock="Left" Width="56" BackColor="TitleBarBackground">
+    <Sidebar x:Name="nav" DisplayMode="Compact" SelectedItem="{Binding Section, Mode=TwoWay}" OnSelectionChanged="nav_selection_changed" X="0" Y="4" Width="56" Height="104">
+      <SidebarItem x:Name="nav_chats" Key="chats" Text="{Res nav_chats}" Icon="MessagesSquare"/>
+      <SidebarItem x:Name="nav_meetings" Key="meetings" Text="{Res nav_meetings}" Icon="Video"/>
+    </Sidebar>
+    <IconButton x:Name="settings_button" Icon="Settings" Diameter="36" Glyph="20" ToolTip="{Res settings_tip}" DropDownMenu="settings_menu" X="10" Y="704" Width="36" Height="36" Anchor="Bottom, Left"/>
+    <IconButton x:Name="profile_button" Icon="UserRound" Filled="true" Diameter="36" Glyph="20" ToolTip="{Res profile_tip}" DropDownMenu="profile_menu" X="10" Y="748" Width="36" Height="36" Anchor="Bottom, Left"/>
+    <Panel x:Name="rail_rule" Dock="Right" Width="1" BackColor="Divider"/>
+  </Panel>
+  <ConversationListPane x:Name="list_pane" Dock="Left" Width="360" OnConversationSelected="list_pane_conversation_selected" OnSearchChanged="list_pane_search_changed"/>
+  <ConversationPane x:Name="conversation" Dock="Fill" OnSendRequested="conversation_send_requested" OnCommand="conversation_command" OnMessageActivated="conversation_message_activated" OnReachedTop="conversation_reached_top"/>
+  <!-- Expires a "typing…" note whose typing_stop never came. -->
+  <Timer x:Name="typing_timer" Interval="1000" Enabled="true" OnTick="typing_timer_tick"/>
+  <ContextMenu x:Name="settings_menu">
+    <MenuItem Kind="Header" Text="{Res theme_header}"/>
+    <MenuItem x:Name="theme_light" Text="{Res theme_light}" RadioGroup="theme" Checked="{Binding LightTheme}" OnClick="theme_light_click"/>
+    <MenuItem x:Name="theme_dark" Text="{Res theme_dark}" RadioGroup="theme" Checked="{Binding DarkTheme}" OnClick="theme_dark_click"/>
+    <MenuItem Kind="Separator"/>
+    <MenuItem Kind="Header" Text="{Res language_header}"/>
+    <MenuItem x:Name="language_fr" Text="Français" RadioGroup="language" Checked="{Binding French}" OnClick="language_fr_click"/>
+    <MenuItem x:Name="language_en" Text="English" RadioGroup="language" Checked="{Binding English}" OnClick="language_en_click"/>
+  </ContextMenu>
+  <ContextMenu x:Name="profile_menu">
+    <MenuItem Kind="Header" Text="{Binding AccountText}"/>
+    <MenuItem Kind="Separator"/>
+    <MenuItem x:Name="quit" Text="{Res quit}" Icon="LogOut" OnClick="quit_click"/>
+  </ContextMenu>
+</Panel>

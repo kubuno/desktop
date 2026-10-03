@@ -1,0 +1,21 @@
+[package]
+name        = "kubuno-shell-controls"
+description = "The menus of a Kubuno header as reusable user controls for every Kubuno desktop app: WaffleMenu (the app launcher, with its AppTileGrid) and AccountMenu (the account panel), their data coming through the LauncherService and AccountService traits"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# A control library: any desktop app of the workspace adds it as a path dependency and places
+# `<WaffleMenu/>` in its views (the language server, the designer's Toolbox and the macros scan
+# path dependencies). It depends on the `kubuno` facade only, never on an app crate (module
+# isolation, vskubuno docs/VIEWS-SPEC.md): the app hands it its data through `LauncherService`.
+[lib]
+name = "kubuno_shell_controls"
+path = "src/lib.rs"
+
+[dependencies]
+kubuno     = { workspace = true }
+# The designer's sample apps (`controls/design/apps.json`).
+serde      = { workspace = true }
+serde_json = { workspace = true }

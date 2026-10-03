@@ -1,0 +1,13 @@
+<!--
+  The directory's groups (the web's GroupsPanel): how many there are and « Nouveau groupe » (the web console)
+  on the title's line, then one GroupRow per group — a Repeater whose items are the groups' headers, each
+  followed by its details while it is expanded. Creating, editing and member management open the web console.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="GroupsSection" DesignWidth="936" DesignHeight="688" OnLoad="groups_section_load">
+  <AdminSectionHeader x:Name="header" Parent="{Res adm_directory}" Title="{Res adm_groups}" Count="{Binding CountText}" X="0" Y="0" Width="740" Height="60" Anchor="Top, Left, Right"/>
+  <Button x:Name="new_group" Text="{Res groups_new}" Icon="Plus" X="762" Y="22" Width="174" Height="36" Anchor="Top, Right" OnClick="new_group_click"/>
+  <StatusPresenter x:Name="status" Mode="{Binding StatusMode}" d:Visible="false" EmptyIcon="Users" EmptyTitle="{Res groups_empty_title}" EmptyText="{Res groups_empty_text}" ErrorText="{Binding ErrorText}" X="0" Y="74" Width="936" Height="600" Anchor="Top, Bottom, Left, Right"/>
+  <Repeater x:Name="list" ItemsSource="{Binding Rows}" ItemKey="Key" ItemHeight="64" d:ItemsSource="design/groups.json" X="0" Y="74" Width="936" Height="614" Anchor="Top, Bottom, Left, Right">
+    <GroupRow AccessibleName="{Binding GroupName}" Kind="{Binding Kind}" GroupName="{Binding GroupName}" Description="{Binding Description}" IsDefault="{Binding IsDefault}" IsSystem="{Binding IsSystem}" CountText="{Binding CountText}" Expanded="{Binding Expanded}" Permissions="{Binding Permissions}" CreatedText="{Binding CreatedText}" OnToggleRequested="row_toggle_requested" OnEditRequested="row_edit_requested"/>
+  </Repeater>
+</UserControl>

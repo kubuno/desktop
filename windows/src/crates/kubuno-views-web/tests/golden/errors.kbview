@@ -1,0 +1,13 @@
+<Stack Gap="wide">
+  <Buton Text="typo"/>
+  <Button Txt="typo" Variant="Huge" OnClick="1bad"/>
+  <Button x:Name="ok"/>
+  <Button x:Name="ok"/>
+  <Button x:Name="props"/>
+  <Button><Badge/></Button>
+  <Option Value="x"/>
+  <Card><Stack/><Stack/></Card>
+  <Card><Button.Actions/></Card>
+  <Switch On="{Binding a b}" Label="{Binding x, Mod=TwoWay}"/>
+  <Badge>some text</Badge>
+</Stack>

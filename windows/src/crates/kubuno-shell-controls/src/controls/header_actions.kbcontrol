@@ -1,0 +1,34 @@
+<!--
+  The right-hand cluster of a Kubuno header (the web's HeaderActions): the notifications bell and its counter,
+  settings, help, the apps waffle and the account avatar, in that order, round buttons with no gap (the avatar 2
+  further: `ml-0.5`), right-aligned with an 8 gap after the avatar. Each one shows or hides with its Show…
+  property; a hidden one leaves no hole (the row runs from the right). Its place is the window's title bar,
+  immediately left of the caption buttons (TitleBar.Region="Right"): Compact="true" sizes the buttons to the
+  caption buttons (30) for a normal title bar; Compact="false" keeps the web's 36 for a 64-DIP header.
+-->
+<UserControl x:Class="HeaderActions" DesignWidth="190" DesignHeight="64" OnLoad="header_actions_load">
+  <Stack x:Name="items" Direction="{Binding FlowDirection}" Gap="0" Padding="0" CrossAlign="Center" Visible="{Binding Large}" Dock="Fill">
+    <Panel x:Name="trailing_gap" Width="8" Height="36"/>
+    <AccountButton x:Name="account" AvatarTint="{Binding AvatarTint}" Visible="{Binding ShowAccount}" Width="36" Height="36"/>
+    <Panel x:Name="avatar_gap" Visible="{Binding ShowAccount}" Width="2" Height="36"/>
+    <WaffleButton x:Name="waffle" Visible="{Binding ShowWaffle}" Width="36" Height="36"/>
+    <IconButton x:Name="help_button" Icon="HelpCircle" ToolTip="{Res header_help_tip, Source=shell_controls}" Visible="{Binding HelpShown}" Width="36" Height="36" OnClick="help_button_click"/>
+    <IconButton x:Name="settings_button" Icon="Settings" ToolTip="{Res header_settings_tip, Source=shell_controls}" Visible="{Binding SettingsShown}" Width="36" Height="36" OnClick="settings_button_click"/>
+    <Panel x:Name="bell" Visible="{Binding BellShown}" Width="36" Height="36">
+      <IconButton x:Name="bell_button" Icon="Bell" ToolTip="{Res header_notifications_tip, Source=shell_controls}" X="0" Y="0" Width="36" Height="36" OnClick="bell_button_click"/>
+      <Badge x:Name="bell_badge" Text="{Binding UnreadText}" d:Text="3" Variant="Danger" Solid="true" Visible="{Binding HasUnread}" X="14" Y="6" Width="16" Height="16"/>
+    </Panel>
+  </Stack>
+  <Stack x:Name="compact_items" Direction="{Binding FlowDirection}" Gap="0" Padding="0" CrossAlign="Center" Visible="{Binding Compact}" d:Visible="false" Dock="Fill">
+    <Panel x:Name="compact_trailing_gap" Width="8" Height="30"/>
+    <AccountButton x:Name="compact_account" AvatarSize="30" AvatarTint="{Binding AvatarTint}" Visible="{Binding ShowAccount}" Width="30" Height="30"/>
+    <Panel x:Name="compact_avatar_gap" Visible="{Binding ShowAccount}" Width="2" Height="30"/>
+    <WaffleButton x:Name="compact_waffle" ButtonDiameter="30" ButtonGlyph="16" Visible="{Binding ShowWaffle}" Width="30" Height="30"/>
+    <IconButton x:Name="compact_help" Icon="HelpCircle" Diameter="30" Glyph="16" ToolTip="{Res header_help_tip, Source=shell_controls}" Visible="{Binding HelpShown}" Width="30" Height="30" OnClick="help_button_click"/>
+    <IconButton x:Name="compact_settings" Icon="Settings" Diameter="30" Glyph="16" ToolTip="{Res header_settings_tip, Source=shell_controls}" Visible="{Binding SettingsShown}" Width="30" Height="30" OnClick="settings_button_click"/>
+    <Panel x:Name="compact_bell" Visible="{Binding BellShown}" Width="30" Height="30">
+      <IconButton x:Name="compact_bell_button" Icon="Bell" Diameter="30" Glyph="16" ToolTip="{Res header_notifications_tip, Source=shell_controls}" X="0" Y="0" Width="30" Height="30" OnClick="bell_button_click"/>
+      <Badge x:Name="compact_bell_badge" Text="{Binding UnreadText}" Variant="Danger" Solid="true" Visible="{Binding HasUnread}" X="14" Y="2" Width="16" Height="16"/>
+    </Panel>
+  </Stack>
+</UserControl>

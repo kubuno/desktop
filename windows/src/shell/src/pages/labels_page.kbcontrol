@@ -1,0 +1,20 @@
+<!--
+  The cross-module labels page (the web's LabelsPage): a field and « Créer » to make one, then the labels
+  (a Repeater of LabelRow: colour, name, count, who shared it, delete, and the palette of the selected
+  row), or what the page says while it loads, when there is none, or when the server failed. Everything
+  is raised as LabelCommand (create, delete, colour); the window talks to the server.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="LabelsPage" DesignWidth="984" DesignHeight="736" BackColor="Background" AcceptButton="create">
+  <Label x:Name="title" Text="{Res labels_title}" Role="Page" TextAlign="MiddleLeft" X="24" Y="0" Width="936" Height="64" Anchor="Top, Left, Right"/>
+  <Label x:Name="intro" Text="{Res labels_intro}" Role="Meta" ForeColor="TextTertiary" TextAlign="MiddleLeft" X="24" Y="42" Width="936" Height="22" Anchor="Top, Left, Right"/>
+  <Card x:Name="card" Flush="true" X="24" Y="64" Width="936" Height="648" Anchor="Top, Bottom, Left, Right">
+    <Panel x:Name="body" Width="934" Height="646">
+      <TextField x:Name="new_name" Text="{Binding NewName, Mode=TwoWay}" Placeholder="{Res new_label_placeholder}" AccessibleName="{Res new_label_placeholder}" X="15" Y="15" Width="404" Height="36" OnTextChanged="new_name_text_changed"/>
+      <Button x:Name="create" Text="{Res create}" Enabled="{Binding CanCreate}" X="427" Y="15" Height="36" OnClick="create_click"/>
+      <Repeater x:Name="list" ItemsSource="{Binding Rows}" ItemKey="Id" ItemHeight="44" SelectionMode="Single" SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}" Visible="{Binding HasLabels}" DesignItemCount="4" d:ItemsSource='[{"Id":"l1","Name":"Projet Atlas","Color":"#1a73e8","Count":"24","CanManage":true,"Shared":"","Expanded":false},{"Id":"l2","Name":"Comptabilité 2026","Color":"#1e8e3e","Count":"9","CanManage":true,"Shared":"","Expanded":true},{"Id":"l3","Name":"Urgent","Color":"#d93025","Count":"3","CanManage":true,"Shared":"","Expanded":false},{"Id":"l5","Name":"Équipe design","Color":"#9334e6","Count":"31","CanManage":false,"Shared":"Partagée par Alex Morel","Expanded":false}]' X="15" Y="67" Width="904" Height="564" Anchor="Top, Bottom, Left, Right" OnSelectionChanged="list_selection_changed">
+        <LabelRow LabelName="{Binding Name}" Colour="{Binding Color}" Count="{Binding Count}" CanManage="{Binding CanManage}" Shared="{Binding Shared}" Expanded="{Binding Expanded}" OnDeleteRequested="row_delete_requested" OnColourRequested="row_colour_requested"/>
+      </Repeater>
+      <StatusPresenter x:Name="status" Mode="{Binding StatusMode}" d:Visible="false" EmptyIcon="Tag" EmptyTitle="{Res labels_empty_title}" EmptyText="{Res labels_empty_text}" ErrorText="{Binding ErrorText}" X="15" Y="75" Width="904" Height="556" Anchor="Top, Bottom, Left, Right"/>
+    </Panel>
+  </Card>
+</UserControl>

@@ -1,0 +1,5 @@
+# Drive builds as part of the Windows workspace (`../../Cargo.toml`), with that
+# workspace's settings (`../../.cargo/config.toml`) and build directory: it must
+# be built together with the shared `kubuno_ui-<hash>.dll` it loads. Never give it a
+# build directory of its own. No committed target-dir either — see
+# ../../../BUILD.md ("target-dir").

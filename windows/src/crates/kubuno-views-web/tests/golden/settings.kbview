@@ -1,0 +1,23 @@
+<!-- The WEB-VIEWS §2.2 example, on the elements the web registry has today. -->
+<Stack xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" Direction="TopDown" Gap="16" DesignWidth="960" DesignHeight="640" OnLoad="page_load">
+  <Card Title="{Res notes_pref_title}" Icon="Settings">
+    <Stack Gap="8">
+      <Switch x:Name="autosave" On="{Binding prefs.autosave, Mode=TwoWay}" Label="{Res notes_pref_autosave}"/>
+      <TextField Text="{Binding prefs.signature, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Placeholder="Signature" MaxLength="80"/>
+      <Dropdown SelectedValue="{Binding prefs.font, Mode=TwoWay}" OnSelectedValueChanged="font_changed">
+        <Option Value="sans" Label="Sans serif"/>
+        <Option Value="serif" Label="Serif"/>
+      </Dropdown>
+      <CheckBox Checked="{Binding prefs.spellcheck, Mode=TwoWay}" Text="Spell check" Enabled="{Binding canEdit}"/>
+    </Stack>
+    <Card.Actions>
+      <Button x:Name="save" Text="Enregistrer" Icon="Save" Loading="{Binding busy}" OnClick="save_click"/>
+      <Button Text="{Res common_cancel}" Variant="Ghost" Size="Sm" OnClick="cancel_click" Visible="{Binding dirty}"/>
+    </Card.Actions>
+  </Card>
+  <Callout Variant="Warning" Title="Attention" Body="{Binding warning, StringFormat='({0})'}" ActionLabel="Fix" OnAction="fix_click"/>
+  <Tabs SelectedIndex="{Binding tab, Mode=TwoWay}">
+    <TabItem Header="General"><Badge Text="1"/></TabItem>
+    <TabItem Header="Advanced" Icon="Wrench"/>
+  </Tabs>
+</Stack>

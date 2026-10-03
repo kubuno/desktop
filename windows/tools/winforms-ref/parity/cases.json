@@ -1,0 +1,559 @@
+{
+  "//": "SHARED case list for the layout parity harness. Read at RUNTIME by both",
+  "//1": "probes: tools/winforms-ref/parity/layout-winforms (real WinForms) and",
+  "//2": "crates/kubuno-controls/examples/parity_layout.rs (the port). Neither owns",
+  "//3": "a copy, so the two can never silently drift apart in what they test.",
+  "//4": "",
+  "//5": "Units are DIP == pixels: the C# probe runs DpiUnaware and the port never",
+  "//6": "scales, so both sides do their arithmetic in the same space and a delta",
+  "//7": "is a real difference in the model, not a scaling artefact.",
+  "//8": "",
+  "//9": "Child defaults mirror the toolkit's own: dock None, anchor Top|Left,",
+  "//10": "visible true, margin 3 on all sides (Control.DefaultMargin), padding 0,",
+  "//11": "min/max empty (== no constraint). rect is [x, y, w, h].",
+  "//12": "",
+  "//13": "Property order is fixed on BOTH sides: min/max FIRST, then rect, then",
+  "//14": "dock/anchor. WinForms' MinimumSize setter clamps the bounds immediately,",
+  "//15": "so setting them the other way round would compare two different inputs.",
+  "//16": "",
+  "//17": "A nested container's rect carries a REALISTIC design size — the size the",
+  "//18": "first dock pass will give it — even though a docked node's own rect is",
+  "//19": "otherwise ignored on the axis it docks to. It is the baseline its own",
+  "//20": "anchored children are measured from, so a placeholder like [0,0,10,10]",
+  "//21": "would make every nested anchor case measure that placeholder instead.",
+
+  "cases": [
+    {
+      "id": "D01-dock-top",
+      "why": "One Top band: full width, its own height.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 50, 24], "dock": "Top" }]
+    },
+    {
+      "id": "D02-dock-bottom",
+      "why": "One Bottom band.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 50, 20], "dock": "Bottom" }]
+    },
+    {
+      "id": "D03-dock-left",
+      "why": "One Left band: full height, its own width.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 60, 10], "dock": "Left" }]
+    },
+    {
+      "id": "D04-dock-right",
+      "why": "One Right band.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 40, 10], "dock": "Right" }]
+    },
+    {
+      "id": "D05-dock-fill",
+      "why": "Fill alone takes the whole display rect and forgets its design bounds.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [5, 5, 50, 24], "dock": "Fill" }]
+    },
+    {
+      "id": "D06-dock-four-edges-then-fill",
+      "why": "The canonical four bands plus Fill, added in edge-then-fill order.",
+      "size": [300, 200],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 30], "dock": "Top" },
+        { "name": "bottom", "rect": [0, 0, 10, 20], "dock": "Bottom" },
+        { "name": "left", "rect": [0, 0, 60, 10], "dock": "Left" },
+        { "name": "right", "rect": [0, 0, 40, 10], "dock": "Right" },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D07-dock-two-tops",
+      "why": "Reverse z-order: the child added LAST gets the outermost band.",
+      "size": [200, 100],
+      "children": [
+        { "name": "inner", "rect": [0, 0, 10, 30], "dock": "Top" },
+        { "name": "outer", "rect": [0, 0, 10, 20], "dock": "Top" }
+      ]
+    },
+    {
+      "id": "D08-fill-first-in-z-order",
+      "why": "Fill added FIRST, so it is resolved LAST in the reverse walk. Does Fill get the leftover, or the whole rect with the Top band drawn over it?",
+      "size": [200, 100],
+      "children": [
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" },
+        { "name": "top", "rect": [0, 0, 10, 30], "dock": "Top" }
+      ]
+    },
+    {
+      "id": "D09-fill-last-in-z-order",
+      "why": "The mirror of D08: Fill added last, resolved first.",
+      "size": [200, 100],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 30], "dock": "Top" },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D10-fill-between-two-bands",
+      "why": "Fill sandwiched in z-order between a Top and a Bottom.",
+      "size": [200, 100],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 30], "dock": "Top" },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" },
+        { "name": "bottom", "rect": [0, 0, 10, 20], "dock": "Bottom" }
+      ]
+    },
+    {
+      "id": "D11-two-fills",
+      "why": "Two Fill siblings. Both full-size, or only one?",
+      "size": [200, 100],
+      "children": [
+        { "name": "f1", "rect": [0, 0, 10, 10], "dock": "Fill" },
+        { "name": "f2", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D12-oversize-top",
+      "why": "A Top band taller than the container. Clamped to the remaining space, or allowed to overflow?",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 10, 400], "dock": "Top" }]
+    },
+    {
+      "id": "D13-oversize-left",
+      "why": "The horizontal mirror of D12.",
+      "size": [200, 100],
+      "children": [{ "name": "a", "rect": [0, 0, 500, 10], "dock": "Left" }]
+    },
+    {
+      "id": "D14-three-tops-exhaust",
+      "why": "Three 50-tall Top bands in a 100-tall container: the third has no room left.",
+      "size": [200, 100],
+      "children": [
+        { "name": "a", "rect": [0, 0, 10, 50], "dock": "Top" },
+        { "name": "b", "rect": [0, 0, 10, 50], "dock": "Top" },
+        { "name": "c", "rect": [0, 0, 10, 50], "dock": "Top" }
+      ]
+    },
+    {
+      "id": "D15-hidden-band-then-fill",
+      "why": "A hidden Top band must consume no edge, and must keep its own bounds.",
+      "size": [200, 100],
+      "children": [
+        { "name": "hidden", "rect": [7, 9, 40, 40], "dock": "Top", "visible": false },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D16-container-padding",
+      "why": "Container Padding shifts the display rect. Tests the origin convention as much as the size.",
+      "size": [200, 100],
+      "padding": [10, 10, 10, 10],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 24], "dock": "Top" },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D17-child-margin",
+      "why": "Does DefaultLayout's dock pass honour a child's Margin? The port's Item carries no margin at all.",
+      "size": [200, 100],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 24], "dock": "Top", "margin": [8, 8, 8, 8] },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill", "margin": [8, 8, 8, 8] }
+      ]
+    },
+    {
+      "id": "D18-docked-min-height",
+      "why": "A Top band shorter than its MinimumSize. The band must grow, and the leftover must shrink with it.",
+      "size": [200, 100],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 10], "dock": "Top", "min": [0, 40] },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D19-docked-max-height",
+      "why": "A Top band taller than its MaximumSize.",
+      "size": [200, 100],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 90], "dock": "Top", "max": [0, 30] },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D20-fill-max-size",
+      "why": "MaximumSize on the Fill child: does the leftover rect get clamped?",
+      "size": [200, 100],
+      "children": [
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill", "max": [120, 60] }
+      ]
+    },
+    {
+      "id": "D21-right-left-fill",
+      "why": "Right and Left added before Fill, so the vertical bands resolve outside-in.",
+      "size": [300, 150],
+      "children": [
+        { "name": "right", "rect": [0, 0, 40, 10], "dock": "Right" },
+        { "name": "left", "rect": [0, 0, 60, 10], "dock": "Left" },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+      ]
+    },
+    {
+      "id": "D22-mixed-z-order",
+      "why": "Fill first, then three edges: every band resolves before the Fill in the reverse walk.",
+      "size": [300, 200],
+      "children": [
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" },
+        { "name": "left", "rect": [0, 0, 50, 10], "dock": "Left" },
+        { "name": "top", "rect": [0, 0, 10, 25], "dock": "Top" },
+        { "name": "right", "rect": [0, 0, 30, 10], "dock": "Right" }
+      ]
+    },
+
+    {
+      "id": "D23-padding-dock-and-anchor",
+      "why": "A padded container holding BOTH a docked band and an anchored child. Nothing resizes, so any delta is purely a disagreement about which origin a child's rectangle is measured from — and the two children must agree with each other.",
+      "size": [200, 100],
+      "padding": [10, 10, 10, 10],
+      "children": [
+        { "name": "band", "rect": [0, 0, 10, 24], "dock": "Top" },
+        { "name": "free", "rect": [10, 40, 80, 30], "anchor": "Top,Left" }
+      ]
+    },
+    {
+      "id": "D24-band-cross-axis-max",
+      "why": "MaximumSize on the axis the dock pass COMPUTES (a Left band's height) rather than the one it copies from the design size. Design-time clamping cannot mask this one.",
+      "size": [200, 120],
+      "children": [
+        { "name": "left", "rect": [0, 0, 60, 10], "dock": "Left", "max": [0, 50] },
+        { "name": "top", "rect": [0, 0, 10, 20], "dock": "Top", "max": [90, 0] }
+      ]
+    },
+
+    {
+      "id": "A01-anchor-top-left",
+      "why": "The default anchor: the child must not move when the container grows.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Left" }]
+    },
+    {
+      "id": "A02-anchor-top-right",
+      "why": "Right only: moves horizontally, keeps its width.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Right" }]
+    },
+    {
+      "id": "A03-anchor-bottom-left",
+      "why": "Bottom only: moves vertically, keeps its height.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Bottom,Left" }]
+    },
+    {
+      "id": "A04-anchor-bottom-right",
+      "why": "Both far edges: moves on both axes.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Bottom,Right" }]
+    },
+    {
+      "id": "A05-anchor-all-four",
+      "why": "Anchored to all four edges: stretches on both axes.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [
+        { "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Bottom,Left,Right" }
+      ]
+    },
+    {
+      "id": "A06-anchor-none",
+      "why": "AnchorStyles.None. WinForms keeps a None-anchored child PROPORTIONALLY placed (it moves by half the size change); does the port?",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "None" }]
+    },
+    {
+      "id": "A07-anchor-left-right",
+      "why": "Horizontal stretch, vertically unanchored (the half-delta case on the Y axis).",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Left,Right" }]
+    },
+    {
+      "id": "A08-anchor-top-bottom",
+      "why": "Vertical stretch, horizontally unanchored (the half-delta case on the X axis).",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Bottom" }]
+    },
+    {
+      "id": "A09-anchor-top-only",
+      "why": "Top alone: pinned vertically, unanchored horizontally.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top" }]
+    },
+    {
+      "id": "A10-anchor-left-only",
+      "why": "Left alone: pinned horizontally, unanchored vertically.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "Left" }]
+    },
+    {
+      "id": "A11-anchor-shrink",
+      "why": "A four-way anchored child in a container that SHRINKS past it.",
+      "size": [300, 200],
+      "resize": [150, 80],
+      "children": [
+        { "name": "a", "rect": [10, 10, 260, 160], "anchor": "Top,Bottom,Left,Right" }
+      ]
+    },
+    {
+      "id": "A12-anchor-shrink-min-clamp",
+      "why": "The same shrink, but MinimumSize stops the child collapsing.",
+      "size": [300, 200],
+      "resize": [150, 80],
+      "children": [
+        {
+          "name": "a",
+          "rect": [10, 10, 260, 160],
+          "anchor": "Top,Bottom,Left,Right",
+          "min": [120, 100]
+        }
+      ]
+    },
+    {
+      "id": "A13-anchor-grow-max-clamp",
+      "why": "A four-way anchored child whose MaximumSize stops the stretch.",
+      "size": [200, 100],
+      "resize": [400, 300],
+      "children": [
+        {
+          "name": "a",
+          "rect": [10, 10, 150, 60],
+          "anchor": "Top,Bottom,Left,Right",
+          "max": [200, 100]
+        }
+      ]
+    },
+    {
+      "id": "A14-anchor-with-container-padding",
+      "why": "Anchoring resolves against the DISPLAY rect, so padding shifts the origin AND the deltas.",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "padding": [10, 5, 10, 5],
+      "children": [
+        { "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Bottom,Left,Right" }
+      ]
+    },
+    {
+      "id": "A15-anchor-hidden",
+      "why": "A hidden anchored child: does it still track the resize?",
+      "size": [200, 100],
+      "resize": [300, 160],
+      "children": [
+        {
+          "name": "a",
+          "rect": [10, 10, 80, 30],
+          "anchor": "Top,Bottom,Left,Right",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "id": "A16-anchor-no-resize",
+      "why": "Identity check: no resize, so nothing may move whatever the anchor is.",
+      "size": [200, 100],
+      "children": [
+        { "name": "a", "rect": [10, 10, 80, 30], "anchor": "Top,Bottom,Left,Right" },
+        { "name": "b", "rect": [10, 50, 80, 30], "anchor": "None" }
+      ]
+    },
+    {
+      "id": "A17-anchor-odd-delta",
+      "why": "An ODD size change, so the half-delta of an unanchored axis has to round.",
+      "size": [200, 100],
+      "resize": [267, 143],
+      "children": [
+        { "name": "none", "rect": [10, 10, 80, 30], "anchor": "None" },
+        { "name": "lr", "rect": [10, 50, 80, 30], "anchor": "Left,Right" }
+      ]
+    },
+    {
+      "id": "A18-anchor-family",
+      "why": "Four differently anchored siblings under one resize, the classic dialog corner set.",
+      "size": [200, 100],
+      "resize": [320, 180],
+      "children": [
+        { "name": "tl", "rect": [5, 5, 60, 20], "anchor": "Top,Left" },
+        { "name": "tr", "rect": [135, 5, 60, 20], "anchor": "Top,Right" },
+        { "name": "bl", "rect": [5, 75, 60, 20], "anchor": "Bottom,Left" },
+        { "name": "br", "rect": [135, 75, 60, 20], "anchor": "Bottom,Right" }
+      ]
+    },
+    {
+      "id": "A19-anchor-shrink-to-zero",
+      "why": "Shrink far enough that a stretched child would invert. WinForms floors the size at 0.",
+      "size": [300, 200],
+      "resize": [40, 30],
+      "children": [
+        { "name": "a", "rect": [10, 10, 260, 160], "anchor": "Top,Bottom,Left,Right" }
+      ]
+    },
+
+    {
+      "id": "A20-odd-start-half-delta",
+      "why": "An ODD start size on the unanchored axis. WinForms recentres on displayRect.Width / 2 (integer), which is NOT the same number as adding half the size CHANGE — this case is the one that tells the two rules apart.",
+      "size": [201, 101],
+      "resize": [300, 160],
+      "children": [{ "name": "a", "rect": [10, 10, 80, 30], "anchor": "None" }]
+    },
+
+    {
+      "id": "C01-dock-and-anchor-siblings",
+      "why": "Docked and anchored children in one container, under a resize. Dock resolves first and the anchored child ignores the bands.",
+      "size": [300, 200],
+      "resize": [400, 260],
+      "children": [
+        { "name": "band", "rect": [0, 0, 10, 30], "dock": "Top" },
+        { "name": "free", "rect": [20, 50, 100, 40], "anchor": "Top,Left" },
+        { "name": "freeBR", "rect": [180, 140, 100, 40], "anchor": "Bottom,Right" }
+      ]
+    },
+    {
+      "id": "C02-nested-dock-in-dock",
+      "why": "A docked panel containing its own docked children, resized through the parent.",
+      "size": [300, 200],
+      "resize": [380, 240],
+      "children": [
+        {
+          "name": "header",
+          "rect": [0, 0, 300, 60],
+          "dock": "Top",
+          "children": [
+            { "name": "hLeft", "rect": [0, 0, 50, 10], "dock": "Left" },
+            { "name": "hFill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+          ]
+        },
+        {
+          "name": "body",
+          "rect": [0, 0, 300, 200],
+          "dock": "Fill",
+          "children": [
+            { "name": "bLeft", "rect": [0, 0, 70, 10], "dock": "Left" },
+            { "name": "bFill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C03-dock-anchor-dock",
+      "why": "The brief's hard case: a DOCKED panel containing ANCHORED children, one of which contains another DOCKED panel. Three levels, one resize.",
+      "size": [400, 300],
+      "resize": [500, 360],
+      "children": [
+        {
+          "name": "outerBand",
+          "rect": [0, 0, 400, 40],
+          "dock": "Top",
+          "children": [
+            { "name": "bandFill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+          ]
+        },
+        {
+          "name": "outerFill",
+          "rect": [0, 0, 400, 300],
+          "dock": "Fill",
+          "children": [
+            {
+              "name": "stretchy",
+              "rect": [10, 10, 360, 220],
+              "anchor": "Top,Bottom,Left,Right",
+              "children": [
+                { "name": "innerTop", "rect": [0, 0, 10, 20], "dock": "Top" },
+                { "name": "innerFill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+              ]
+            },
+            { "name": "corner", "rect": [280, 250, 60, 30], "anchor": "Bottom,Right" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C04-nested-padding",
+      "why": "Padding at two levels: the offsets compose, so an origin-convention error doubles.",
+      "size": [300, 200],
+      "padding": [8, 8, 8, 8],
+      "children": [
+        {
+          "name": "outer",
+          "rect": [0, 0, 284, 184],
+          "dock": "Fill",
+          "padding": [4, 6, 4, 6],
+          "children": [
+            { "name": "top", "rect": [0, 0, 10, 20], "dock": "Top" },
+            { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C05-hidden-among-docked",
+      "why": "A hidden band between two visible ones: the visible pair must close ranks.",
+      "size": [200, 120],
+      "children": [
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill" },
+        { "name": "b1", "rect": [0, 0, 10, 20], "dock": "Top" },
+        { "name": "hid", "rect": [3, 4, 10, 25], "dock": "Top", "visible": false },
+        { "name": "b2", "rect": [0, 0, 10, 30], "dock": "Top" }
+      ]
+    },
+    {
+      "id": "C06-nested-child-larger-than-parent",
+      "why": "A child larger than its container, inside a container larger than ITS container.",
+      "size": [200, 120],
+      "children": [
+        {
+          "name": "box",
+          "rect": [10, 10, 400, 300],
+          "anchor": "Top,Left",
+          "children": [
+            { "name": "inner", "rect": [0, 0, 600, 20], "dock": "Top" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C07-dock-then-anchor-in-fill",
+      "why": "Anchored children inside a Fill panel, resized twice through two levels of dock.",
+      "size": [320, 240],
+      "resize": [420, 300],
+      "children": [
+        { "name": "toolbar", "rect": [0, 0, 10, 28], "dock": "Top" },
+        { "name": "status", "rect": [0, 0, 10, 22], "dock": "Bottom" },
+        { "name": "side", "rect": [0, 0, 80, 10], "dock": "Left" },
+        {
+          "name": "content",
+          "rect": [0, 0, 320, 240],
+          "dock": "Fill",
+          "children": [
+            { "name": "grid", "rect": [8, 8, 240, 180], "anchor": "Top,Bottom,Left,Right" },
+            { "name": "ok", "rect": [250, 206, 60, 22], "anchor": "Bottom,Right" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C08-docked-min-max-family",
+      "why": "MinimumSize and MaximumSize on several docked siblings at once.",
+      "size": [300, 200],
+      "children": [
+        { "name": "top", "rect": [0, 0, 10, 10], "dock": "Top", "min": [0, 35] },
+        { "name": "left", "rect": [0, 0, 200, 10], "dock": "Left", "max": [70, 0] },
+        { "name": "fill", "rect": [0, 0, 10, 10], "dock": "Fill", "min": [400, 0] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+<!--
+  The activity page: what the sync loop has been doing, newest first (a Repeater of ActivityRow: the
+  kind as a tinted glyph, the title, the details, the age), or an empty state while nothing happened.
+  It has nothing to click: the rail navigates away from it.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="ActivityPage" DesignWidth="984" DesignHeight="736" BackColor="Background">
+  <Label x:Name="title" Text="{Res activity_title}" Role="Page" TextAlign="MiddleLeft" X="24" Y="0" Width="936" Height="64" Anchor="Top, Left, Right"/>
+  <Card x:Name="card" X="24" Y="64" Width="936" Height="648" Anchor="Top, Bottom, Left, Right">
+    <Panel x:Name="body" Width="902" Height="614">
+      <Repeater x:Name="list" ItemsSource="{Binding Rows}" ItemTemplate="ActivityRow" ItemHeight="56" Visible="{Binding HasEvents}" DesignItemCount="4" d:ItemsSource='[{"Tone":"Success","Title":"Synchronisation terminée","Body":"↑ 3 envoyé(s), 1 modifié(s) — ↓ 12 reçu(s), 0 supprimé(s)","Age":"à l&apos;instant"},{"Tone":"Warning","Title":"Conflit résolu","Body":"Rapport annuel.docx — les deux versions sont conservées","Age":"il y a 5 min"},{"Tone":"Danger","Title":"Échec de l&apos;envoi","Body":"Budget 2026.xlsx : accès refusé par le serveur","Age":"il y a 2 h"},{"Tone":"Success","Title":"Synchronisation manuelle","Body":"↑ 0 envoyé(s), 0 modifié(s) — ↓ 4 reçu(s), 1 supprimé(s)","Age":"il y a 1 j"}]' X="7" Y="7" Width="888" Height="595" Anchor="Top, Bottom, Left, Right"/>
+      <EmptyState x:Name="empty" Icon="History" Title="{Res activity_empty_title}" Description="{Res activity_empty_text}" Visible="{Binding IsEmpty}" d:Visible="false" X="0" Y="0" Width="902" Height="614" Anchor="Top, Bottom, Left, Right"/>
+    </Panel>
+  </Card>
+</UserControl>

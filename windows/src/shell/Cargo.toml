@@ -1,0 +1,90 @@
+[package]
+name        = "kubuno-desktop"
+description = "Kubuno desktop shell — launcher, sync client and settings, written like a Windows Forms application (.kbview views)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The library holds everything the Visual Studio designer must link to render the views: the main
+# form (`ShellWindow`), its user controls (one per page, the account rows, the label rows…), the
+# custom controls (`StorageGauge`, `StatusDot`, `AppTileGrid`…) and the flyouts. The binary is the
+# short `Program.cs` (`main.rs`): the splash screen, then `Application::run(ShellWindow)`.
+[lib]
+name = "kubuno_shell"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kubuno-desktop"
+path = "src/main.rs"
+
+[dependencies]
+# The Kubuno desktop programming model (Application::run, #[kubuno::view], user and custom
+# controls, resources): it re-exports kubuno-views, kubuno-controls and kubuno-ui. The shell
+# depends on no other application's crate (module isolation, vskubuno docs/VIEWS-SPEC.md).
+kubuno = { path = "../crates/kubuno" }
+# The header's menus (`WaffleMenu`, `AccountMenu`): shared user controls the flyouts host, fed through
+# their `LauncherService` / `AccountService` (`services::favorites`, `model::view_model`).
+kubuno-shell-controls = { path = "../crates/kubuno-shell-controls" }
+# The launcher's data logic shared with the other desktop apps: module parsing, tiles, logo cache.
+kubuno-header-data = { path = "../crates/kubuno-header-data" }
+# The sync engine, unchanged: this crate only puts a native face on it.
+kubuno-sync = { path = "../../../common/kubuno-sync" }
+# Accounts and tokens (vskubuno docs/DESKTOP-OFFLINE-SYNC.md section 19.4): the shell is the only refresh-token
+# owner of the machine (`TokenOwner`, refresh tokens in the OS credential store) and serves the token broker
+# the apps borrow access tokens from.
+kubuno-account    = { path = "../../../common/kubuno-account" }
+kubuno-secrets    = { path = "../../../common/kubuno-secrets" }
+kubuno-api-client = { path = "../../../common/kubuno-api-client" }
+tokio       = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+# The error type the sync engine's API returns (its `AuthFailure` is read off it).
+anyhow      = "1"
+# The WinRT async plumbing behind `windows`, needed to wait on a sync-root
+# registration without pulling in an async runtime.
+windows-future  = "0.3"
+# `#[implement]` expands to code that names `windows_core` directly.
+windows-core    = "0.62"
+
+[dependencies.windows]
+version  = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Com",
+    "Win32_System_Registry",
+    "Win32_Graphics_Gdi",
+    # Cloud Files API + the WinRT sync-root manager: the Explorer integration
+    # (navigation-pane entry, status overlays) is kept as-is.
+    "Win32_Storage_CloudFilters",
+    "Win32_Storage_FileSystem",
+    "Win32_Security",
+    "Win32_System_IO",
+    "Win32_System_CorrelationVector",
+    "Win32_System_WinRT",
+    "Storage",
+    "Storage_Provider",
+    "Storage_Search",
+    "Storage_Streams",
+    "Security_Cryptography",
+    "Foundation",
+]
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+uuid   = { version = "1", features = ["v5"] }
+# Toasts under our own AUMID, so they read "Kubuno" and not "PowerShell".
+# Despite its name this is a standalone WinRT notification crate — it pulls in
+# no part of the Tauri framework, which this shell replaced.
+# 0.7.3 is the floor on purpose: up to 0.7.2 this crate built its toast XML with
+# `quick-xml` 0.37, which carries RUSTSEC-2026-0194 and RUSTSEC-2026-0195
+# (quadratic parsing and unbounded namespace allocation). 0.7.3 drops the
+# `quick-xml` dependency altogether, so the XML parser leaves our tree.
+tauri-winrt-notification = "0.7.3"
+
+[build-dependencies]
+embed-manifest = "1.4"
+winresource    = "0.1"

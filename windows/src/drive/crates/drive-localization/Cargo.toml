@@ -1,0 +1,10 @@
+[package]
+name = "drive-localization"
+description = "Localisation .resw + repli de culture (port de StringsPropertyGenerator + AppLocalizationService)"
+version = "0.1.0"   # Drive's own version, not the desktop workspace's
+edition.workspace = true
+license = "MIT"     # Drive's own licence (see the desktop README)
+build = "build.rs"
+
+[dependencies]
+windows = { workspace = true, features = ["Win32_Globalization"] }

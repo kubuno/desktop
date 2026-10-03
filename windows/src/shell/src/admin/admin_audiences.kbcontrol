@@ -1,0 +1,19 @@
+<!--
+  The directory's target audiences (the web's AudiencesSection): how many there are, a search over them and
+  « Nouvelle audience » (the web console), then the table — the name (a globe on « Tout le monde », which every
+  active account is in), its description, its members, how many accounts it reaches, where it is offered, and a
+  pencil that edits it in the web console.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="AudiencesSection" DesignWidth="936" DesignHeight="688" OnLoad="audiences_section_load">
+  <AdminSectionHeader x:Name="header" Parent="{Res adm_directory}" Title="{Res adm_audiences}" Count="{Binding CountText}" X="0" Y="0" Width="936" Height="60" Anchor="Top, Left, Right"/>
+  <SearchField x:Name="search" Placeholder="{Res audiences_search}" X="0" Y="76" Width="360" Height="32" OnTextChanged="search_text_changed"/>
+  <Button x:Name="new_audience" Text="{Res audiences_new}" Icon="Plus" X="756" Y="74" Width="180" Height="36" Anchor="Top, Right" OnClick="new_audience_click"/>
+  <DataTable x:Name="table" AccessibleName="{Res adm_audiences}" ItemsSource="{Binding Rows}" d:ItemsSource="design/audiences.json" ReadOnly="true" OwnerDraw="true" Density="Comfortable" Loading="{Binding Loading}" ErrorText="{Binding ErrorText}" EmptyTitle="{Res audiences_empty_title}" EmptyText="{Res audiences_empty_text}" X="0" Y="124" Width="936" Height="564" Anchor="Top, Bottom, Left, Right" OnDrawItem="table_draw_item" OnCellClick="table_cell_click">
+    <Column Header="{Res audiences_col_name}" Binding="{Binding Name}" Width="210"/>
+    <Column Header="{Res audiences_col_description}" Binding="{Binding Description}" Width="160" AutoSizeMode="Fill"/>
+    <Column Header="{Res audiences_col_members}" Binding="{Binding Members}" Width="110" Alignment="Right"/>
+    <Column Header="{Res audiences_col_reach}" Binding="{Binding Reach}" Width="180" Alignment="Right"/>
+    <Column Header="{Res audiences_col_applied}" Binding="{Binding Applied}" Width="170" Alignment="Right"/>
+    <Column Header="" Binding="{Binding Id}" Width="44"/>
+  </DataTable>
+</UserControl>

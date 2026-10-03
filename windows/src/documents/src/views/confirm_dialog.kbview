@@ -1,0 +1,12 @@
+<!--
+  A question the document cannot answer for the user: restore the copy kept on this PC after a crash,
+  or choose between two versions when the server copy changed under us. The shell's confirmation
+  dialog (shell/src/views/confirm_dialog.kbview), vendored: an app never links the shell. Enter
+  confirms, Escape and the second action decline. ConfirmDialog (confirm_dialog.rs) fills it in.
+-->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="460" DesignHeight="150" WindowKind="Dialog" Title="Document" AcceptButton="confirm" CancelButton="cancel">
+  <Icon x:Name="glyph" Name="AlertTriangle" Disc="Warning" Size="40" X="24" Y="24" Width="40" Height="40"/>
+  <Label x:Name="message" Text="" Overflow="Wrap" TextAlign="TopLeft" X="80" Y="24" Width="356" Height="100" Anchor="Top, Bottom, Left, Right"/>
+  <Button x:Name="cancel" ActionBar.Region="Right" Text="{Res cancel}" Variant="Secondary" Width="150" Height="36" OnClick="cancel_click"/>
+  <Button x:Name="confirm" ActionBar.Region="Right" Text="OK" Variant="Primary" Width="150" Height="36" OnClick="confirm_click"/>
+</Panel>

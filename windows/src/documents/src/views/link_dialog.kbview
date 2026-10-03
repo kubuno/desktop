@@ -1,0 +1,10 @@
+<!--
+  Insertion › Lien (Ctrl+K): the address of the link on the selection — the web's `prompt({ title:
+  'Insérer un lien', placeholder: 'https://exemple.com', allowEmpty: true })`. An empty address
+  removes the link. LinkDialog (link_dialog.rs) fills it in and reads it back.
+-->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="420" DesignHeight="96" WindowKind="Dialog" Title="{Res link_title}" AcceptButton="ok" CancelButton="cancel">
+  <TextField x:Name="url_box" Text="{Binding Url, Mode=TwoWay}" Placeholder="https://exemple.com" X="24" Y="24" Width="372" Height="32" Anchor="Top, Left, Right"/>
+  <Button x:Name="cancel" ActionBar.Region="Right" Text="{Res cancel}" Variant="Secondary" Width="96" Height="36" OnClick="cancel_click"/>
+  <Button x:Name="ok" ActionBar.Region="Right" Text="{Res link_apply}" Variant="Primary" Width="104" Height="36" OnClick="ok_click"/>
+</Panel>

@@ -1,0 +1,11 @@
+<Project Sdk="Kubuno.Rust.Sdk/1.1.1">
+
+  <!-- The web target's .kbview compiler (vskubuno docs/WEB-VIEWS.md, WV-2). -->
+  <PropertyGroup>
+    <CargoPackage>kubuno-views-web</CargoPackage>
+    <!-- The workspace shares a Rust dylib between several crates: build the whole workspace, so that the
+         dylib and every program loading it always get the same features (docs/RSPROJ.md, "Cargo workspaces"). -->
+    <CargoBuildScope>Workspace</CargoBuildScope>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,36 @@
+name: Checks
+
+# Security & quality gate (ISO/IEC 27001 A.8.29, A.8.8): clippy -D warnings,
+# tests, and a dependency-vulnerability audit. Complements the build workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: clippy }
+      - uses: Swatinem/rust-cache@v2
+      # clippy --all-targets also compiles the test code (catching test
+      # build breakage). Running the backend suites needs a Postgres service
+      # per repo — wired as a follow-up.
+      - name: clippy (deny warnings)
+        run: cargo clippy --all-targets -- -D warnings
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with: { tool: cargo-audit }
+      - name: cargo audit
+        run: cargo audit

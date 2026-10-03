@@ -1,0 +1,23 @@
+[package]
+name        = "kubuno-app-storage-components"
+description = "The storage components of Kubuno desktop views (vskubuno docs/STORAGE-COMPONENTS.md): <Settings> (typed, scoped, versioned settings bound with {Binding Theme, Source=settings}), <SecretStore> (the app's secrets in the OS credential store) and <RegistryKey> (a Windows Registry key, its values bindable), as non-visual components of the designer's component tray, over the portable engine kubuno-app-storage."
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+# The component hierarchy, the registry (the Toolbox, the component tray), `Event<A>` and the args derive, the
+# binding providers of a view's scope.
+kubuno-views       = { workspace = true }
+# The portable engine: paths, settings, back-ends, app secrets, the Registry (desktop/common, cross-OS).
+kubuno-app-storage = { path = "../../../../common/kubuno-app-storage" }
+tracing            = { workspace = true }
+# The values of a key/value store.
+serde_json         = { workspace = true }
+# The `.kbsettings` format: the declared defaults the designer shows before the project is built.
+kubuno-resources-model = { workspace = true }
+
+[dev-dependencies]
+# `STORAGE_ELEMENTS`, the names `#[kubuno::view]` accepts for this crate's components (kept in sync by a test).
+kubuno-views-meta      = { workspace = true }

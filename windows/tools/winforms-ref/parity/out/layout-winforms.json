@@ -1,0 +1,1701 @@
+{
+  "meta": {
+    "probe": "winforms",
+    "framework": "9.0.19",
+    "deviceDpi": 96,
+    "anchorLayoutV2": false,
+    "caseFile": "Z:\\projects\\kubuno\\desktop\\tools\\winforms-ref\\parity\\cases.json"
+  },
+  "cases": [
+    {
+      "id": "D01-dock-top",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            0,
+            200,
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D02-dock-bottom",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            80,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D03-dock-left",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            0,
+            60,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D04-dock-right",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            160,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D05-dock-fill",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D06-dock-four-edges-then-fill",
+      "display": [
+        0,
+        0,
+        300,
+        200
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            60,
+            0,
+            260,
+            30
+          ]
+        },
+        {
+          "path": "1",
+          "name": "bottom",
+          "bounds": [
+            60,
+            180,
+            260,
+            200
+          ]
+        },
+        {
+          "path": "2",
+          "name": "left",
+          "bounds": [
+            0,
+            0,
+            60,
+            200
+          ]
+        },
+        {
+          "path": "3",
+          "name": "right",
+          "bounds": [
+            260,
+            0,
+            300,
+            200
+          ]
+        },
+        {
+          "path": "4",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            300,
+            200
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D07-dock-two-tops",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "inner",
+          "bounds": [
+            0,
+            20,
+            200,
+            50
+          ]
+        },
+        {
+          "path": "1",
+          "name": "outer",
+          "bounds": [
+            0,
+            0,
+            200,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D08-fill-first-in-z-order",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "fill",
+          "bounds": [
+            0,
+            30,
+            200,
+            100
+          ]
+        },
+        {
+          "path": "1",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D09-fill-last-in-z-order",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            30
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D10-fill-between-two-bands",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            30
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            80
+          ]
+        },
+        {
+          "path": "2",
+          "name": "bottom",
+          "bounds": [
+            0,
+            80,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D11-two-fills",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "f1",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        },
+        {
+          "path": "1",
+          "name": "f2",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D12-oversize-top",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            0,
+            200,
+            400
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D13-oversize-left",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            0,
+            500,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D14-three-tops-exhaust",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            0,
+            100,
+            200,
+            150
+          ]
+        },
+        {
+          "path": "1",
+          "name": "b",
+          "bounds": [
+            0,
+            50,
+            200,
+            100
+          ]
+        },
+        {
+          "path": "2",
+          "name": "c",
+          "bounds": [
+            0,
+            0,
+            200,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D15-hidden-band-then-fill",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "hidden",
+          "bounds": [
+            7,
+            9,
+            47,
+            49
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D16-container-padding",
+      "display": [
+        10,
+        10,
+        190,
+        90
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            10,
+            10,
+            190,
+            34
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            10,
+            10,
+            190,
+            90
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D17-child-margin",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            24
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D18-docked-min-height",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            40
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D19-docked-max-height",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            200,
+            30
+          ]
+        },
+        {
+          "path": "1",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            200,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D20-fill-max-size",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            120,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D21-right-left-fill",
+      "display": [
+        0,
+        0,
+        300,
+        150
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "right",
+          "bounds": [
+            260,
+            0,
+            300,
+            150
+          ]
+        },
+        {
+          "path": "1",
+          "name": "left",
+          "bounds": [
+            0,
+            0,
+            60,
+            150
+          ]
+        },
+        {
+          "path": "2",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            300,
+            150
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D22-mixed-z-order",
+      "display": [
+        0,
+        0,
+        300,
+        200
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "fill",
+          "bounds": [
+            50,
+            25,
+            270,
+            200
+          ]
+        },
+        {
+          "path": "1",
+          "name": "left",
+          "bounds": [
+            0,
+            25,
+            50,
+            200
+          ]
+        },
+        {
+          "path": "2",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            270,
+            25
+          ]
+        },
+        {
+          "path": "3",
+          "name": "right",
+          "bounds": [
+            270,
+            0,
+            300,
+            200
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D23-padding-dock-and-anchor",
+      "display": [
+        10,
+        10,
+        190,
+        90
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "band",
+          "bounds": [
+            10,
+            10,
+            190,
+            34
+          ]
+        },
+        {
+          "path": "1",
+          "name": "free",
+          "bounds": [
+            10,
+            40,
+            90,
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D24-band-cross-axis-max",
+      "display": [
+        0,
+        0,
+        200,
+        120
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "left",
+          "bounds": [
+            0,
+            20,
+            60,
+            70
+          ]
+        },
+        {
+          "path": "1",
+          "name": "top",
+          "bounds": [
+            0,
+            0,
+            90,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A01-anchor-top-left",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            90,
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A02-anchor-top-right",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            110,
+            10,
+            190,
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A03-anchor-bottom-left",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            70,
+            90,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A04-anchor-bottom-right",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            110,
+            70,
+            190,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A05-anchor-all-four",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            190,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A06-anchor-none",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            60,
+            40,
+            140,
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A07-anchor-left-right",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            40,
+            190,
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A08-anchor-top-bottom",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            60,
+            10,
+            140,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A09-anchor-top-only",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            60,
+            10,
+            140,
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A10-anchor-left-only",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            40,
+            90,
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A11-anchor-shrink",
+      "display": [
+        0,
+        0,
+        150,
+        80
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            120,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A12-anchor-shrink-min-clamp",
+      "display": [
+        0,
+        0,
+        150,
+        80
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            130,
+            110
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A13-anchor-grow-max-clamp",
+      "display": [
+        0,
+        0,
+        400,
+        300
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            210,
+            110
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A14-anchor-with-container-padding",
+      "display": [
+        10,
+        5,
+        290,
+        155
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            190,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A15-anchor-hidden",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            190,
+            100
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A16-anchor-no-resize",
+      "display": [
+        0,
+        0,
+        200,
+        100
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            90,
+            40
+          ]
+        },
+        {
+          "path": "1",
+          "name": "b",
+          "bounds": [
+            10,
+            50,
+            90,
+            80
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A17-anchor-odd-delta",
+      "display": [
+        0,
+        0,
+        267,
+        143
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "none",
+          "bounds": [
+            43,
+            31,
+            123,
+            61
+          ]
+        },
+        {
+          "path": "1",
+          "name": "lr",
+          "bounds": [
+            10,
+            71,
+            157,
+            101
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A18-anchor-family",
+      "display": [
+        0,
+        0,
+        320,
+        180
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "tl",
+          "bounds": [
+            5,
+            5,
+            65,
+            25
+          ]
+        },
+        {
+          "path": "1",
+          "name": "tr",
+          "bounds": [
+            255,
+            5,
+            315,
+            25
+          ]
+        },
+        {
+          "path": "2",
+          "name": "bl",
+          "bounds": [
+            5,
+            155,
+            65,
+            175
+          ]
+        },
+        {
+          "path": "3",
+          "name": "br",
+          "bounds": [
+            255,
+            155,
+            315,
+            175
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A19-anchor-shrink-to-zero",
+      "display": [
+        0,
+        0,
+        40,
+        30
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            10,
+            10,
+            10,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A20-odd-start-half-delta",
+      "display": [
+        0,
+        0,
+        300,
+        160
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "a",
+          "bounds": [
+            60,
+            40,
+            140,
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C01-dock-and-anchor-siblings",
+      "display": [
+        0,
+        0,
+        400,
+        260
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "band",
+          "bounds": [
+            0,
+            0,
+            400,
+            30
+          ]
+        },
+        {
+          "path": "1",
+          "name": "free",
+          "bounds": [
+            20,
+            50,
+            120,
+            90
+          ]
+        },
+        {
+          "path": "2",
+          "name": "freeBR",
+          "bounds": [
+            280,
+            200,
+            380,
+            240
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C02-nested-dock-in-dock",
+      "display": [
+        0,
+        0,
+        380,
+        240
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "header",
+          "bounds": [
+            0,
+            0,
+            380,
+            60
+          ],
+          "display": [
+            0,
+            0,
+            380,
+            60
+          ]
+        },
+        {
+          "path": "0.0",
+          "name": "hLeft",
+          "bounds": [
+            0,
+            0,
+            50,
+            60
+          ]
+        },
+        {
+          "path": "0.1",
+          "name": "hFill",
+          "bounds": [
+            0,
+            0,
+            380,
+            60
+          ]
+        },
+        {
+          "path": "1",
+          "name": "body",
+          "bounds": [
+            0,
+            0,
+            380,
+            240
+          ],
+          "display": [
+            0,
+            0,
+            380,
+            240
+          ]
+        },
+        {
+          "path": "1.0",
+          "name": "bLeft",
+          "bounds": [
+            0,
+            0,
+            70,
+            240
+          ]
+        },
+        {
+          "path": "1.1",
+          "name": "bFill",
+          "bounds": [
+            0,
+            0,
+            380,
+            240
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C03-dock-anchor-dock",
+      "display": [
+        0,
+        0,
+        500,
+        360
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "outerBand",
+          "bounds": [
+            0,
+            0,
+            500,
+            40
+          ],
+          "display": [
+            0,
+            0,
+            500,
+            40
+          ]
+        },
+        {
+          "path": "0.0",
+          "name": "bandFill",
+          "bounds": [
+            0,
+            0,
+            500,
+            40
+          ]
+        },
+        {
+          "path": "1",
+          "name": "outerFill",
+          "bounds": [
+            0,
+            0,
+            500,
+            360
+          ],
+          "display": [
+            0,
+            0,
+            500,
+            360
+          ]
+        },
+        {
+          "path": "1.0",
+          "name": "stretchy",
+          "bounds": [
+            10,
+            10,
+            470,
+            290
+          ],
+          "display": [
+            0,
+            0,
+            460,
+            280
+          ]
+        },
+        {
+          "path": "1.0.0",
+          "name": "innerTop",
+          "bounds": [
+            0,
+            0,
+            460,
+            20
+          ]
+        },
+        {
+          "path": "1.0.1",
+          "name": "innerFill",
+          "bounds": [
+            0,
+            0,
+            460,
+            280
+          ]
+        },
+        {
+          "path": "1.1",
+          "name": "corner",
+          "bounds": [
+            380,
+            310,
+            440,
+            340
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C04-nested-padding",
+      "display": [
+        8,
+        8,
+        292,
+        192
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "outer",
+          "bounds": [
+            8,
+            8,
+            292,
+            192
+          ],
+          "display": [
+            4,
+            6,
+            280,
+            178
+          ]
+        },
+        {
+          "path": "0.0",
+          "name": "top",
+          "bounds": [
+            4,
+            6,
+            280,
+            26
+          ]
+        },
+        {
+          "path": "0.1",
+          "name": "fill",
+          "bounds": [
+            4,
+            6,
+            280,
+            178
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C05-hidden-among-docked",
+      "display": [
+        0,
+        0,
+        200,
+        120
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "fill",
+          "bounds": [
+            0,
+            50,
+            200,
+            120
+          ]
+        },
+        {
+          "path": "1",
+          "name": "b1",
+          "bounds": [
+            0,
+            30,
+            200,
+            50
+          ]
+        },
+        {
+          "path": "2",
+          "name": "hid",
+          "bounds": [
+            3,
+            4,
+            13,
+            29
+          ]
+        },
+        {
+          "path": "3",
+          "name": "b2",
+          "bounds": [
+            0,
+            0,
+            200,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C06-nested-child-larger-than-parent",
+      "display": [
+        0,
+        0,
+        200,
+        120
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "box",
+          "bounds": [
+            10,
+            10,
+            410,
+            310
+          ],
+          "display": [
+            0,
+            0,
+            400,
+            300
+          ]
+        },
+        {
+          "path": "0.0",
+          "name": "inner",
+          "bounds": [
+            0,
+            0,
+            400,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C07-dock-then-anchor-in-fill",
+      "display": [
+        0,
+        0,
+        420,
+        300
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "toolbar",
+          "bounds": [
+            80,
+            0,
+            420,
+            28
+          ]
+        },
+        {
+          "path": "1",
+          "name": "status",
+          "bounds": [
+            80,
+            278,
+            420,
+            300
+          ]
+        },
+        {
+          "path": "2",
+          "name": "side",
+          "bounds": [
+            0,
+            0,
+            80,
+            300
+          ]
+        },
+        {
+          "path": "3",
+          "name": "content",
+          "bounds": [
+            0,
+            0,
+            420,
+            300
+          ],
+          "display": [
+            0,
+            0,
+            420,
+            300
+          ]
+        },
+        {
+          "path": "3.0",
+          "name": "grid",
+          "bounds": [
+            8,
+            8,
+            348,
+            248
+          ]
+        },
+        {
+          "path": "3.1",
+          "name": "ok",
+          "bounds": [
+            350,
+            266,
+            410,
+            288
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C08-docked-min-max-family",
+      "display": [
+        0,
+        0,
+        300,
+        200
+      ],
+      "children": [
+        {
+          "path": "0",
+          "name": "top",
+          "bounds": [
+            70,
+            0,
+            300,
+            35
+          ]
+        },
+        {
+          "path": "1",
+          "name": "left",
+          "bounds": [
+            0,
+            0,
+            70,
+            200
+          ]
+        },
+        {
+          "path": "2",
+          "name": "fill",
+          "bounds": [
+            0,
+            0,
+            400,
+            200
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[package]
+name = "drive-core-storage"
+description = "Core storage abstractions (port of Files.Core.Storage)"
+version = "0.1.0"   # Drive's own version, not the desktop workspace's
+edition.workspace = true
+license = "MIT"     # Drive's own licence (see the desktop README)
+
+[dependencies]
+drive-shared.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+bitflags.workspace = true
+futures.workspace = true

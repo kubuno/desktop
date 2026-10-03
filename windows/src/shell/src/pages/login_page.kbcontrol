@@ -1,0 +1,27 @@
+<!--
+  The sign-in page: the one screen without which a fresh install is a dead end, since no account can be
+  added from anywhere else. Server, username, password and the local folder (typed, or picked with
+  « Parcourir… »), then « Se connecter » (Enter) — and « Annuler » when there is an account to go back to.
+  A failed attempt shows a danger callout under the actions. The window signs in (Command: submit,
+  browse, cancel) and reads the fields through typed access.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="LoginPage" DesignWidth="1180" DesignHeight="736" BackColor="Background" AcceptButton="submit" OnLoad="login_page_load">
+  <Label x:Name="title" Text="{Res login_title}" Role="Page" TextAlign="MiddleLeft" X="24" Y="0" Width="1132" Height="64" Anchor="Top, Left, Right"/>
+  <Panel x:Name="form" Surface="Layer" X="12" Y="64" Width="1156" Height="660" Anchor="Top, Bottom, Left, Right">
+    <Label x:Name="server_label" Text="{Res field_server}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="24" Width="120" Height="36"/>
+    <TextField x:Name="server" Text="{Binding Server, Mode=TwoWay}" d:Text="https://cloud.exemple.fr" AccessibleName="{Res field_server}" X="152" Y="24" Width="380" Height="36" OnTextChanged="field_text_changed"/>
+    <Label x:Name="login_label" Text="{Res field_login}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="88" Width="120" Height="36"/>
+    <TextField x:Name="login" Text="{Binding Login, Mode=TwoWay}" d:Text="camille.martin" AccessibleName="{Res field_login}" X="152" Y="88" Width="380" Height="36" OnTextChanged="field_text_changed"/>
+    <Label x:Name="password_label" Text="{Res field_password}" Visible="{Binding AskPassword}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="152" Width="120" Height="36"/>
+    <TextField x:Name="password" Text="{Binding Password, Mode=TwoWay}" PasswordChar="•" Visible="{Binding AskPassword}" AccessibleName="{Res field_password}" X="152" Y="152" Width="380" Height="36" OnTextChanged="field_text_changed"/>
+    <Label x:Name="code_label" Text="{Res field_code}" Visible="{Binding NeedsCode}" d:Visible="false" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="152" Width="120" Height="36"/>
+    <TextField x:Name="code" Text="{Binding Code, Mode=TwoWay}" Visible="{Binding NeedsCode}" d:Visible="false" AccessibleName="{Res field_code}" X="152" Y="152" Width="380" Height="36" OnTextChanged="field_text_changed"/>
+    <Label x:Name="code_hint" Text="{Res login_code_hint}" Visible="{Binding NeedsCode}" d:Visible="false" ForeColor="TextSecondary" Overflow="Wrap" TextAlign="MiddleLeft" X="540" Y="146" Width="560" Height="48"/>
+    <Label x:Name="folder_label" Text="{Res field_folder}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="24" Y="216" Width="120" Height="36"/>
+    <TextField x:Name="folder" Text="{Binding Folder, Mode=TwoWay}" d:Text="C:\Users\Camille\Kubuno" AccessibleName="{Res field_folder}" X="152" Y="216" Width="380" Height="36" OnTextChanged="field_text_changed"/>
+    <Button x:Name="browse" Text="{Res browse}" Variant="Secondary" X="540" Y="216" Width="110" Height="36" OnClick="browse_click"/>
+    <Button x:Name="submit" Text="{Binding SubmitText}" d:Text="Se connecter" Enabled="{Binding CanSubmit}" X="152" Y="288" Width="160" Height="36" OnClick="submit_click"/>
+    <Button x:Name="cancel" Text="{Res cancel}" Variant="Secondary" Visible="{Binding Cancellable}" X="320" Y="288" Width="120" Height="36" OnClick="cancel_click"/>
+    <Callout x:Name="error" Body="{Binding Error}" Variant="Danger" Visible="{Binding HasError}" d:Visible="false" X="152" Y="336" Width="720" Height="52"/>
+  </Panel>
+</UserControl>

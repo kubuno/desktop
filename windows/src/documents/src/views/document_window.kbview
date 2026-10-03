@@ -1,0 +1,682 @@
+<!--
+  Kubuno Documents' window, laid out like Word: the ribbon (its tab strip colours the title bar), the
+  rulers around the page, the paginated document and the status bar with the zoom slider.
+  DocumentWindow (document_window.rs) opens the document into the page canvas, binds what the canvas
+  reports to the rulers, the status bar and the Backstage, and applies what the rulers change.
+  Every ribbon command is a <Command>: those the desktop can run today (the ruler, the zoom) have a
+  handler; the others are declared, enabled as on the web, and have no effect until the editing path
+  exists — never a fake one.
+-->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="1280" DesignHeight="860" Title="{Binding WindowTitle}" Icon="{Res app_icon}" ShowIcon="false"
+       ShowWaffle="true" ShowAccount="true"
+       OnLoad="document_window_load" OnFormClosing="document_window_closing">
+  <Command x:Name="cmd_save" Label="{Res cmd_save}" SmallIcon="Save" Shortcut="Ctrl+S" Enabled="{Binding CanSave}" OnExecute="save_execute"/>
+  <Command x:Name="cmd_undo" Label="{Res cmd_undo}" SmallIcon="Undo2" Shortcut="Ctrl+Z" Enabled="{Binding CanUndo}" OnExecute="undo_execute"/>
+  <Command x:Name="cmd_redo" Label="{Res cmd_redo}" SmallIcon="Redo2" Shortcut="Ctrl+Y" Enabled="{Binding CanRedo}" OnExecute="redo_execute"/>
+  <!-- The commands (component tray): one per ribbon action, shared by the ribbon, the quick access toolbar and the shortcuts. -->
+  <Command x:Name="cmd_paste" Label="{Res cmd_paste}" SmallIcon="ClipboardPaste" Shortcut="Ctrl+V" OnExecute="paste_execute"/>
+  <Command x:Name="cmd_cut" Label="{Res cmd_cut}" SmallIcon="Scissors" Shortcut="Ctrl+X" OnExecute="cut_execute"/>
+  <Command x:Name="cmd_copy" Label="{Res cmd_copy}" SmallIcon="Copy" Shortcut="Ctrl+C" OnExecute="copy_execute"/>
+  <Command x:Name="cmd_paste_plain" Label="{Res cmd_paste_plain}" SmallIcon="ClipboardPaste" OnExecute="paste_plain_execute"/>
+  <Command x:Name="cmd_select_all" Label="{Res cmd_select_all}" SmallIcon="SelectAll" OnExecute="select_all_execute"/>
+  <Command x:Name="cmd_find" Label="{Res cmd_find}" SmallIcon="Search" Shortcut="Ctrl+F" OnExecute="find_execute"/>
+  <Command x:Name="cmd_replace" Label="{Res cmd_replace}" SmallIcon="Replace" Shortcut="Ctrl+H" OnExecute="replace_execute"/>
+  <Command x:Name="cmd_cliphist" Label="{Res cmd_cliphist}" SmallIcon="ClipboardList" ScreenTipTitle="{Res cmd_cliphist_tip}"/>
+  <Command x:Name="cmd_fmtpainter" Label="{Res cmd_fmtpainter}" SmallIcon="Paintbrush" Shortcut="Alt+Ctrl+C" ScreenTipTitle="{Res cmd_fmtpainter_tip}" IsCheckable="true" Checked="{Binding FormatPainter}" OnExecute="fmtpainter_execute"/>
+  <Command x:Name="cmd_clear" Label="{Res cmd_clear}" SmallIcon="Eraser" OnExecute="clear_execute"/>
+  <Command x:Name="cmd_bold" Label="{Res cmd_bold}" SmallIcon="Bold" Shortcut="Ctrl+B" IsCheckable="true" Checked="{Binding Bold}" OnExecute="bold_execute"/>
+  <Command x:Name="cmd_italic" Label="{Res cmd_italic}" SmallIcon="Italic" Shortcut="Ctrl+I" IsCheckable="true" Checked="{Binding Italic}" OnExecute="italic_execute"/>
+  <Command x:Name="cmd_underline" Label="{Res cmd_underline}" SmallIcon="Underline" Shortcut="Ctrl+U" IsCheckable="true" Checked="{Binding Underline}" OnExecute="underline_execute"/>
+  <Command x:Name="cmd_strike" Label="{Res cmd_strike}" SmallIcon="Strikethrough" IsCheckable="true" Checked="{Binding Strike}" OnExecute="strike_execute" Shortcut="Ctrl+Shift+S"/>
+  <Command x:Name="cmd_subscript" Label="{Res cmd_subscript}" SmallIcon="Subscript" IsCheckable="true" Checked="{Binding Subscript}" OnExecute="subscript_execute"/>
+  <Command x:Name="cmd_superscript" Label="{Res cmd_superscript}" SmallIcon="Superscript" IsCheckable="true" Checked="{Binding Superscript}" OnExecute="superscript_execute"/>
+  <Command x:Name="cmd_grow" Label="{Res cmd_grow}" SmallIcon="AArrowUp" OnExecute="grow_execute"/>
+  <Command x:Name="cmd_shrink" Label="{Res cmd_shrink}" SmallIcon="AArrowDown" OnExecute="shrink_execute"/>
+  <Command x:Name="cmd_case_upper" Label="{Res cmd_case_upper}" OnExecute="case_upper_execute"/>
+  <Command x:Name="cmd_case_lower" Label="{Res cmd_case_lower}" OnExecute="case_lower_execute"/>
+  <Command x:Name="cmd_case_title" Label="{Res cmd_case_title}" OnExecute="case_title_execute"/>
+  <Command x:Name="cmd_case_sentence" Label="{Res cmd_case_sentence}" OnExecute="case_sentence_execute"/>
+  <Command x:Name="cmd_case_toggle" Label="{Res cmd_case_toggle}" OnExecute="case_toggle_execute"/>
+  <Command x:Name="cmd_case_smallcaps" Label="{Res cmd_case_smallcaps}" OnExecute="case_smallcaps_execute"/>
+  <Command x:Name="cmd_case_spacing" Label="{Res cmd_case_spacing}"/>
+  <Command x:Name="cmd_color" Label="{Res cmd_color}" SmallIcon="Baseline" OnExecute="color_execute"/>
+  <Command x:Name="cmd_color_auto" Label="{Res cmd_color_auto}" OnExecute="color_auto_execute"/>
+  <Command x:Name="cmd_color_red" Label="{Res cmd_color_red}" OnExecute="color_red_execute"/>
+  <Command x:Name="cmd_color_blue" Label="{Res cmd_color_blue}" OnExecute="color_blue_execute"/>
+  <Command x:Name="cmd_color_more" Label="{Res cmd_color_more}"/>
+  <Command x:Name="cmd_highlight" Label="{Res cmd_highlight}" SmallIcon="Highlighter" OnExecute="highlight_execute"/>
+  <Command x:Name="cmd_hl_yellow" Label="{Res cmd_hl_yellow}" OnExecute="hl_yellow_execute"/>
+  <Command x:Name="cmd_hl_green" Label="{Res cmd_hl_green}" OnExecute="hl_green_execute"/>
+  <Command x:Name="cmd_hl_cyan" Label="{Res cmd_hl_cyan}" OnExecute="hl_cyan_execute"/>
+  <Command x:Name="cmd_hl_none" Label="{Res cmd_hl_none}" OnExecute="hl_none_execute"/>
+  <Command x:Name="cmd_ul" Label="{Res cmd_ul}" SmallIcon="List" IsCheckable="true" Checked="{Binding ListBullet}" OnExecute="ul_execute" Shortcut="Ctrl+Shift+8"/>
+  <Command x:Name="cmd_ol" Label="{Res cmd_ol}" SmallIcon="ListOrdered" IsCheckable="true" Checked="{Binding ListOrdered}" OnExecute="ol_execute" Shortcut="Ctrl+Shift+7"/>
+  <Command x:Name="cmd_task" Label="{Res cmd_task}" SmallIcon="SquareCheck" IsCheckable="true" Checked="{Binding ListTask}" OnExecute="task_execute"/>
+  <Command x:Name="cmd_al_left" Label="{Res cmd_al_left}" SmallIcon="AlignLeft" IsCheckable="true" Checked="{Binding AlignLeft}" OnExecute="al_left_execute" Shortcut="Ctrl+L"/>
+  <Command x:Name="cmd_al_center" Label="{Res cmd_al_center}" SmallIcon="AlignCenter" IsCheckable="true" Checked="{Binding AlignCenter}" OnExecute="al_center_execute" Shortcut="Ctrl+E"/>
+  <Command x:Name="cmd_al_right" Label="{Res cmd_al_right}" SmallIcon="AlignRight" IsCheckable="true" Checked="{Binding AlignRight}" OnExecute="al_right_execute" Shortcut="Ctrl+R"/>
+  <Command x:Name="cmd_al_justify" Label="{Res cmd_al_justify}" SmallIcon="AlignJustify" IsCheckable="true" Checked="{Binding AlignJustify}" OnExecute="al_justify_execute" Shortcut="Ctrl+J"/>
+  <Command x:Name="cmd_ind_dec" Label="{Res cmd_ind_dec}" SmallIcon="IndentDecrease" OnExecute="ind_dec_execute"/>
+  <Command x:Name="cmd_ind_inc" Label="{Res cmd_ind_inc}" SmallIcon="IndentIncrease" OnExecute="ind_inc_execute"/>
+  <Command x:Name="cmd_ls" Label="{Res cmd_ls}" SmallIcon="SquareSplitVertical"/>
+  <Command x:Name="cmd_ls1" Label="{Res cmd_ls1}" IsCheckable="true" Checked="{Binding Ls1}" OnExecute="ls1_execute"/>
+  <Command x:Name="cmd_ls1_15" Label="{Res cmd_ls1_15}" IsCheckable="true" Checked="{Binding Ls115}" OnExecute="ls1_15_execute"/>
+  <Command x:Name="cmd_ls1_5" Label="{Res cmd_ls1_5}" IsCheckable="true" Checked="{Binding Ls15}" OnExecute="ls1_5_execute"/>
+  <Command x:Name="cmd_ls2" Label="{Res cmd_ls2}" IsCheckable="true" Checked="{Binding Ls2}" OnExecute="ls2_execute"/>
+  <Command x:Name="cmd_ls2_5" Label="{Res cmd_ls2_5}" IsCheckable="true" Checked="{Binding Ls25}" OnExecute="ls2_5_execute"/>
+  <Command x:Name="cmd_ls3" Label="{Res cmd_ls3}" IsCheckable="true" Checked="{Binding Ls3}" OnExecute="ls3_execute"/>
+  <Command x:Name="cmd_sp_before" Label="{Res cmd_sp_before}" IsCheckable="true" Checked="{Binding SpaceBefore}" OnExecute="sp_before_execute"/>
+  <Command x:Name="cmd_sp_after" Label="{Res cmd_sp_after}" IsCheckable="true" Checked="{Binding SpaceAfter}" OnExecute="sp_after_execute"/>
+  <Command x:Name="cmd_sortasc" Label="{Res cmd_sortasc}" SmallIcon="ArrowDownAZ"/>
+  <Command x:Name="cmd_sortdesc" Label="{Res cmd_sortdesc}" SmallIcon="ArrowUpAZ"/>
+  <Command x:Name="cmd_hnum" Label="{Res cmd_hnum}" SmallIcon="ListTree"/>
+  <Command x:Name="cmd_firstline" Label="{Res cmd_firstline}" SmallIcon="Pilcrow" IsCheckable="true" Checked="{Binding FirstLine}" OnExecute="firstline_execute"/>
+  <Command x:Name="cmd_hanging" Label="{Res cmd_hanging}" SmallIcon="IndentDecrease" IsCheckable="true" Checked="{Binding Hanging}" OnExecute="hanging_execute"/>
+  <Command x:Name="cmd_parashade" Label="{Res cmd_parashade}" SmallIcon="PaintBucket"/>
+  <Command x:Name="cmd_shade_none" Label="{Res cmd_shade_none}"/>
+  <Command x:Name="cmd_shade_grey" Label="{Res cmd_shade_grey}"/>
+  <Command x:Name="cmd_border_box" Label="{Res cmd_border_box}"/>
+  <Command x:Name="cmd_border_none" Label="{Res cmd_border_none}"/>
+  <Command x:Name="cmd_flow_widow" Label="{Res cmd_flow_widow}"/>
+  <Command x:Name="cmd_flow_keepnext" Label="{Res cmd_flow_keepnext}" IsCheckable="true" Checked="{Binding KeepNext}" OnExecute="flow_keepnext_execute"/>
+  <Command x:Name="cmd_flow_keeplines" Label="{Res cmd_flow_keeplines}" IsCheckable="true" Checked="{Binding KeepLines}" OnExecute="flow_keeplines_execute"/>
+  <Command x:Name="cmd_flow_pagebreak" Label="{Res cmd_flow_pagebreak}" IsCheckable="true" Checked="{Binding PageBreakBefore}" OnExecute="flow_pagebreak_execute"/>
+  <Command x:Name="cmd_link" Label="{Res cmd_link}" SmallIcon="Link" IsCheckable="true" Checked="{Binding OnLink}" OnExecute="link_execute" Shortcut="Ctrl+K"/>
+  <Command x:Name="cmd_link_web" Label="{Res cmd_link_web}" OnExecute="link_execute"/>
+  <Command x:Name="cmd_link_mail" Label="{Res cmd_link_mail}"/>
+  <Command x:Name="cmd_link_rm" Label="{Res cmd_link_rm}" OnExecute="link_rm_execute"/>
+  <Command x:Name="cmd_bookmark" Label="{Res cmd_bookmark}" SmallIcon="Bookmark"/>
+  <Command x:Name="cmd_goto" Label="{Res cmd_goto}" SmallIcon="CornerDownRight"/>
+  <Command x:Name="cmd_wordcount" Label="{Res cmd_wordcount}" SmallIcon="Hash" OnExecute="wordcount_execute"/>
+  <Command x:Name="cmd_texttools" Label="{Res cmd_texttools}" SmallIcon="Eraser"/>
+  <Command x:Name="cmd_tt_empties" Label="{Res cmd_tt_empties}"/>
+  <Command x:Name="cmd_tt_spaces" Label="{Res cmd_tt_spaces}"/>
+  <Command x:Name="cmd_tt_tabs" Label="{Res cmd_tt_tabs}"/>
+  <Command x:Name="cmd_tt_quotes" Label="{Res cmd_tt_quotes}"/>
+  <Command x:Name="cmd_tt_number" Label="{Res cmd_tt_number}"/>
+  <Command x:Name="cmd_tt_reverse" Label="{Res cmd_tt_reverse}"/>
+  <Command x:Name="cmd_tt_dedupe" Label="{Res cmd_tt_dedupe}"/>
+  <Command x:Name="cmd_tt_title" Label="{Res cmd_tt_title}"/>
+  <Command x:Name="cmd_tt_clear" Label="{Res cmd_tt_clear}"/>
+  <Command x:Name="cmd_details" Label="{Res cmd_details}" SmallIcon="FileText"/>
+  <Command x:Name="cmd_cover" Label="{Res cmd_cover}" SmallIcon="FileText"/>
+  <Command x:Name="cmd_cover1" Label="{Res cmd_cover1}"/>
+  <Command x:Name="cmd_cover2" Label="{Res cmd_cover2}"/>
+  <Command x:Name="cmd_pb" Label="{Res cmd_pb}" SmallIcon="SeparatorHorizontal" OnExecute="pb_execute" Shortcut="Ctrl+Enter"/>
+  <Command x:Name="cmd_sb" Label="{Res cmd_sb}" SmallIcon="SquareSplitVertical"/>
+  <Command x:Name="cmd_table_insert" Label="{Res cmd_table_insert}" OnExecute="table_insert_execute"/>
+  <Command x:Name="cmd_table_from_text" Label="{Res cmd_table_from_text}"/>
+  <Command x:Name="cmd_txt2tbl" Label="{Res cmd_txt2tbl}" SmallIcon="Table"/>
+  <Command x:Name="cmd_tbl2txt" Label="{Res cmd_tbl2txt}" SmallIcon="WrapText"/>
+  <Command x:Name="cmd_img" Label="{Res cmd_img}" SmallIcon="Image" OnExecute="img_execute"/>
+  <Command x:Name="cmd_shape_rect" Label="{Res cmd_shape_rect}"/>
+  <Command x:Name="cmd_shape_ellipse" Label="{Res cmd_shape_ellipse}"/>
+  <Command x:Name="cmd_shape_line" Label="{Res cmd_shape_line}"/>
+  <Command x:Name="cmd_shape_arrow" Label="{Res cmd_shape_arrow}"/>
+  <Command x:Name="cmd_textbox" Label="{Res cmd_textbox}" SmallIcon="TextCursorInput"/>
+  <Command x:Name="cmd_header" Label="{Res cmd_header}" SmallIcon="PanelTop"/>
+  <Command x:Name="cmd_footer" Label="{Res cmd_footer}" SmallIcon="PanelBottom"/>
+  <Command x:Name="cmd_ins_toc" Label="{Res cmd_ins_toc}" SmallIcon="ListTree"/>
+  <Command x:Name="cmd_toc_ins" Label="{Res cmd_toc_ins}"/>
+  <Command x:Name="cmd_ins_toc_upd" Label="{Res cmd_ins_toc_upd}"/>
+  <Command x:Name="cmd_fld_upd" Label="{Res cmd_fld_upd}" SmallIcon="RotateCw"/>
+  <Command x:Name="cmd_special" Label="{Res cmd_special}" SmallIcon="Omega"/>
+  <Command x:Name="cmd_datetime" Label="{Res cmd_datetime}" SmallIcon="CalendarClock"/>
+  <Command x:Name="cmd_fld_date" Label="{Res cmd_fld_date}"/>
+  <Command x:Name="cmd_fld_time" Label="{Res cmd_fld_time}"/>
+  <Command x:Name="cmd_fld_datetime" Label="{Res cmd_fld_datetime}"/>
+  <Command x:Name="cmd_ins_caption" Label="{Res cmd_ins_caption}" SmallIcon="Captions"/>
+  <Command x:Name="cmd_hr" Label="{Res cmd_hr}" SmallIcon="Minus" OnExecute="hr_execute"/>
+  <Command x:Name="cmd_quote" Label="{Res cmd_quote}" SmallIcon="Quote"/>
+  <Command x:Name="cmd_code" Label="{Res cmd_code}" SmallIcon="Code" IsCheckable="true" Checked="{Binding CodeBlock}" OnExecute="code_execute"/>
+  <Command x:Name="cmd_footnote" Label="{Res cmd_footnote}" SmallIcon="Superscript"/>
+  <Command x:Name="cmd_endnote" Label="{Res cmd_endnote}" SmallIcon="BookOpen"/>
+  <Command x:Name="cmd_dropcap" Label="{Res cmd_dropcap}" SmallIcon="Type"/>
+  <Command x:Name="cmd_sign" Label="{Res cmd_sign}" SmallIcon="Pencil"/>
+  <Command x:Name="cmd_pagexy" Label="{Res cmd_pagexy}" SmallIcon="Hash"/>
+  <Command x:Name="cmd_symbols" Label="{Res cmd_symbols}" SmallIcon="Omega"/>
+  <Command x:Name="cmd_sym_emdash" Label="{Res cmd_sym_emdash}" OnExecute="sym_emdash_execute"/>
+  <Command x:Name="cmd_sym_endash" Label="{Res cmd_sym_endash}" OnExecute="sym_endash_execute"/>
+  <Command x:Name="cmd_sym_ellipsis" Label="{Res cmd_sym_ellipsis}" OnExecute="sym_ellipsis_execute"/>
+  <Command x:Name="cmd_sym_nbsp" Label="{Res cmd_sym_nbsp}" OnExecute="sym_nbsp_execute"/>
+  <Command x:Name="cmd_sym_guillemets" Label="{Res cmd_sym_guillemets}" OnExecute="sym_guillemets_execute"/>
+  <Command x:Name="cmd_sym_euro" Label="{Res cmd_sym_euro}" OnExecute="sym_euro_execute"/>
+  <Command x:Name="cmd_sym_tm" Label="{Res cmd_sym_tm}" OnExecute="sym_tm_execute"/>
+  <Command x:Name="cmd_sym_copyright" Label="{Res cmd_sym_copyright}" OnExecute="sym_copyright_execute"/>
+  <Command x:Name="cmd_sym_registered" Label="{Res cmd_sym_registered}" OnExecute="sym_registered_execute"/>
+  <Command x:Name="cmd_sym_section" Label="{Res cmd_sym_section}" OnExecute="sym_section_execute"/>
+  <Command x:Name="cmd_sym_bullet" Label="{Res cmd_sym_bullet}" OnExecute="sym_bullet_execute"/>
+  <Command x:Name="cmd_sym_degree" Label="{Res cmd_sym_degree}" OnExecute="sym_degree_execute"/>
+  <Command x:Name="cmd_sym_times" Label="{Res cmd_sym_times}" OnExecute="sym_times_execute"/>
+  <Command x:Name="cmd_sym_divide" Label="{Res cmd_sym_divide}" OnExecute="sym_divide_execute"/>
+  <Command x:Name="cmd_sym_plusminus" Label="{Res cmd_sym_plusminus}" OnExecute="sym_plusminus_execute"/>
+  <Command x:Name="cmd_sym_arrow" Label="{Res cmd_sym_arrow}" OnExecute="sym_arrow_execute"/>
+  <Command x:Name="cmd_sym_notequal" Label="{Res cmd_sym_notequal}" OnExecute="sym_notequal_execute"/>
+  <Command x:Name="cmd_sym_half" Label="{Res cmd_sym_half}" OnExecute="sym_half_execute"/>
+  <Command x:Name="cmd_sym_approx" Label="{Res cmd_sym_approx}" OnExecute="sym_approx_execute"/>
+  <Command x:Name="cmd_sym_infinity" Label="{Res cmd_sym_infinity}" OnExecute="sym_infinity_execute"/>
+  <Command x:Name="cmd_sym_sqrt" Label="{Res cmd_sym_sqrt}" OnExecute="sym_sqrt_execute"/>
+  <Command x:Name="cmd_sym_sum" Label="{Res cmd_sym_sum}" OnExecute="sym_sum_execute"/>
+  <Command x:Name="cmd_sym_pi" Label="{Res cmd_sym_pi}" OnExecute="sym_pi_execute"/>
+  <Command x:Name="cmd_sym_delta" Label="{Res cmd_sym_delta}" OnExecute="sym_delta_execute"/>
+  <Command x:Name="cmd_margins" Label="{Res cmd_margins}" SmallIcon="SquareDashed"/>
+  <Command x:Name="cmd_mg_normal" Label="{Res cmd_mg_normal}" OnExecute="mg_normal_execute"/>
+  <Command x:Name="cmd_mg_narrow" Label="{Res cmd_mg_narrow}" OnExecute="mg_narrow_execute"/>
+  <Command x:Name="cmd_mg_moderate" Label="{Res cmd_mg_moderate}" OnExecute="mg_moderate_execute"/>
+  <Command x:Name="cmd_mg_wide" Label="{Res cmd_mg_wide}" OnExecute="mg_wide_execute"/>
+  <Command x:Name="cmd_pagecolor" Label="{Res cmd_pagecolor}" SmallIcon="PaintBucket"/>
+  <Command x:Name="cmd_pc_none" Label="{Res cmd_pc_none}"/>
+  <Command x:Name="cmd_pc_cream" Label="{Res cmd_pc_cream}"/>
+  <Command x:Name="cmd_pc_grey" Label="{Res cmd_pc_grey}"/>
+  <Command x:Name="cmd_watermark" Label="{Res cmd_watermark}" SmallIcon="Droplet"/>
+  <Command x:Name="cmd_pageborder" Label="{Res cmd_pageborder}" SmallIcon="Frame"/>
+  <Command x:Name="cmd_toc_auto1" Label="{Res cmd_toc_auto1}"/>
+  <Command x:Name="cmd_toc_auto2" Label="{Res cmd_toc_auto2}"/>
+  <Command x:Name="cmd_toc_manual" Label="{Res cmd_toc_manual}"/>
+  <Command x:Name="cmd_toc_custom" Label="{Res cmd_toc_custom}"/>
+  <Command x:Name="cmd_toc_remove" Label="{Res cmd_toc_remove}"/>
+  <Command x:Name="cmd_ol_0" Label="{Res cmd_ol_0}"/>
+  <Command x:Name="cmd_ol_1" Label="{Res cmd_ol_1}"/>
+  <Command x:Name="cmd_ol_2" Label="{Res cmd_ol_2}"/>
+  <Command x:Name="cmd_ol_3" Label="{Res cmd_ol_3}"/>
+  <Command x:Name="cmd_ref_toc_upd" Label="{Res cmd_ref_toc_upd}" SmallIcon="RotateCw" Enabled="false"/>
+  <Command x:Name="cmd_fn" Label="{Res cmd_fn}" SmallIcon="Superscript"/>
+  <Command x:Name="cmd_en" Label="{Res cmd_en}" SmallIcon="BookOpen"/>
+  <Command x:Name="cmd_nextnote" Label="{Res cmd_nextnote}" SmallIcon="Superscript"/>
+  <Command x:Name="cmd_note_footnote_next" Label="{Res cmd_note_footnote_next}"/>
+  <Command x:Name="cmd_note_footnote_prev" Label="{Res cmd_note_footnote_prev}"/>
+  <Command x:Name="cmd_note_endnote_next" Label="{Res cmd_note_endnote_next}"/>
+  <Command x:Name="cmd_note_endnote_prev" Label="{Res cmd_note_endnote_prev}"/>
+  <Command x:Name="cmd_shownotes" Label="{Res cmd_shownotes}" SmallIcon="FileText" Enabled="false"/>
+  <Command x:Name="cmd_cite_new" Label="{Res cmd_cite_new}"/>
+  <Command x:Name="cmd_cite_pick" Label="{Res cmd_cite_pick}"/>
+  <Command x:Name="cmd_sources" Label="{Res cmd_sources}" SmallIcon="BookMarked"/>
+  <Command x:Name="cmd_biblio_bibliography" Label="{Res cmd_biblio_bibliography}"/>
+  <Command x:Name="cmd_biblio_references" Label="{Res cmd_biblio_references}"/>
+  <Command x:Name="cmd_biblio_works" Label="{Res cmd_biblio_works}"/>
+  <Command x:Name="cmd_ref_caption" Label="{Res cmd_ref_caption}" SmallIcon="Quote"/>
+  <Command x:Name="cmd_tof" Label="{Res cmd_tof}" SmallIcon="ListTree"/>
+  <Command x:Name="cmd_tof_upd" Label="{Res cmd_tof_upd}" SmallIcon="RotateCw"/>
+  <Command x:Name="cmd_xref" Label="{Res cmd_xref}" SmallIcon="Hash"/>
+  <Command x:Name="cmd_xe" Label="{Res cmd_xe}" SmallIcon="Tag"/>
+  <Command x:Name="cmd_idx_ins" Label="{Res cmd_idx_ins}" SmallIcon="ListTree"/>
+  <Command x:Name="cmd_idx_upd" Label="{Res cmd_idx_upd}" SmallIcon="RotateCw" Enabled="false"/>
+  <Command x:Name="cmd_ta" Label="{Res cmd_ta}" SmallIcon="BookMarked"/>
+  <Command x:Name="cmd_toa_ins" Label="{Res cmd_toa_ins}" SmallIcon="ListTree"/>
+  <Command x:Name="cmd_toa_upd" Label="{Res cmd_toa_upd}" SmallIcon="RotateCw" Enabled="false"/>
+  <Command x:Name="cmd_edit" Label="{Res cmd_edit}" SmallIcon="FileText"/>
+  <Command x:Name="cmd_read" Label="{Res cmd_read}" SmallIcon="Eye" Checked="true"/>
+  <Command x:Name="cmd_ruler" Label="{Res cmd_ruler}" SmallIcon="Ruler" IsCheckable="true" Checked="{Binding ShowRuler, Mode=TwoWay}" OnExecute="ruler_execute"/>
+  <Command x:Name="cmd_nav" Label="{Res cmd_nav}" SmallIcon="PanelLeft"/>
+  <Command x:Name="cmd_bounds" Label="{Res cmd_bounds}" SmallIcon="Frame"/>
+  <Command x:Name="cmd_marks" Label="{Res cmd_marks}" SmallIcon="Pilcrow" IsCheckable="true" Checked="{Binding ShowMarks, Mode=TwoWay}" OnExecute="marks_execute"/>
+  <Command x:Name="cmd_outarrows" Label="{Res cmd_outarrows}" SmallIcon="ChevronRight"/>
+  <Command x:Name="cmd_zdlg" Label="{Res cmd_zdlg}" SmallIcon="ZoomIn" ScreenTipTitle="{Res cmd_zdlg_tip}"/>
+  <Command x:Name="cmd_z100" Label="{Res cmd_z100}" SmallIcon="FileText" OnExecute="zoom_100_execute"/>
+  <Command x:Name="cmd_z1p" Label="{Res cmd_z1p}" SmallIcon="FileText" OnExecute="zoom_one_page_execute"/>
+  <Command x:Name="cmd_zmp" Label="{Res cmd_zmp}" SmallIcon="Files"/>
+  <Command x:Name="cmd_zpw" Label="{Res cmd_zpw}" SmallIcon="MoveHorizontal" OnExecute="zoom_page_width_execute"/>
+  <Command x:Name="cmd_mac_show" Label="{Res cmd_mac_show}"/>
+  <Command x:Name="cmd_mac_rec" Label="{Res cmd_mac_rec}"/>
+  <Command x:Name="cmd_mac_pause" Label="{Res cmd_mac_pause}" Enabled="false"/>
+  <Command x:Name="cmd_spell" Label="{Res cmd_spell}" SmallIcon="SpellCheck"/>
+  <Command x:Name="cmd_spelldict" Label="{Res cmd_spelldict}" SmallIcon="BookMarked"/>
+  <Command x:Name="cmd_trackchanges" Label="{Res cmd_trackchanges}" SmallIcon="PenLine"/>
+  <Command x:Name="cmd_reviewpane" Label="{Res cmd_reviewpane}" SmallIcon="ListChecks"/>
+  <Command x:Name="cmd_revfinal" Label="{Res cmd_revfinal}" SmallIcon="Eye"/>
+  <Command x:Name="cmd_addcomment" Label="{Res cmd_addcomment}" SmallIcon="MessageSquarePlus"/>
+  <Command x:Name="cmd_showcomments" Label="{Res cmd_showcomments}" SmallIcon="MessageSquare"/>
+
+  <!-- The right-click menu of the page: the web's buildCtxItems, minus what the desktop does not have yet. -->
+  <ContextMenu x:Name="page_menu">
+    <MenuItem Command="cmd_cut"/>
+    <MenuItem Command="cmd_copy"/>
+    <MenuItem Command="cmd_paste"/>
+    <MenuItem Command="cmd_paste_plain" ShortcutKeyDisplayString="Ctrl+Maj+V"/>
+    <MenuSeparator/>
+    <MenuItem Command="cmd_link"/>
+    <MenuSeparator/>
+    <MenuItem Text="{Res menu_break}">
+      <MenuItem Command="cmd_pb"/>
+    </MenuItem>
+    <MenuSeparator/>
+    <MenuItem Text="{Res menu_text}">
+      <MenuItem Command="cmd_bold"/>
+      <MenuItem Command="cmd_italic"/>
+      <MenuItem Command="cmd_underline"/>
+      <MenuItem Command="cmd_strike"/>
+    </MenuItem>
+    <MenuItem Text="{Res menu_align}">
+      <MenuItem Command="cmd_al_left"/>
+      <MenuItem Command="cmd_al_center"/>
+      <MenuItem Command="cmd_al_right"/>
+      <MenuItem Command="cmd_al_justify"/>
+    </MenuItem>
+    <MenuSeparator/>
+    <MenuItem Command="cmd_select_all" ShortcutKeyDisplayString="Ctrl+A"/>
+  </ContextMenu>
+
+  <Ribbon x:Name="ribbon" Dock="Top" Tone="Documents">
+    <RibbonQuickAccessToolbar>
+      <RibbonButton x:Name="qat_save" Command="cmd_save"/>
+      <RibbonButton x:Name="qat_undo" Command="cmd_undo"/>
+      <RibbonButton x:Name="qat_redo" Command="cmd_redo"/>
+    </RibbonQuickAccessToolbar>
+    <RibbonBackstage x:Name="backstage" Header="{Res tab_file}" KeyTip="F">
+      <BackstageTab x:Name="bs_info" Header="{Res bs_info}" Icon="Info">
+        <BackstageInfo x:Name="backstage_info" DocumentTitle="{Binding DocTitle}" Pages="{Binding PagesText}" ZoomText="{Binding ZoomText}" Hidden="{Binding HiddenText}"/>
+      </BackstageTab>
+      <BackstageSeparator/>
+      <BackstageButton x:Name="bs_close" Label="{Res bs_close}" SmallIcon="X" OnClick="bs_close_click"/>
+    </RibbonBackstage>
+    <RibbonTab x:Name="tab_home" Header="{Res tab_home}" KeyTip="H">
+      <RibbonGroup x:Name="grp_clip" Header="{Res grp_clip}">
+        <RibbonButton Command="cmd_paste" Size="Large"/>
+        <RibbonButton Command="cmd_cut"/>
+        <RibbonButton Command="cmd_copy"/>
+        <RibbonButton Command="cmd_cliphist"/>
+        <RibbonToggleButton Command="cmd_fmtpainter"/>
+        <RibbonButton Command="cmd_clear"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_font" Header="{Res grp_font}">
+        <RibbonComboBox x:Name="fontfamily" Width="105" SelectedValue="{Binding FontFamily}" ItemsSource="{Binding FontFamilies}" OnSelectedValueChanged="font_family_changed"/>
+        <RibbonComboBox x:Name="fontsize" Width="54" SelectedValue="{Binding FontSize}" OnSelectedValueChanged="font_size_changed">
+          <Option Value="8"/>
+          <Option Value="9"/>
+          <Option Value="10"/>
+          <Option Value="11"/>
+          <Option Value="12"/>
+          <Option Value="14"/>
+          <Option Value="16"/>
+          <Option Value="18"/>
+          <Option Value="20"/>
+          <Option Value="24"/>
+          <Option Value="28"/>
+          <Option Value="32"/>
+          <Option Value="36"/>
+          <Option Value="48"/>
+          <Option Value="72"/>
+        </RibbonComboBox>
+        <RibbonToggleButton Command="cmd_bold" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_italic" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_underline" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_strike" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_subscript" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_superscript" ShowLabel="false"/>
+        <RibbonButton Command="cmd_grow" ShowLabel="false"/>
+        <RibbonButton Command="cmd_shrink" ShowLabel="false"/>
+        <RibbonMenuButton x:Name="menu_case" Label="{Res menu_case}" SmallIcon="CaseSensitive" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_case_upper"/>
+          <RibbonMenuItem Command="cmd_case_lower"/>
+          <RibbonMenuItem Command="cmd_case_title"/>
+          <RibbonMenuItem Command="cmd_case_sentence"/>
+          <RibbonMenuItem Command="cmd_case_toggle"/>
+          <RibbonMenuItem Command="cmd_case_smallcaps"/>
+          <RibbonMenuItem Command="cmd_case_spacing"/>
+        </RibbonMenuButton>
+        <RibbonSplitButton Command="cmd_color" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_color_auto"/>
+          <RibbonMenuItem Command="cmd_color_red"/>
+          <RibbonMenuItem Command="cmd_color_blue"/>
+          <RibbonMenuItem Command="cmd_color_more"/>
+        </RibbonSplitButton>
+        <RibbonSplitButton Command="cmd_highlight" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_hl_yellow"/>
+          <RibbonMenuItem Command="cmd_hl_green"/>
+          <RibbonMenuItem Command="cmd_hl_cyan"/>
+          <RibbonMenuItem Command="cmd_hl_none"/>
+        </RibbonSplitButton>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_para" Header="{Res grp_para}">
+        <RibbonToggleButton Command="cmd_ul" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_ol" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_task" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_al_left" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_al_center" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_al_right" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_al_justify" ShowLabel="false"/>
+        <RibbonButton Command="cmd_ind_dec" ShowLabel="false"/>
+        <RibbonButton Command="cmd_ind_inc" ShowLabel="false"/>
+        <RibbonSplitButton Command="cmd_ls" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_ls1"/>
+          <RibbonMenuItem Command="cmd_ls1_15"/>
+          <RibbonMenuItem Command="cmd_ls1_5"/>
+          <RibbonMenuItem Command="cmd_ls2"/>
+          <RibbonMenuItem Command="cmd_ls2_5"/>
+          <RibbonMenuItem Command="cmd_ls3"/>
+          <RibbonSeparator/>
+          <RibbonMenuItem Command="cmd_sp_before"/>
+          <RibbonMenuItem Command="cmd_sp_after"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_sortasc" ShowLabel="false"/>
+        <RibbonButton Command="cmd_sortdesc" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_hnum" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_firstline" ShowLabel="false"/>
+        <RibbonToggleButton Command="cmd_hanging" ShowLabel="false"/>
+        <RibbonSplitButton Command="cmd_parashade" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_shade_none"/>
+          <RibbonMenuItem Command="cmd_shade_grey"/>
+          <RibbonMenuItem Command="cmd_border_box"/>
+          <RibbonMenuItem Command="cmd_border_none"/>
+        </RibbonSplitButton>
+        <RibbonMenuButton x:Name="menu_paraflow" Label="{Res menu_paraflow}" SmallIcon="WrapText" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_flow_widow"/>
+          <RibbonMenuItem Command="cmd_flow_keepnext"/>
+          <RibbonMenuItem Command="cmd_flow_keeplines"/>
+          <RibbonMenuItem Command="cmd_flow_pagebreak"/>
+        </RibbonMenuButton>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_styles" Header="{Res grp_styles}">
+        <RibbonGallery x:Name="stylegallery" Display="Inline" SelectedValue="{Binding StyleValue}" OnItemClick="style_gallery_item_click">
+          <RibbonGalleryItem Value="normal" Label="{Res style_normal}"/>
+          <RibbonGalleryItem Value="h1" Label="{Res style_h1}"/>
+          <RibbonGalleryItem Value="h2" Label="{Res style_h2}"/>
+          <RibbonGalleryItem Value="h3" Label="{Res style_h3}"/>
+          <RibbonGalleryItem Value="title" Label="{Res style_title}"/>
+          <RibbonGalleryItem Value="quote" Label="{Res style_quote}"/>
+        </RibbonGallery>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_edit" Header="{Res grp_edit}">
+        <RibbonSplitButton Command="cmd_link">
+          <RibbonMenuItem Command="cmd_link_web"/>
+          <RibbonMenuItem Command="cmd_link_mail"/>
+          <RibbonMenuItem Command="cmd_link_rm"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_bookmark"/>
+        <RibbonButton Command="cmd_goto"/>
+        <RibbonButton Command="cmd_wordcount"/>
+        <RibbonSplitButton Command="cmd_texttools" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_tt_empties"/>
+          <RibbonMenuItem Command="cmd_tt_spaces"/>
+          <RibbonMenuItem Command="cmd_tt_tabs"/>
+          <RibbonMenuItem Command="cmd_tt_quotes"/>
+          <RibbonSeparator/>
+          <RibbonMenuItem Command="cmd_tt_number"/>
+          <RibbonMenuItem Command="cmd_tt_reverse"/>
+          <RibbonMenuItem Command="cmd_tt_dedupe"/>
+          <RibbonSeparator/>
+          <RibbonMenuItem Command="cmd_tt_title"/>
+          <RibbonMenuItem Command="cmd_tt_clear"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_details"/>
+      </RibbonGroup>
+    </RibbonTab>
+    <RibbonTab x:Name="tab_insert" Header="{Res tab_insert}" KeyTip="N">
+      <RibbonGroup x:Name="grp_pages" Header="{Res grp_pages}">
+        <RibbonSplitButton Command="cmd_cover" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_cover1"/>
+          <RibbonMenuItem Command="cmd_cover2"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_pb"/>
+        <RibbonButton Command="cmd_sb"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_tables" Header="{Res grp_tables}">
+        <RibbonMenuButton x:Name="menu_table" Label="{Res menu_table}" SmallIcon="Table" Size="Large">
+          <RibbonMenuItem Command="cmd_table_insert"/>
+          <RibbonMenuItem Command="cmd_table_from_text"/>
+        </RibbonMenuButton>
+        <RibbonButton Command="cmd_txt2tbl"/>
+        <RibbonButton Command="cmd_tbl2txt"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_illustrations" Header="{Res grp_illustrations}">
+        <RibbonButton Command="cmd_img" Size="Large"/>
+        <RibbonMenuButton x:Name="menu_shapes" Label="{Res menu_shapes}" SmallIcon="Shapes" Size="Large">
+          <RibbonMenuItem Command="cmd_shape_rect"/>
+          <RibbonMenuItem Command="cmd_shape_ellipse"/>
+          <RibbonMenuItem Command="cmd_shape_line"/>
+          <RibbonMenuItem Command="cmd_shape_arrow"/>
+        </RibbonMenuButton>
+        <RibbonButton Command="cmd_textbox"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_hf" Header="{Res grp_hf}">
+        <RibbonButton Command="cmd_header"/>
+        <RibbonButton Command="cmd_footer"/>
+        <RibbonComboBox x:Name="pgnum" Width="120" SelectedValue="{Binding PageNumberPosition}">
+          <Option Value="none" Label="{Res opt_pgnum_none}"/>
+          <Option Value="footer-right" Label="{Res opt_pgnum_footer_right}"/>
+          <Option Value="footer-center" Label="{Res opt_pgnum_footer_center}"/>
+          <Option Value="header-right" Label="{Res opt_pgnum_header_right}"/>
+          <Option Value="header-center" Label="{Res opt_pgnum_header_center}"/>
+        </RibbonComboBox>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_text" Header="{Res grp_text}">
+        <RibbonSplitButton Command="cmd_ins_toc" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_toc_ins"/>
+          <RibbonMenuItem Command="cmd_ins_toc_upd"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_fld_upd"/>
+        <RibbonButton Command="cmd_special"/>
+        <RibbonSplitButton Command="cmd_datetime" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_fld_date"/>
+          <RibbonMenuItem Command="cmd_fld_time"/>
+          <RibbonMenuItem Command="cmd_fld_datetime"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_ins_caption"/>
+        <RibbonButton Command="cmd_hr"/>
+        <RibbonToggleButton Command="cmd_quote"/>
+        <RibbonToggleButton Command="cmd_code"/>
+        <RibbonButton Command="cmd_footnote"/>
+        <RibbonButton Command="cmd_endnote"/>
+        <RibbonToggleButton Command="cmd_dropcap"/>
+        <RibbonButton Command="cmd_sign"/>
+        <RibbonButton Command="cmd_pagexy"/>
+        <RibbonSplitButton Command="cmd_symbols" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_sym_emdash"/>
+          <RibbonMenuItem Command="cmd_sym_endash"/>
+          <RibbonMenuItem Command="cmd_sym_ellipsis"/>
+          <RibbonMenuItem Command="cmd_sym_nbsp"/>
+          <RibbonMenuItem Command="cmd_sym_guillemets"/>
+          <RibbonMenuItem Command="cmd_sym_euro"/>
+          <RibbonMenuItem Command="cmd_sym_tm"/>
+          <RibbonMenuItem Command="cmd_sym_copyright"/>
+          <RibbonMenuItem Command="cmd_sym_registered"/>
+          <RibbonMenuItem Command="cmd_sym_section"/>
+          <RibbonMenuItem Command="cmd_sym_bullet"/>
+          <RibbonMenuItem Command="cmd_sym_degree"/>
+          <RibbonMenuItem Command="cmd_sym_times"/>
+          <RibbonMenuItem Command="cmd_sym_divide"/>
+          <RibbonMenuItem Command="cmd_sym_plusminus"/>
+          <RibbonMenuItem Command="cmd_sym_arrow"/>
+          <RibbonMenuItem Command="cmd_sym_notequal"/>
+          <RibbonMenuItem Command="cmd_sym_half"/>
+          <RibbonMenuItem Command="cmd_sym_approx"/>
+          <RibbonMenuItem Command="cmd_sym_infinity"/>
+          <RibbonMenuItem Command="cmd_sym_sqrt"/>
+          <RibbonMenuItem Command="cmd_sym_sum"/>
+          <RibbonMenuItem Command="cmd_sym_pi"/>
+          <RibbonMenuItem Command="cmd_sym_delta"/>
+        </RibbonSplitButton>
+      </RibbonGroup>
+    </RibbonTab>
+    <RibbonTab x:Name="tab_layout" Header="{Res tab_layout}" KeyTip="P">
+      <RibbonGroup x:Name="grp_setup" Header="{Res grp_setup}">
+        <RibbonSplitButton Command="cmd_margins" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_mg_normal"/>
+          <RibbonMenuItem Command="cmd_mg_narrow"/>
+          <RibbonMenuItem Command="cmd_mg_moderate"/>
+          <RibbonMenuItem Command="cmd_mg_wide"/>
+        </RibbonSplitButton>
+        <RibbonComboBox x:Name="orient" Width="110" SelectedValue="{Binding Orientation}">
+          <Option Value="portrait" Label="{Res opt_orient_portrait}"/>
+          <Option Value="landscape" Label="{Res opt_orient_landscape}"/>
+        </RibbonComboBox>
+        <RibbonComboBox x:Name="paper" Width="84" SelectedValue="{Binding PaperSize}">
+          <Option Value="a4" Label="{Res opt_paper_a4}"/>
+          <Option Value="a5" Label="{Res opt_paper_a5}"/>
+          <Option Value="a3" Label="{Res opt_paper_a3}"/>
+          <Option Value="letter" Label="{Res opt_paper_letter}"/>
+          <Option Value="legal" Label="{Res opt_paper_legal}"/>
+        </RibbonComboBox>
+        <RibbonComboBox x:Name="cols" Width="96" SelectedValue="{Binding Columns}">
+          <Option Value="1" Label="{Res opt_cols_1}"/>
+          <Option Value="2" Label="{Res opt_cols_2}"/>
+          <Option Value="3" Label="{Res opt_cols_3}"/>
+        </RibbonComboBox>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_bg" Header="{Res grp_bg}">
+        <RibbonSplitButton Command="cmd_pagecolor">
+          <RibbonMenuItem Command="cmd_pc_none"/>
+          <RibbonMenuItem Command="cmd_pc_cream"/>
+          <RibbonMenuItem Command="cmd_pc_grey"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_watermark"/>
+        <RibbonButton Command="cmd_pageborder"/>
+      </RibbonGroup>
+    </RibbonTab>
+    <RibbonTab x:Name="tab_references" Header="{Res tab_references}" KeyTip="S">
+      <RibbonGroup x:Name="grp_ref_tocg" Header="{Res grp_ref_tocg}">
+        <RibbonMenuButton x:Name="menu_ref_toc" Label="{Res menu_ref_toc}" SmallIcon="ListTree" Size="Large">
+          <RibbonMenuItem Command="cmd_toc_auto1"/>
+          <RibbonMenuItem Command="cmd_toc_auto2"/>
+          <RibbonMenuItem Command="cmd_toc_manual"/>
+          <RibbonSeparator/>
+          <RibbonMenuItem Command="cmd_toc_custom"/>
+          <RibbonMenuItem Command="cmd_toc_remove"/>
+        </RibbonMenuButton>
+        <RibbonMenuButton x:Name="menu_toc_addtext" Label="{Res menu_toc_addtext}" SmallIcon="Tag">
+          <RibbonMenuItem Command="cmd_ol_0"/>
+          <RibbonMenuItem Command="cmd_ol_1"/>
+          <RibbonMenuItem Command="cmd_ol_2"/>
+          <RibbonMenuItem Command="cmd_ol_3"/>
+        </RibbonMenuButton>
+        <RibbonButton Command="cmd_ref_toc_upd"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_notes" Header="{Res grp_notes}">
+        <RibbonButton Command="cmd_fn" Size="Large"/>
+        <RibbonButton Command="cmd_en"/>
+        <RibbonSplitButton Command="cmd_nextnote" ShowLabel="false">
+          <RibbonMenuItem Command="cmd_note_footnote_next"/>
+          <RibbonMenuItem Command="cmd_note_footnote_prev"/>
+          <RibbonMenuItem Command="cmd_note_endnote_next"/>
+          <RibbonMenuItem Command="cmd_note_endnote_prev"/>
+        </RibbonSplitButton>
+        <RibbonButton Command="cmd_shownotes"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_citations" Header="{Res grp_citations}">
+        <RibbonMenuButton x:Name="menu_cite" Label="{Res menu_cite}" SmallIcon="TextQuote" Size="Large">
+          <RibbonMenuItem Command="cmd_cite_new"/>
+          <RibbonMenuItem Command="cmd_cite_pick"/>
+        </RibbonMenuButton>
+        <RibbonButton Command="cmd_sources"/>
+        <RibbonComboBox x:Name="citestyle" Width="120" SelectedValue="{Binding CitationStyle}">
+          <Option Value="APA"/>
+          <Option Value="MLA"/>
+          <Option Value="Chicago"/>
+          <Option Value="ISO 690"/>
+          <Option Value="IEEE"/>
+          <Option Value="Harvard"/>
+        </RibbonComboBox>
+        <RibbonMenuButton x:Name="menu_biblio" Label="{Res menu_biblio}" SmallIcon="BookOpen">
+          <RibbonMenuItem Command="cmd_biblio_bibliography"/>
+          <RibbonMenuItem Command="cmd_biblio_references"/>
+          <RibbonMenuItem Command="cmd_biblio_works"/>
+        </RibbonMenuButton>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_captions" Header="{Res grp_captions}">
+        <RibbonButton Command="cmd_ref_caption" Size="Large"/>
+        <RibbonButton Command="cmd_tof"/>
+        <RibbonButton Command="cmd_tof_upd"/>
+        <RibbonButton Command="cmd_xref"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_index" Header="{Res grp_index}">
+        <RibbonButton Command="cmd_xe" Size="Large"/>
+        <RibbonButton Command="cmd_idx_ins"/>
+        <RibbonButton Command="cmd_idx_upd"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_authorities" Header="{Res grp_authorities}">
+        <RibbonButton Command="cmd_ta" Size="Large"/>
+        <RibbonButton Command="cmd_toa_ins"/>
+        <RibbonButton Command="cmd_toa_upd"/>
+      </RibbonGroup>
+    </RibbonTab>
+    <RibbonTab x:Name="tab_view" Header="{Res tab_view}" KeyTip="W">
+      <RibbonGroup x:Name="grp_modes" Header="{Res grp_modes}">
+        <RibbonToggleButton Command="cmd_edit" Size="Large"/>
+        <RibbonToggleButton Command="cmd_read" Size="Large"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_show" Header="{Res grp_show}">
+        <RibbonToggleButton Command="cmd_ruler"/>
+        <RibbonToggleButton Command="cmd_nav"/>
+        <RibbonToggleButton Command="cmd_bounds"/>
+        <RibbonToggleButton Command="cmd_marks"/>
+        <RibbonToggleButton Command="cmd_outarrows"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_zoom" Header="{Res grp_zoom}">
+        <RibbonButton Command="cmd_zdlg" Size="Large"/>
+        <RibbonButton Command="cmd_z100" Size="Large"/>
+        <RibbonButton Command="cmd_z1p"/>
+        <RibbonButton Command="cmd_zmp"/>
+        <RibbonButton Command="cmd_zpw"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_macros" Header="{Res grp_macros}">
+        <RibbonMenuButton x:Name="menu_macros_menu" Label="{Res menu_macros_menu}" SmallIcon="SquarePlay" Size="Large">
+          <RibbonMenuItem Command="cmd_mac_show"/>
+          <RibbonMenuItem Command="cmd_mac_rec"/>
+          <RibbonMenuItem Command="cmd_mac_pause"/>
+        </RibbonMenuButton>
+      </RibbonGroup>
+    </RibbonTab>
+    <RibbonTab x:Name="tab_review" Header="{Res tab_review}" KeyTip="R">
+      <RibbonGroup x:Name="grp_proofing" Header="{Res grp_proofing}">
+        <RibbonToggleButton Command="cmd_spell" Size="Large"/>
+        <RibbonButton Command="cmd_spelldict"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_tracking" Header="{Res grp_tracking}">
+        <RibbonToggleButton Command="cmd_trackchanges" Size="Large"/>
+        <RibbonToggleButton Command="cmd_reviewpane"/>
+        <RibbonToggleButton Command="cmd_revfinal"/>
+      </RibbonGroup>
+      <RibbonGroup x:Name="grp_comments" Header="{Res grp_comments}">
+        <RibbonButton Command="cmd_addcomment" Size="Large"/>
+        <RibbonToggleButton Command="cmd_showcomments"/>
+      </RibbonGroup>
+    </RibbonTab>
+  </Ribbon>
+
+  <!-- Rechercher / Remplacer (Ctrl+F / Ctrl+H), under the ribbon: the matches are found in the
+       document's text block by block, Enter goes to the next one, Échap closes the bar. -->
+  <Panel x:Name="find_bar" Dock="Top" Height="44" BackColor="Surface1" Visible="{Binding ShowFind}">
+    <Panel x:Name="find_rule" Dock="Bottom" Height="1" BackColor="Border"/>
+    <TextField x:Name="find_box" Text="{Binding FindText, Mode=TwoWay}" Placeholder="{Res find_placeholder}" AccessibleName="{Res find_placeholder}" X="12" Y="6" Width="220" Height="32" OnTextChanged="find_text_changed" OnKeyDown="find_key_down"/>
+    <TextField x:Name="replace_box" Text="{Binding ReplaceText, Mode=TwoWay}" Placeholder="{Res replace_placeholder}" AccessibleName="{Res replace_placeholder}" X="240" Y="6" Width="200" Height="32" Visible="{Binding ShowReplace}"/>
+    <CheckBox x:Name="find_case" Text="{Res find_match_case}" X="452" Y="12" Width="160" Height="20" OnCheckedChanged="find_case_changed"/>
+    <Button x:Name="find_prev" Text="{Res find_prev}" Variant="Secondary" X="616" Y="6" Width="96" Height="32" OnClick="find_prev_click"/>
+    <Button x:Name="find_next" Text="{Res find_next}" Variant="Primary" X="716" Y="6" Width="96" Height="32" OnClick="find_next_click"/>
+    <Button x:Name="find_replace" Text="{Res find_replace}" Variant="Secondary" X="816" Y="6" Width="104" Height="32" Visible="{Binding ShowReplace}" OnClick="find_replace_click"/>
+    <Button x:Name="find_replace_all" Text="{Res find_replace_all}" Variant="Secondary" X="924" Y="6" Width="128" Height="32" Visible="{Binding ShowReplace}" OnClick="find_replace_all_click"/>
+    <Label x:Name="find_count" Text="{Binding FindStatus}" X="1060" Y="12" Width="120" Height="20"/>
+    <IconButton x:Name="find_close" Icon="X" Diameter="32" Glyph="16" AccessibleName="{Res find_close}" X="1236" Y="6" Width="32" Height="32" Anchor="Top, Right" OnClick="find_close_click"/>
+  </Panel>
+
+  <!-- The status bar: the page and what is not drawn on the left, the zoom on the right. -->
+  <Panel x:Name="status_band" Dock="Bottom" Height="22" BackColor="Surface1">
+    <Panel x:Name="status_rule" Dock="Top" Height="1" BackColor="Border"/>
+    <ZoomSlider x:Name="zoom_slider" Dock="Right" Width="228" Value="{Binding ZoomPercent}" OnValueChanged="zoom_slider_value_changed"/>
+    <StatusBar x:Name="status_bar" Dock="Fill">
+      <StatusLabel x:Name="status_page" Text="{Binding PageText}"/>
+      <StatusLabel x:Name="status_hidden" Text="{Binding HiddenStatus}" ForeColor="Caution" Visible="{Binding HasHidden}"/>
+      <StatusLabel x:Name="status_sync" Text="{Binding SyncStatus}" Visible="{Binding HasSync}"/>
+      <StatusLabel x:Name="status_spring" Spring="true"/>
+    </StatusBar>
+  </Panel>
+
+  <!-- The vertical ruler, under the tab-type selector where the two rulers meet. -->
+  <Panel x:Name="ruler_column" Dock="Left" Width="20" Visible="{Binding ShowRuler}">
+    <RulerCorner x:Name="ruler_corner" Dock="Top" Height="20" TabType="{Binding TabType}" OnTabTypeChanged="ruler_corner_tab_type_changed"/>
+    <VerticalRuler x:Name="vertical_ruler" Dock="Fill" PageHeight="{Binding PageHeight}" MarginTop="{Binding MarginTop}" MarginBottom="{Binding MarginBottom}"
+                   Zoom="{Binding Zoom}" PageTop="{Binding PageTop}"
+                   OnMarginsChanged="vertical_ruler_margins_changed" OnDragGuideChanged="vertical_ruler_drag_guide_changed"/>
+  </Panel>
+
+  <!-- The page, with the horizontal ruler laid over its top: its band covers the canvas's top
+       20 DIP (ViewportTop) and its markers hang over the page through its transparent overhang. -->
+  <Panel x:Name="page_host" Dock="Fill">
+    <PageCanvas x:Name="page" Dock="Fill" ViewportTop="{Binding RulerInset}" ContextMenu="page_menu" OnViewChanged="page_view_changed" OnEditorStateChanged="page_editor_state_changed"/>
+    <HorizontalRuler x:Name="horizontal_ruler" X="0" Y="0" Width="1260" Height="25" Anchor="Top, Left, Right" Visible="{Binding ShowRuler}"
+                     PageWidth="{Binding PageWidth}" MarginLeft="{Binding MarginLeft}" MarginRight="{Binding MarginRight}" Zoom="{Binding Zoom}"
+                     Origin="{Binding PageOrigin}" IndentLeft="{Binding IndentLeft}" IndentFirstLine="{Binding IndentFirstLine}"
+                     IndentRight="{Binding IndentRight}" TabStops="{Binding TabStops}" TabType="{Binding TabType}"
+                     OnMarginsChanged="horizontal_ruler_margins_changed" OnIndentsChanged="horizontal_ruler_indents_changed"
+                     OnTabStopsChanged="horizontal_ruler_tab_stops_changed" OnDragGuideChanged="horizontal_ruler_drag_guide_changed"/>
+  </Panel>
+</Panel>

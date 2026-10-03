@@ -1,0 +1,34 @@
+# Cross-platform desktop components, shared by every OS shell.
+#
+# `kubuno-sync` — the offline-first file-sync daemon, pure Rust (rustls +
+# bundled SQLite), which already compiles on Windows, Linux and macOS — and the
+# foundation of the offline-first data sync (vskubuno
+# docs/DESKTOP-OFFLINE-SYNC.md): `kubuno-secrets` (OS credential store),
+# `kubuno-api-client` (Kubuno Delta Protocol v1 client), `kubuno-account`
+# (accounts, token owner, token broker) and `kubuno-sync-engine` (local
+# SQLite/SQLCipher database, outbox, feeds, conflicts, scheduler).
+# `kubuno-docs-core` is the word processor's engine (document model, layout,
+# pagination, editing, undo), with no platform code: it also builds for
+# wasm32-unknown-unknown (vskubuno docs/DOCUMENTS-EDITING.md).
+# `kubuno-app-storage` is where an app keeps its data on the device: the
+# per-user/machine directories, typed versioned settings (files, the Windows
+# Registry, memory), app-scoped secrets and the Windows Registry API (vskubuno
+# docs/STORAGE-COMPONENTS.md).
+# The per-OS shells (../windows, ../linux, ../macos) depend on them by path.
+[workspace]
+resolver = "2"
+members  = [
+    "kubuno-sync",
+    "kubuno-secrets",
+    "kubuno-api-client",
+    "kubuno-account",
+    "kubuno-sync-engine",
+    "kubuno-docs-core",
+    "kubuno-app-storage",
+]
+
+[workspace.package]
+version    = "0.1.0-alpha"
+edition    = "2021"
+license    = "AGPL-3.0-or-later"
+repository = "https://github.com/kubuno/desktop"

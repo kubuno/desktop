@@ -1,28 +1,70 @@
-<p align="center">
-  <img src=".github/logo.svg" alt="Kubuno Desktop logo" width="128" height="128">
-</p>
+<!--
+  SPDX-FileCopyrightText: 2026 Kubuno contributors
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 
-# Kubuno Desktop
+<div align="center">
 
-Desktop client for [Kubuno](https://github.com/kubuno/core), the self-hosted cloud platform.
+<img src=".github/logo.svg" alt="Kubuno Desktop logo" width="120">
 
-This repository hosts two layers, both implemented:
+# Kubuno — Desktop
 
-- **`crates/kubuno-sync`** — a Nextcloud-style file synchronisation engine (Rust),
-  usable as a library and as a CLI daemon. Bidirectional (pull + push) with an
-  offline outbox, conflict handling, a continuous `watch` mode and a real-time
-  WebSocket trigger.
-- **`app/`** — a **Tauri** desktop application (window + system tray) that
-  embeds the engine as a library and grows it into a full desktop shell for
-  the platform: an application **launcher**, **native per-app windows**, and a
-  **local-first runtime** that downloads the modules' WebAssembly backends and
-  runs them on the device, so Kubuno apps keep working entirely offline. A
-  background thread runs the continuous `watch` loop; the tray offers
-  *Sync now / Open folder / Show / Quit*. Builds to `.deb`/AppImage (Linux),
-  MSIX/NSIS (Windows) and DMG (macOS); an Android build is available through
-  Tauri's mobile entry point (see `BUILD.md`).
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+![Rust](https://img.shields.io/badge/Rust-edition_2021-orange.svg)
+![Windows](https://img.shields.io/badge/Windows-native_Win32-0078D4.svg)
+![Sync](https://img.shields.io/badge/sync-Linux_%7C_Windows_%7C_macOS-4D38DB.svg)
+![Status](https://img.shields.io/badge/status-alpha-yellow.svg)
 
-## Architecture (offline-first)
+**Desktop clients and the offline-first file synchronisation engine of [Kubuno](https://github.com/kubuno/core) — the self-hosted, libre (AGPLv3) cloud platform, a sovereign alternative to Google Workspace and Microsoft 365.**
+
+A cross-platform sync daemon, and native desktop applications that draw every pixel
+themselves — no web view, no bundler, no Node.
+
+</div>
+
+---
+
+## What's inside
+
+The repository is organised by platform, around a common foundation:
+
+```
+desktop/
+├── common/     shared by every desktop version
+│   ├── kubuno-sync/   file synchronisation engine (pure Rust, cross-platform)
+│   └── assets/        Kubuno and application logos
+├── windows/    the Windows version (the only shell written so far)
+│   ├── src/shell/        kubuno-desktop.exe — launcher, accounts, sync, settings
+│   ├── src/drive/        drive.exe — the Kubuno Drive file manager
+│   ├── src/chat/         kubuno-chat — two-pane messaging
+│   ├── src/documents/    kubuno-documents — word processor for the Office module
+│   ├── src/crates/       kubuno-ui (design system) + kubuno-controls (controls)
+│   └── packaging/        Microsoft Store (MSIX)
+├── linux/      shell to be written
+└── macos/      shell to be written
+```
+
+## Features
+
+### Sync engine — `common/kubuno-sync`
+
+A file synchronisation engine usable **as a library and as a CLI daemon**, on Linux,
+Windows and macOS:
+
+- **Bidirectional** — every sync runs **push then pull**. Local creates, edits and
+  deletions are detected by comparing on-disk content hashes with the stored etags.
+- **Offline outbox** — local operations are recorded in a persistent outbox and
+  replayed when the server is reachable again.
+- **Safe conflicts** — an edit is sent with `If-Match: <etag>`; if the server changed
+  meanwhile, the local copy is renamed `… (conflit <host> <ts>)` (never overwritten),
+  the server version is restored, then the conflict copy is uploaded as a new file.
+- **Resumable pull** — server changes come from a monotonic cursor, files are fetched
+  only when their etag changed, deletions propagate through tombstones, and the cursor
+  is saved after every page.
+- **Real time** — the `watch` mode combines a filesystem watcher, a WebSocket
+  change trigger and a polling fallback.
+- **Several instances** — each account has its own server, credentials, folder and
+  local state; a folder can be moved without losing it.
 
 ```
 kubuno-sync
@@ -31,167 +73,100 @@ kubuno-sync
 ├── push     detect local changes → outbox → drain to server (If-Match conflicts)
 ├── engine   pull delta → apply (folders → files → tombstones) into the sync folder
 ├── ws       WebSocket listener → real-time remote-change trigger
-└── daemon   `watch`: FS watcher + WebSocket + poll fallback → auto push+pull
+└── daemon   `watch`: FS watcher + WebSocket + poll fallback → auto push + pull
 ```
 
-The daemon authenticates with `client_type=desktop` to obtain a rotating refresh
-token (stored 0600; OS keyring is a follow-up). Each `sync` runs **push then
-pull**:
+### Windows desktop — `windows/`
 
-- **Push** detects local creates/modifies/deletes (by comparing on-disk content
-  hashes against the stored etags), records them in a persistent **outbox**, and
-  replays them to the server. A modify sends `If-Match: <etag>`; if the server
-  changed meanwhile the push gets a **412**, the local edit is renamed to
-  `… (conflit <host> <ts>)` (never overwritten) and the server version is
-  restored by the pull — then the conflict copy is uploaded as a new file. Ops
-  that fail (offline) stay in the outbox and are replayed on the next sync.
-- **Pull** downloads server changes from a monotonic cursor; files are fetched
-  only when their etag changed, deletions propagate via tombstones, and the
-  cursor is persisted after every page so an interrupted sync resumes cleanly.
+Native **Win32 + Direct2D / DirectWrite / DirectComposition** applications sharing one
+design system (`kubuno-ui`), so they share one palette, one set of shape tokens, one
+icon set and one set of controls:
 
-## Usage
+- **Kubuno Desktop** (`kubuno-desktop.exe`) — opens on an **application launcher** with
+  one tile per app of the connected server, drawn with each module's own logo; a tile
+  opens its app in the browser. Pages for **accounts** (several instances side by side),
+  **activity** (what the sync loop has been doing) and **settings** (theme, sync
+  interval, notifications, start with Windows, forced offline mode, outbound proxy).
+  It embeds the sync engine and runs it in the background, with a system-tray menu
+  (*Sync now / Open folder / Show / Quit*).
+- **Explorer integration, without admin rights** — a Cloud Files API sync root with
+  native status overlays (in sync, syncing) and a *Status* column, a navigation-pane
+  entry per instance, and on-demand files downloaded on first access.
+- **Kubuno Drive** (`drive.exe`) — a native Windows file manager with tabs, views and
+  settings, sharing the Kubuno component library with the other apps. It is a Rust port of the MIT-licensed
+  *Files* project; credits and architecture notes are in
+  [`windows/src/drive/README.md`](windows/src/drive/README.md).
+- **Kubuno Chat** and **Kubuno Documents** — native two-pane messaging, and a native
+  word processor for the Office module.
+
+## Usage (sync daemon)
 
 ```bash
-cargo build --release
+cd common && cargo build --release -p kubuno-sync
 
 # Connect and choose the local sync folder
 ./target/release/kubuno-sync login \
-  --server http://localhost:8080 \
-  --login admin@kubuno.local \
+  --server https://cloud.example.com \
+  --login you@example.com \
   --password '••••••••' \
   --folder ~/Kubuno
 
-# Sync once (push local edits, then pull server changes)
-./target/release/kubuno-sync sync
-
-# Or run continuously: filesystem watcher + periodic server poll
-./target/release/kubuno-sync watch --interval 30
-
-# Show current server, folder and cursor
-./target/release/kubuno-sync status
+./target/release/kubuno-sync sync                 # once: push local edits, then pull
+./target/release/kubuno-sync watch --interval 30  # continuously
+./target/release/kubuno-sync status               # server, folder, cursor
+./target/release/kubuno-sync move --id <instance> --to <new-folder>   # relocate a folder
 ```
 
-Config and state live under the OS config dir (`~/.config/kubuno-desktop` on
-Linux, `~/Library/Application Support` on macOS, `%APPDATA%` on Windows).
+Configuration and state live under the OS configuration directory
+(`~/.config/kubuno-desktop` on Linux, `~/Library/Application Support` on macOS,
+`%APPDATA%` on Windows). The daemon signs in as a desktop client and keeps a rotating
+refresh token (file mode `0600`).
 
-## Platforms & packaging
+## Build & packaging
 
-`kubuno-sync` is pure Rust and builds for the three desktop OSes. TLS uses
-**rustls** and SQLite is **vendored**, so there is no system OpenSSL/sqlite
-dependency — builds are uniform across platforms.
+`kubuno-sync` is pure Rust: TLS uses **rustls** and SQLite is **vendored**, so there is
+no system OpenSSL or SQLite dependency and builds are identical across platforms.
 
-| OS | Artifact | Produced by |
-|----|----------|-------------|
-| Linux | `.deb`, `.rpm` | `cargo deb` / `cargo generate-rpm` |
-| Windows | `.exe` (zip) | `cargo build` + zip (MSIX/NSIS installers ship with the Tauri shell) |
-| macOS | universal binary (zip) | `cargo build` x86_64 + aarch64 (`.dmg` ships with the Tauri shell) |
+| Artifact | Platform | Produced by |
+|---|---|---|
+| `kubuno-sync` `.deb`, `.rpm` | Linux | `common/build_deb.sh` (`cargo deb` / `cargo generate-rpm`) |
+| `kubuno-sync` `.exe` (zip) | Windows | `cargo build` + zip |
+| `kubuno-sync` binaries (zip) | macOS (Apple Silicon and Intel) | `cargo build` per target |
+| `kubuno-desktop` `.exe` / MSIX | Windows 10/11 | `windows/` + `windows/packaging/package-msix.ps1` |
 
-The release CI (`.github/workflows/release.yml`) builds every target on its
-**native runner** (a `.dmg`/`.msi` cannot be produced from Linux) and attaches
-the artifacts to a GitHub Release on a `v*` tag.
+On a `v*` tag, CI builds every target on its **native runner** and attaches the
+artifacts to a GitHub Release (`release.yml` for the sync daemon, `app-release.yml`
+for the Windows shell).
 
-Build a Linux package locally:
+Windows shell, from `windows/`:
 
 ```bash
-cargo install cargo-deb cargo-generate-rpm
-cargo deb -p kubuno-sync                 # → target/debian/kubuno-sync_*.deb
-cargo generate-rpm -p crates/kubuno-sync # → target/generate-rpm/*.rpm
+cargo build --release -p kubuno-desktop     # → target/release/kubuno-desktop.exe
+cargo run   -p kubuno-ui --example gallery  # the component gallery (UI reference)
+cargo build --release -p drive-app          # → target/release/drive.exe
+pwsh ./tools/stage-runtime.ps1 -Profile release   # puts each program's kubuno_ui-<hash>.dll next to it
 ```
 
-## Desktop app (GUI)
-
-The Tauri app lives in `app/`. It needs the platform WebView toolchain
-(WebKitGTK + GTK on Linux, WebView2 on Windows, WKWebView on macOS) and the
-Tauri CLI.
-
-```bash
-cargo install tauri-cli --version "^2"
-cd app
-cargo tauri build                # → target/release/bundle/{deb,appimage,...}
-cargo tauri dev                  # run with hot-reload (needs a display)
-```
-
-`.github/workflows/app-release.yml` builds the app for all desktop OSes via
-`tauri-action` on a `v*` tag (Tauri's bundler produces `.deb`/AppImage, MSI and
-DMG natively on each runner). `BUILD.md` documents the other packaging paths:
-the Microsoft Store **MSIX** (exe cross-compiled from Linux with `cargo-xwin`,
-packaged under Windows), the out-of-store **NSIS** installer, and the
-**Android** build (`cargo tauri android init` generates the Gradle project;
-`kubuno-sync` compiles for the NDK targets thanks to rustls + bundled SQLite).
-
-### Application launcher
-
-The main window opens on a waffle-style **launcher**: one tile per application
-of the connected server, with the same branding and icons as the web shell.
-Tiles carry a **local-first status badge** — grey (*backend available for
-download*), blue (*installed, initial sync pending*), green (*offline ready*) —
-and a context menu to install, update or remove the local backend. Mono-app
-modules are grouped under a single alphabetised *Apps* group. Everything the
-launcher shows is driven by the server's component manifest and claims: no
-tile→component mapping is hardcoded.
-
-### Local-first WASM backends
-
-The desktop can download `<module>-core.wasm` components published by the core
-and execute them in an embedded **wasmtime** host. A local proxy fronts every
-app window and routes requests by **longest claimed prefix** to the local WASM
-backend, falling back to the remote core for everything else. The routing
-table is derived entirely from the persisted component manifest
-(`components.json`) — a newly published module component routes, syncs and
-appears in the launcher **without any desktop code change**. Two guards keep
-this safe: a prefix only routes once *primed* (a first full pull has
-completed), and mutations are only accepted once a replay loop exists for that
-prefix (*pushable*).
-
-Three sync drivers keep local backends and the core converging:
-
-- **Dedicated loops** for the historical pair — office *documents* (delta pull
-  with content, granular push, collab-aware) and *drive* files (listings
-  served from the local store, outbox replay to the core).
-- A **generic entity engine** for everything else (spreadsheets,
-  presentations, diagrams, whiteboards, notes, tasks, contacts, assistant…):
-  delta pull → verbatim `_ingest` into the WASM store (idempotent by
-  `change_seq`), then replay of a durable local outbox (verbatim
-  method/path/body + `Idempotency-Key`, server-wins guard on stale base,
-  `_ack` after consumption). The entity list is derived from the manifest's
-  `sync` surface (falling back to claims).
-- A **blob driver** (`sync_mode: "blob"`) for opaque per-user blobs such as
-  keestore's `.kdbx` vault — versioned PUT/GET with conflict detection
-  (`X-Sync-Version`, server-wins on 409), enabling offline vault unlock.
-
-The local-first layer is resilient by design: when the core answers **401**
-(revoked/expired session) or is unreachable, the proxy serves the cached copy
-of cacheable GETs, so locally synced apps keep opening with their full UI
-instead of a login screen.
-
-### Native windows & pop-outs
-
-Apps and documents open in dedicated **frameless native windows** with a
-custom title bar, served by the local proxy (stable origin, offline-capable).
-Every such window is injected with `window.kubunoDesktop.openWindow(route,
-label, {width, height})`, so floating windows of the web UI can be detached
-into real OS windows — the call goes through the same-origin proxy endpoint,
-keeping Tauri IPC away from remote-origin webviews.
-
-### Windows shell integration
-
-On Windows the sync folder integrates with Explorer the way established sync
-clients do, without admin rights:
-
-- **Cloud Files API sync root** — native status overlays (✓ in-sync,
-  ⟳ syncing) and a *Status* column, registered per user via WinRT's
-  `StorageProviderSyncRootManager`.
-- **Navigation-pane entry** — each instance's folder appears as a root node in
-  Explorer's left pane through a per-user shell namespace extension, with
-  stale entries pruned automatically.
-- **On-demand ("virtual") files** — content can be downloaded on first access
-  instead of eagerly.
+The full guide — per-machine build directory, memory-constrained builds, Microsoft
+Store submission — is in **[`BUILD.md`](BUILD.md)**.
 
 ## Roadmap
 
-- New local folders → create on the server (currently only files in known
-  folders are pushed).
-- Server-side idempotency for drive writes (so a lost-response retry of a
-  create can't duplicate).
-- Code-signing / notarisation for the MSI (Windows) and DMG (macOS) installers.
+- Shells for Linux and macOS (only the Windows shell exists today).
+- New local folders created on the server (today only files in known folders are pushed).
+- Server-side idempotency for drive writes, so a retried create cannot duplicate.
+- Code signing for the MSIX package.
 - OS keyring for the refresh token.
+
+## Security
+
+Please report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md).
+
+## Contributing
+
+Issues and pull requests are welcome. For any significant change, please open an issue first.
+
+## License
+
+[AGPL-3.0-or-later](LICENSE) © Kubuno contributors. The `windows/src/drive` crates are
+MIT-licensed, like the project they are ported from.

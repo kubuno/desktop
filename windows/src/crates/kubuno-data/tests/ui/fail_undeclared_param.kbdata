@@ -1,0 +1,8 @@
+name = "Shop"
+connection = "Shop"
+provider = "sqlite"
+
+[[queries]]
+name = "by_city"
+sql = "SELECT name FROM customers WHERE city = @city"
+columns = [{ name = "name", db_type = "TEXT", rust_type = "String" }]

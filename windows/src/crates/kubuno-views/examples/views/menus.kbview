@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every feature of the menu family (vskubuno/docs/MENUS.md): a menu bar with mnemonics, shortcuts,
+     icons, check marks, a radio group, section headers, separators, a cascaded sub-menu, a bound
+     "recent files" sub-menu made from an item template, commands shared with shortcuts, a drop-down
+     button, a split button and the page's context menu. Run it with `menus_demo`. -->
+<Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Name="menus_demo" Title="Menus" DesignWidth="760" DesignHeight="480" ContextMenu="page_menu">
+  <Command x:Name="cmd_save" Label="&amp;Enregistrer" SmallIcon="Save" Shortcut="Ctrl+S" OnExecute="save"/>
+  <Command x:Name="cmd_bold" Label="&amp;Gras" SmallIcon="Bold" Shortcut="Ctrl+B" IsCheckable="true" Checked="{Binding Bold, Mode=TwoWay}" OnExecute="bold"/>
+
+  <MenuBar x:Name="main_menu" Dock="Top" OnMenuActivate="menu_activate" OnMenuDeactivate="menu_deactivate">
+    <MenuItem Text="&amp;Fichier">
+      <MenuItem Text="&amp;Nouveau" Icon="FilePlus" ShortcutKeys="Ctrl+N" OnClick="new_file"/>
+      <MenuItem Text="&amp;Ouvrir…" Icon="FolderOpen" ShortcutKeys="Ctrl+O" OnClick="open_file"/>
+      <MenuItem Text="Fichiers &amp;récents" Icon="History" ItemsSource="{Binding Recent}">
+        <MenuItem.ItemTemplate>
+          <MenuItem Text="{Binding Name}" Icon="FileText" ToolTip="{Binding Path}" OnClick="open_recent"/>
+        </MenuItem.ItemTemplate>
+      </MenuItem>
+      <MenuSeparator/>
+      <MenuItem Command="cmd_save"/>
+      <MenuItem Text="Enregistrer &amp;sous…" ShortcutKeys="Ctrl+Shift+S" OnClick="save_as"/>
+      <MenuSeparator/>
+      <MenuItem Text="&amp;Quitter" Icon="LogOut" ShortcutKeys="Alt+F4" OnClick="quit"/>
+    </MenuItem>
+    <MenuItem Text="&amp;Édition">
+      <MenuItem Text="&amp;Annuler" Icon="Undo2" ShortcutKeys="Ctrl+Z" OnClick="undo"/>
+      <MenuItem Text="&amp;Rétablir" Icon="Redo2" ShortcutKeys="Ctrl+Y" Enabled="false"/>
+      <MenuSeparator/>
+      <MenuItem Text="Co&amp;uper" Icon="Scissors" ShortcutKeys="Ctrl+X" OnClick="cut"/>
+      <MenuItem Text="&amp;Copier" Icon="Copy" ShortcutKeys="Ctrl+C" OnClick="copy"/>
+      <MenuItem Text="C&amp;oller" Icon="ClipboardPaste" ShortcutKeys="Ctrl+V" OnClick="paste"/>
+      <MenuSeparator/>
+      <MenuItem Text="&amp;Supprimer" Icon="Trash2" ShortcutKeys="Delete" Danger="true" OnClick="delete"/>
+    </MenuItem>
+    <MenuItem Text="&amp;Affichage">
+      <MenuHeader Text="Disposition"/>
+      <MenuItem Text="&amp;Liste" RadioGroup="layout" Checked="true" OnCheckedChanged="layout_changed"/>
+      <MenuItem Text="&amp;Grille" RadioGroup="layout" OnCheckedChanged="layout_changed"/>
+      <MenuSeparator/>
+      <MenuItem Text="&amp;Barre d'état" CheckOnClick="true" Checked="true"/>
+      <MenuItem Command="cmd_bold"/>
+      <MenuItem Text="&amp;Zoom" Icon="ZoomIn">
+        <MenuItem Text="Zoom a&amp;vant" ShortcutKeys="Ctrl++" OnClick="zoom_in"/>
+        <MenuItem Text="Zoom a&amp;rrière" ShortcutKeys="Ctrl+-" OnClick="zoom_out"/>
+        <MenuItem Text="&amp;Taille réelle" ShortcutKeys="Ctrl+0" ShortcutKeyDisplayString="Ctrl+0 (100 %)" OnClick="zoom_reset"/>
+      </MenuItem>
+    </MenuItem>
+    <MenuItem Text="Ai&amp;de">
+      <MenuItem Text="&amp;Documentation" Icon="BookOpen" ShortcutKeys="F1" ToolTip="Ouvre la documentation de Kubuno" OnClick="help"/>
+      <MenuItem Text="À &amp;propos de Kubuno" Icon="Info" OnClick="about"/>
+    </MenuItem>
+  </MenuBar>
+
+  <Stack Dock="Top" Direction="LeftToRight" Gap="8" Padding="12" CrossAlign="Start">
+    <DropDownButton Text="&amp;Nouveau" Icon="Plus" Variant="Primary">
+      <MenuItem Text="Document" Icon="FileText" OnClick="new_document"/>
+      <MenuItem Text="Classeur" Icon="Sheet" OnClick="new_sheet"/>
+      <MenuItem Text="Présentation" Icon="Presentation" OnClick="new_deck"/>
+    </DropDownButton>
+    <SplitButton Text="&amp;Exporter" Icon="Download" OnClick="export">
+      <MenuItem x:Name="export_pdf" Text="En PDF" Icon="FileText" OnClick="export_pdf"/>
+      <MenuItem Text="En Word (.docx)" OnClick="export_docx"/>
+      <MenuSeparator/>
+      <MenuItem Text="Imprimer…" Icon="Printer" ShortcutKeys="Ctrl+P" OnClick="print"/>
+    </SplitButton>
+  </Stack>
+
+  <Label Dock="Fill" Text="{Binding Status}" Padding="16, 8, 16, 8"/>
+
+  <ContextMenu x:Name="page_menu" OnOpening="page_opening">
+    <MenuItem Text="Co&amp;uper" Icon="Scissors" OnClick="cut"/>
+    <MenuItem Text="&amp;Copier" Icon="Copy" OnClick="copy"/>
+    <MenuItem Text="C&amp;oller" Icon="ClipboardPaste" Enabled="{Binding CanPaste}" OnClick="paste"/>
+    <MenuSeparator/>
+    <MenuItem Text="&amp;Partager" Icon="Share2">
+      <MenuItem Text="Par &amp;lien" Icon="Link" OnClick="share_link"/>
+      <MenuItem Text="Par &amp;e-mail" Icon="Mail" OnClick="share_mail"/>
+    </MenuItem>
+    <MenuSeparator/>
+    <MenuItem Text="&amp;Supprimer" Icon="Trash2" Danger="true" OnClick="delete"/>
+  </ContextMenu>
+</Panel>

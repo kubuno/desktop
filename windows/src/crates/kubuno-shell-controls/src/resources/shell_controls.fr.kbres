@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Version="1">
+  <String Name="launcher_apps">Applications Kubuno</String>
+  <String Name="launcher_title">Vos favoris</String>
+  <String Name="launcher_edit_tip">Modifier les favoris</String>
+  <String Name="launcher_cancel">Annuler</String>
+  <String Name="launcher_ok">OK</String>
+  <String Name="launcher_drag_help">Glisser-déposer des applis</String>
+  <String Name="launcher_drop_here">Faites glisser vos applis ici</String>
+  <String Name="launcher_all_favorites">Toutes les apps sont dans vos favoris</String>
+  <String Name="account_tip">Compte</String>
+  <String Name="account_close_tip">Fermer</String>
+  <String Name="account_greeting">Bonjour {0} !</String>
+  <String Name="account_manage">Gérer votre compte</String>
+  <String Name="account_others">Comptes</String>
+  <String Name="account_actions">Actions du compte</String>
+  <String Name="account_add">Ajouter un compte</String>
+  <String Name="account_labels">Étiquettes</String>
+  <String Name="account_admin">Administration</String>
+  <String Name="account_logout">Se déconnecter</String>
+  <String Name="header_notifications_tip">Notifications</String>
+  <String Name="header_settings_tip">Paramètres</String>
+  <String Name="header_help_tip">Aide</String>
+  <String Name="account_change_photo">Changer la photo</String>
+  <String Name="account_show_more">Afficher plus de comptes</String>
+  <String Name="account_hide_more">Masquer plus de comptes</String>
+  <String Name="account_open">Ouvrir</String>
+  <String Name="account_remove">Supprimer</String>
+  <String Name="account_reconnect">Connexion</String>
+  <String Name="account_disconnected">Déconnecté</String>
+</Resources>

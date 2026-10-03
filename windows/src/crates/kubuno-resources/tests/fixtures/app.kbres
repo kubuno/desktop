@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Version="1">
+  <String Name="welcome_text" Comment="The greeting">Welcome</String>
+  <String Name="OkButton.Text">OK</String>
+  <Image Name="flag" File="img/flag.png"/>
+  <Color Name="accent" Value="#3366FF"/>
+  <Font Name="heading" Value="Segoe UI, 14pt, style=Bold"/>
+  <File Name="notes" Format="txt" Text="true">aGVsbG8=</File>
+</Resources>

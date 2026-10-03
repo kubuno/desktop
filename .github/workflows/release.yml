@@ -32,31 +32,35 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
+        working-directory: common
         run: cargo build --release --locked --target ${{ matrix.target }} -p kubuno-sync
 
       # ── Linux: .deb + .rpm ──────────────────────────────────────────────────
       - name: Package Linux (deb + rpm)
         if: matrix.kind == 'linux'
+        working-directory: common
         run: |
           cargo install cargo-deb cargo-generate-rpm --locked
           cargo deb -p kubuno-sync --target ${{ matrix.target }} --no-build
-          cargo generate-rpm -p crates/kubuno-sync --target ${{ matrix.target }}
+          cargo generate-rpm -p kubuno-sync --target ${{ matrix.target }}
           mkdir -p dist
           cp target/${{ matrix.target }}/debian/*.deb dist/
           cp target/${{ matrix.target }}/generate-rpm/*.rpm dist/
 
-      # ── Windows: zip the .exe (MSI installer comes with the Tauri shell) ─────
+      # ── Windows: zip the CLI .exe (the shell ships its own MSIX) ────────────
       - name: Package Windows (zip)
         if: matrix.kind == 'windows'
         shell: pwsh
+        working-directory: common
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path target/${{ matrix.target }}/release/kubuno-sync.exe `
             -DestinationPath dist/kubuno-sync-${{ matrix.target }}.zip
 
-      # ── macOS: zip the binary (.dmg comes with the Tauri shell) ─────────────
+      # ── macOS: zip the CLI binary ──────────────────────────────────────────
       - name: Package macOS (zip)
         if: matrix.kind == 'macos'
+        working-directory: common
         run: |
           mkdir -p dist
           zip -j dist/kubuno-sync-${{ matrix.target }}.zip target/${{ matrix.target }}/release/kubuno-sync
@@ -64,7 +68,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: kubuno-sync-${{ matrix.target }}
-          path: dist/*
+          path: common/dist/*
 
   release:
     needs: build

@@ -1,0 +1,16 @@
+<!--
+  « Fichier › Informations »: what is known about the open document — its title, its pages, the
+  zoom, and what the stored document holds that this version cannot draw yet (saying it out loud is
+  the difference between a known limitation and a bug report). The form sets its properties.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="BackstageInfo" DesignWidth="760" DesignHeight="200">
+  <Label x:Name="heading" Text="{Res bs_info}" Role="Title" TextAlign="MiddleLeft" X="0" Y="4" Width="728" Height="32" Anchor="Top, Left, Right"/>
+  <Label x:Name="title_key" Text="{Res info_title}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="0" Y="56" Width="140" Height="22"/>
+  <Label x:Name="title_value" Text="{Binding DocumentTitle}" d:Text="Kubuno Documents" TextAlign="MiddleLeft" X="150" Y="56" Width="578" Height="22" Anchor="Top, Left, Right"/>
+  <Label x:Name="pages_key" Text="{Res info_pages}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="0" Y="86" Width="140" Height="22"/>
+  <Label x:Name="pages_value" Text="{Binding Pages}" d:Text="2" TextAlign="MiddleLeft" X="150" Y="86" Width="578" Height="22" Anchor="Top, Left, Right"/>
+  <Label x:Name="zoom_key" Text="{Res info_zoom}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="0" Y="116" Width="140" Height="22"/>
+  <Label x:Name="zoom_value" Text="{Binding ZoomText}" d:Text="100 %" TextAlign="MiddleLeft" X="150" Y="116" Width="578" Height="22" Anchor="Top, Left, Right"/>
+  <Label x:Name="hidden_key" Text="{Res info_hidden}" ForeColor="TextSecondary" TextAlign="MiddleLeft" X="0" Y="146" Width="140" Height="22"/>
+  <Label x:Name="hidden_value" Text="{Binding Hidden}" d:Text="rien — tout le contenu est à l'écran" TextAlign="MiddleLeft" X="150" Y="146" Width="578" Height="22" Anchor="Top, Left, Right"/>
+</UserControl>

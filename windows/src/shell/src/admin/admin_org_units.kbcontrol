@@ -1,0 +1,11 @@
+<!--
+  The directory's organisational units (the web's OrgUnitsPanel): how many there are and « Nouvelle unité » on
+  the title's line, then the units as an indented tree (OrgUnitTree), each with its accounts and its descendants'.
+  Creating a unit, adding a child, moving and deleting open the web console.
+-->
+<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" x:Class="OrgUnitsSection" DesignWidth="936" DesignHeight="688" OnLoad="org_units_section_load">
+  <AdminSectionHeader x:Name="header" Parent="{Res adm_directory}" Title="{Res adm_org_units}" Count="{Binding CountText}" X="0" Y="0" Width="740" Height="60" Anchor="Top, Left, Right"/>
+  <Button x:Name="new_unit" Text="{Res units_new}" Icon="Plus" X="770" Y="22" Width="166" Height="36" Anchor="Top, Right" OnClick="new_unit_click"/>
+  <StatusPresenter x:Name="status" Mode="{Binding StatusMode}" d:Visible="false" EmptyIcon="Building2" EmptyTitle="{Res units_empty_title}" EmptyText="{Res units_empty_text}" ErrorText="{Binding ErrorText}" X="0" Y="74" Width="936" Height="600" Anchor="Top, Bottom, Left, Right"/>
+  <OrgUnitTree x:Name="tree" UnitsSource="{Binding Units}" AccessibleName="{Res adm_org_units}" AccessibleRole="Outline" X="0" Y="74" Width="936" Height="600" Anchor="Top, Bottom, Left, Right" OnEditRequested="tree_edit_requested" OnAddChildRequested="tree_edit_requested"/>
+</UserControl>

@@ -1,0 +1,55 @@
+<!-- settings_view.kbview -->
+<View xmlns:x="https://kubuno.com/views/x" xmlns="kubuno/ui/2026" x:Class="shell::settings_view::SettingsView">
+  <ScrollArea x:Name="scroll">
+    <Card Padding="XL">
+      <Stack Direction="Vertical" Gap="none">
+
+        <Panel Height="56">
+          <Label Dock="Left" Text="Thème"/>
+          <RadioButtons Dock="Right" x:Name="theme"
+                         SelectedValue="{Binding Theme, Mode=TwoWay}">
+            <RadioOption Value="System" Label="Système"/>
+            <RadioOption Value="Light"  Label="Clair"/>
+            <RadioOption Value="Dark"   Label="Sombre"/>
+          </RadioButtons>
+        </Panel>
+
+        <Panel Height="56">
+          <Label Dock="Left" Text="Intervalle de synchronisation"/>
+          <NumericField Dock="Right" x:Name="interval" Width="96"
+                         Min="1" Max="120"
+                         Value="{Binding SyncIntervalMin, Mode=TwoWay}"/>
+          <Label Dock="Right" Text="min" Width="32"/>
+        </Panel>
+
+        <Panel Height="56">
+          <Label Dock="Left" Text="Notifications"/>
+          <Switch Dock="Right" x:Name="notifications"
+                   On="{Binding Notifications, Mode=TwoWay}"/>
+        </Panel>
+
+        <Panel Height="56">
+          <Label Dock="Left" Text="Démarrer avec Windows"/>
+          <Switch Dock="Right" x:Name="autostart"
+                   On="{Binding Autostart, Mode=TwoWay}"/>
+        </Panel>
+
+        <!-- Two-way binding would be wrong here: Offline is not persisted
+             on Settings (see apply()'s Hot::Offline arm today). -->
+        <Panel Height="56">
+          <Label Dock="Left" Text="Travailler hors ligne"/>
+          <Switch Dock="Right" x:Name="offline" On="{Binding Offline}"
+                   OnToggled="offline_toggled"/>
+        </Panel>
+
+        <Panel Height="56">
+          <Label Dock="Left" Text="Proxy sortant"/>
+          <TextField Dock="Right" x:Name="proxy" Width="320"
+                      Placeholder="http://hôte:port (aucun)"
+                      Text="{Binding Proxy, Mode=TwoWay}"/>
+        </Panel>
+
+      </Stack>
+    </Card>
+  </ScrollArea>
+</View>
