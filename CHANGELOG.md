@@ -9,6 +9,20 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ## [Unreleased]
 
+### Changed
+
+- **Two title bar heights, buttons always centred.** Windows drawn by Kubuno now have a 32-pixel title bar, as in
+  Windows 11 (dialogs, tool windows, secondary windows, documents opened inside a window, in-app dialogs such as
+  confirmations), and main windows that show the header's menus (apps launcher, account, notifications…) have the
+  web's 64-pixel header: the desktop shell, Chat and Documents (whose web editor also has a 64-pixel top bar above its
+  ribbon). The new view property `TitleBarStyle` (`Standard` or `Tall`, also `Form::set_title_bar_style`) chooses
+  it; left unset, a window showing the header's menus is `Tall` and any other `Standard`, and `TitleBarHeight` still
+  sets an exact height. The minimise, maximise and close buttons, the icon, the title and the controls placed in the
+  title bar are centred vertically in every height: Windows-style caption buttons now fill the bar's height instead of
+  staying at its top (Chat's buttons were stuck to the top of its bar), and keep the snap layouts on the maximise
+  button. The gallery has a new *titlebars* page showing both heights with both button styles. For testing, the
+  `KUBUNO_UI_ZOOM` environment variable (formerly the gallery's own) now sets the initial zoom of every window.
+
 ### Added
 
 - **More on-device storage** (lot ST-2). `KeyValueStore` (small values in a JSON file, optional expiry), `FileStore`

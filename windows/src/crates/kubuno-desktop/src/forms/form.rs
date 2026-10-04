@@ -363,12 +363,24 @@ impl Form {
         self.root().set_property("Subtitle", Value::Str(subtitle.into()));
     }
 
-    /// The title bar's height, in DIP (44 by default).
+    /// The title bar's height class (`TitleBarStyle`): `Standard` (32 DIP, Windows 11's — the default) or
+    /// `Tall` (64 DIP, the web's header — the default of a window showing the header's menus).
+    pub fn set_title_bar_style(&self, style: kubuno_desktop_controls::window_chrome::TitleBarStyle) {
+        use kubuno_desktop_controls::window_chrome::TitleBarStyle;
+        let name = match style {
+            TitleBarStyle::Standard => "Standard",
+            TitleBarStyle::Tall => "Tall",
+        };
+        self.root().set_property("TitleBarStyle", Value::Str(name.into()));
+    }
+
+    /// The title bar's exact height, in DIP, over its style (`TitleBarHeight`; unset: 32, or 64 for a
+    /// `Tall` title bar).
     pub fn set_title_bar_height(&self, height: f32) {
         self.root().set_property("TitleBarHeight", height);
     }
 
-    /// The title bar's side insets, in DIP (`TitleBarPadding`, 16 by default): where its icon or its
+    /// The title bar's side insets, in DIP (`TitleBarPadding`; 8 in a band under 40 DIP, 16 in a taller one): where its icon or its
     /// left controls start, and where Kubuno-style caption buttons end.
     pub fn set_title_bar_padding(&self, padding: f32) {
         self.root().set_property("TitleBarPadding", padding);

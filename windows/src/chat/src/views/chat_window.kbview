@@ -1,12 +1,12 @@
 <!--
-  Kubuno Chat's window, laid out like a desktop messenger: the title bar (the default height, the apps waffle
+  Kubuno Chat's window, laid out like a desktop messenger: the title bar (the tall 64-DIP header, the apps waffle
   and the account avatar left of the window buttons: ShowWaffle / ShowAccount), a navigation rail (chats,
   meetings; settings and account at the bottom), the conversation list, and the open conversation.
   ChatWindow (chat_window.rs) keeps the data (model::ChatState) and fills the panes through typed access.
 -->
 <Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="1180" DesignHeight="800" Title="{Res app_title}" Icon="{Res app_icon}" Backdrop="MicaAlt"
        TitleBarBackground="TitleBarBackground" TitleBarForeground="TextPrimary" CaptionButtonStyle="Windows"
-       ShowWaffle="true" ShowAccount="true"
+       TitleBarStyle="Tall" ShowWaffle="true" ShowAccount="true"
        MinimumSize="760, 480" OnLoad="chat_window_load" OnShown="chat_window_shown">
   <Panel x:Name="rail" Dock="Left" Width="56" BackColor="TitleBarBackground">
     <Sidebar x:Name="nav" DisplayMode="Compact" SelectedItem="{Binding Section, Mode=TwoWay}" OnSelectionChanged="nav_selection_changed" X="0" Y="4" Width="56" Height="104">

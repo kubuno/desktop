@@ -122,6 +122,8 @@ pub struct FormSpec {
     /// `CornerRadius` on a flyout: shown as a floating panel rounded at it (`host::FloatingPanel`).
     panel_radius: Option<f32>,
     border_color: Option<crate::style::ColorValue>,
+    /// `TitleBarStyle` as resolved ([`title_bar_style`]: written, else `Tall` for a view hosting the header's menus).
+    title_bar_style: kubuno_desktop_controls::window_chrome::TitleBarStyle,
     title_bar_height: Option<f32>,
     /// `TitleBarPadding`: the band's side insets (`None`: the chrome's own).
     title_bar_padding: Option<f32>,
@@ -249,6 +251,7 @@ impl FormSpec {
             corner_radius: literal("CornerRadius").and_then(|v| host::form::parse_corner_radius(&v)),
             panel_radius: literal("CornerRadius").and_then(|v| host::form::parse_corner_radius(&v)).filter(|r| kind == WindowKind::Flyout && *r > 0.0),
             border_color: color_of(root, "BorderColor"),
+            title_bar_style: title_bar_style(root),
             title_bar_height: literal("TitleBarHeight").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0),
             title_bar_padding: literal("TitleBarPadding").and_then(|v| v.parse::<f32>().ok()).filter(|v| v.is_finite() && *v >= 0.0),
             title_bar_background: color_of(root, "TitleBarBackground"),
@@ -323,6 +326,7 @@ impl FormSpec {
             min_client_size: self.min_size,
             max_client_size: self.max_size,
             chrome: kubuno_desktop_controls::window_chrome::ChromeStyle {
+                size: self.title_bar_style,
                 height: self.title_bar_height,
                 padding: self.title_bar_padding,
                 background: band,
@@ -526,7 +530,7 @@ impl HeaderSpec {
             band_ink: coloured_band(root).then(|| raw("TitleBarForeground").unwrap_or_else(|| "OnPrimary".into())),
             band_height: raw("TitleBarHeight").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0).unwrap_or_else(|| {
                 let tool = raw("WindowKind").as_deref() == Some("ToolWindow") || raw("FormBorderStyle").is_some_and(|b| b.ends_with("ToolWindow"));
-                if tool { kubuno_desktop_controls::window_chrome::TOOL_TITLEBAR_HEIGHT } else { kubuno_desktop_controls::window_chrome::TITLEBAR_HEIGHT }
+                if tool { kubuno_desktop_controls::window_chrome::TOOL_TITLEBAR_HEIGHT } else { title_bar_style(root).height() }
             }),
         }
     }
@@ -621,6 +625,35 @@ impl HeaderSpec {
         }
         xml.push_str(&format!(" {size}/>"));
         Some(xml)
+    }
+}
+
+/// The elements that make a view's title band the web's tall header when they sit in it: the header's cluster and
+/// its two menus (vskubuno `docs/SHELL-CONTROLS.md`).
+pub const HEADER_MENU_CLASSES: [&str; 3] = [HEADER_ACTIONS_CLASS, "WaffleButton", "AccountButton"];
+
+/// Whether the view hosts the header's menus in its title band: one of the header's standard items on its root
+/// (`ShowSearch`, `ShowWaffle`, `ShowAccount`…), or a `HeaderActions` / `WaffleButton` / `AccountButton` in (or inside a
+/// child placed in) a `TitleBar.Region`.
+pub fn hosts_header_menus(root: &Element) -> bool {
+    let shown = |name: &str| root.attribute(name).and_then(|a| a.value()).is_some_and(|v| !v.trim().is_empty() && v.trim() != "false");
+    if shown("ShowSearch") || HEADER_CLUSTER_PROPERTIES.iter().any(|p| shown(p)) {
+        return true;
+    }
+    root.syntax().children().filter_map(Element::cast).filter(|c| ChildPlace::read(c).title != TitleRegion::None).any(|c| {
+        c.syntax().descendants().filter_map(Element::cast).any(|e| e.name().is_some_and(|n| HEADER_MENU_CLASSES.contains(&n.as_str())))
+    })
+}
+
+/// The view's `TitleBarStyle`: as written (`Standard`, `Tall`), else `Tall` for a view hosting the header's menus
+/// ([`hosts_header_menus`]: a main window with the waffle, the account avatar…) and `Standard` (32 DIP, Windows 11's)
+/// for every other window. An explicit `TitleBarHeight` still wins over the style's height.
+pub fn title_bar_style(root: &Element) -> kubuno_desktop_controls::window_chrome::TitleBarStyle {
+    use kubuno_desktop_controls::window_chrome::TitleBarStyle;
+    match root.attribute("TitleBarStyle").and_then(|a| a.value()).and_then(|v| TitleBarStyle::parse(&v)) {
+        Some(style) => style,
+        None if hosts_header_menus(root) => TitleBarStyle::Tall,
+        None => TitleBarStyle::Standard,
     }
 }
 

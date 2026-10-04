@@ -4358,7 +4358,8 @@ mod tests {
     #[test]
     fn frame_layout_puts_the_client_area_under_the_title_bar() {
         let f = FrameLayout::new(10.0, 20.0, 300.0, 200.0);
-        assert_eq!((f.client.left, f.client.top, f.client.right, f.client.bottom), (10.0, 70.0, 310.0, 270.0));
+        // The standard 32-DIP band.
+        assert_eq!((f.client.left, f.client.top, f.client.right, f.client.bottom), (10.0, 52.0, 310.0, 252.0));
         assert_eq!(f.title.bottom, f.client.top);
     }
 

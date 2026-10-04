@@ -736,7 +736,16 @@ pub fn request_repaint_after(ms: u32) {
 }
 
 thread_local! {
-    static ZOOM: Cell<f32> = const { Cell::new(1.0) };
+    static ZOOM: Cell<f32> = Cell::new(env_zoom());
+}
+
+/// `KUBUNO_UI_ZOOM=<factor>`: the initial zoom of every window of the process, for testing (`0.5714` renders at
+/// 100 % on a 175 % monitor: one DIP per physical pixel, the window's frame and corners included).
+fn env_zoom() -> f32 {
+    static ZOOM_ENV: std::sync::OnceLock<f32> = std::sync::OnceLock::new();
+    *ZOOM_ENV.get_or_init(|| {
+        std::env::var("KUBUNO_UI_ZOOM").ok().and_then(|z| z.trim().parse::<f32>().ok()).filter(|z| z.is_finite() && *z > 0.0).map_or(1.0, |z| z.clamp(0.1, 8.0))
+    })
 }
 
 /// Zooms the page of this UI thread's window by `factor` (1.0: none), from the next frame: the

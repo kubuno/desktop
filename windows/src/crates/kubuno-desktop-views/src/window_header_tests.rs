@@ -77,7 +77,7 @@ fn the_header_items_are_off_by_default_for_every_window_kind_and_the_view_wins()
 #[test]
 fn the_items_become_a_search_button_and_the_cluster_with_the_view_s_values_and_handlers() {
     let r = root(
-        r#"<Panel ShowSearch="true" OnSearchClicked="find" ShowNotifications="true" ShowHelp="false" ShowWaffle="{Binding Signed}" ShowAccount="true" UnreadCount="{Binding Unread}" OnNotificationsClicked="bell_click" OnSettingsClicked="settings_click"/>"#,
+        r#"<Panel TitleBarStyle="Standard" ShowSearch="true" OnSearchClicked="find" ShowNotifications="true" ShowHelp="false" ShowWaffle="{Binding Signed}" ShowAccount="true" UnreadCount="{Binding Unread}" OnNotificationsClicked="bell_click" OnSettingsClicked="settings_click"/>"#,
     );
     let spec = HeaderSpec::read(&r);
     assert_eq!(spec.cluster_width(), 3.0 * HEADER_BUTTON_COMPACT + HEADER_AVATAR_GAP + HEADER_TRAILING_GAP, "bell, waffle (bound: room kept), avatar");
@@ -94,7 +94,7 @@ fn the_items_become_a_search_button_and_the_cluster_with_the_view_s_values_and_h
         r#"OnNotificationsClicked="bell_click""#,
         r#"OnSettingsClicked="settings_click""#,
         r#"Compact="true""#,
-        r#"Width="100" Height="50"/>"#,
+        r#"Width="100" Height="32"/>"#,
     ] {
         assert!(cluster.contains(part), "{part} in {cluster}");
     }
@@ -119,10 +119,10 @@ fn a_missing_cluster_class_is_reported_and_shown_as_a_placeholder_in_the_designe
 fn the_view_root_builds_the_items_after_its_own_children_when_the_class_is_registered() {
     register_class(&CLUSTER);
     set_header_class_for_tests("TestHeaderCluster");
-    let r = root(r#"<Panel ShowSearch="true" ShowSettings="true" OnSettingsClicked="go"><Label TitleBar.Region="Right" Text="x"/></Panel>"#);
+    let r = root(r#"<Panel TitleBarStyle="Standard" ShowSearch="true" ShowSettings="true" OnSettingsClicked="go"><Label TitleBar.Region="Right" Text="x"/></Panel>"#);
     let mut cx = crate::props::BuildCx::new();
     let items = build_header_items(&r, &mut cx);
-    assert_eq!(items.iter().map(|(_, size)| *size).collect::<Vec<_>>(), [(30.0, 30.0), (38.0, 50.0)], "the search button, then the cluster (one button)");
+    assert_eq!(items.iter().map(|(_, size)| *size).collect::<Vec<_>>(), [(30.0, 30.0), (38.0, 32.0)], "the search button, then the cluster (one button)");
     // The whole view compiles with them (the root panel adds them to its children).
     assert!(crate::compile::compile(r#"<Panel ShowWaffle="true" ShowSearch="true"><Button Text="ok"/></Panel>"#).is_ok());
     set_header_class_for_tests(HEADER_ACTIONS_CLASS);
@@ -266,15 +266,17 @@ fn a_wide_centre_region_never_covers_the_header_s_buttons() {
 #[test]
 fn the_items_take_the_caption_buttons_size_in_a_usual_title_bar_and_36_in_the_tall_header() {
     let all = r#"ShowNotifications="true" ShowSettings="true" ShowHelp="true" ShowWaffle="true" ShowAccount="true" ShowSearch="true""#;
-    let usual = HeaderSpec::read(&root(&format!("<Panel {all}/>")));
+    // Asked for explicitly: the standard band keeps the compact items (a view with header items is Tall by default).
+    let usual = HeaderSpec::read(&root(&format!(r#"<Panel TitleBarStyle="Standard" {all}/>"#)));
+    assert!(HeaderSpec::read(&root(&format!("<Panel {all}/>"))).tall(), "the header items make the band Tall by default");
     assert!(!usual.tall());
-    assert_eq!((usual.button(), usual.cluster_width(), usual.band_height), (30.0, 160.0, 50.0));
-    assert!(usual.cluster_xml(true, false).is_some_and(|x| x.contains(r#"Compact="true""#) && x.contains(r#"Width="160" Height="50""#)));
+    assert_eq!((usual.button(), usual.cluster_width(), usual.band_height), (30.0, 160.0, 32.0));
+    assert!(usual.cluster_xml(true, false).is_some_and(|x| x.contains(r#"Compact="true""#) && x.contains(r#"Width="160" Height="32""#)));
     assert!(usual.search_xml().is_some_and(|x| x.contains(r#"Diameter="30" Glyph="16" Width="30" Height="30""#)));
     let rtl = HeaderSpec::read(&root(&format!(r#"<Panel RightToLeftLayout="true" {all}/>"#)));
     assert!(rtl.cluster_xml(true, false).is_some_and(|x| x.contains(r#"RightToLeft="true""#)), "the cluster mirrored too");
     assert!(!usual.cluster_xml(true, false).is_some_and(|x| x.contains("RightToLeft")));
-    let tall = HeaderSpec::read(&root(&format!(r#"<Panel TitleBarHeight="64" {all}/>"#)));
+    let tall = HeaderSpec::read(&root(&format!(r#"<Panel TitleBarStyle="Tall" {all}/>"#)));
     assert!(tall.tall());
     assert_eq!((tall.button(), tall.cluster_width()), (36.0, 190.0));
     assert!(tall.cluster_xml(true, false).is_some_and(|x| x.contains(r#"Compact="false""#) && x.contains(r#"Width="190" Height="64""#)));
@@ -310,4 +312,27 @@ fn on_a_coloured_band_the_items_take_its_ink_and_the_pale_avatar() {
     let r = root(r#"<Panel ShowWaffle="true" TitleBarFollowsRibbon="false"><Ribbon Dock="Top"/></Panel>"#);
     assert!(!coloured_band(&r) && FormSpec::read(&r, None).header_items);
     assert!(HeaderSpec::read(&r).cluster_xml(true, false).is_some_and(|x| !x.contains("ForeColor")));
+}
+
+/// `TitleBarStyle`: written, else Tall for a view hosting the header's menus, else Standard; `TitleBarHeight` wins.
+#[test]
+fn the_title_bar_style_follows_the_header_menus_unless_written() {
+    use wc::TitleBarStyle::{Standard, Tall};
+    assert_eq!(title_bar_style(&root(r#"<Panel/>"#)), Standard);
+    assert_eq!(title_bar_style(&root(r#"<Panel WindowKind="Dialog"/>"#)), Standard);
+    assert_eq!(title_bar_style(&root(r#"<Panel ShowWaffle="true"/>"#)), Tall);
+    assert_eq!(title_bar_style(&root(r#"<Panel ShowAccount="{Binding Signed}"/>"#)), Tall);
+    assert_eq!(title_bar_style(&root(r#"<Panel ShowAccount="false"/>"#)), Standard);
+    assert_eq!(title_bar_style(&root(r#"<Panel ShowWaffle="true" TitleBarStyle="Standard"/>"#)), Standard);
+    assert_eq!(title_bar_style(&root(r#"<Panel TitleBarStyle="Tall"/>"#)), Tall);
+    // A header menu placed in the band by the view itself (the shell's), nested or not; not one in the page.
+    assert_eq!(title_bar_style(&root(r#"<Panel><Panel TitleBar.Region="Right"><WaffleButton/></Panel></Panel>"#)), Tall);
+    assert_eq!(title_bar_style(&root(r#"<Panel><AccountButton TitleBar.Region="Right"/></Panel>"#)), Tall);
+    assert_eq!(title_bar_style(&root(r#"<Panel><Panel><WaffleButton/></Panel></Panel>"#)), Standard);
+    // The window's chrome: the style's height, an explicit height over it.
+    let chrome = |src: &str| FormSpec::read(&root(src), None).options(&crate::binding::MapViewModel::default()).chrome;
+    assert_eq!(chrome(r#"<Panel/>"#).band_height(), 32.0);
+    assert_eq!(chrome(r#"<Panel ShowWaffle="true"/>"#).band_height(), 64.0);
+    assert_eq!(chrome(r#"<Panel TitleBarStyle="Tall" TitleBarHeight="50"/>"#).band_height(), 50.0);
+    assert_eq!(HeaderSpec::read(&root(r#"<Panel ShowWaffle="true"/>"#)).band_height, 64.0);
 }

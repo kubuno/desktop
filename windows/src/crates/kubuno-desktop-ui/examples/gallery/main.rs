@@ -69,6 +69,7 @@ const PAGES: &[Page] = &[
     ("richtext", pages::richtext::draw, None, Some(pages::richtext::interactive_column)),
     ("ribbon", pages::ribbon::draw, None, Some(pages::ribbon::interactive_column)),
     ("docking", pages::docking::draw, None, Some(pages::docking::interactive_column)),
+    ("titlebars", pages::titlebars::draw, None, None),
 ];
 
 /// Builds the `Tabs` control the gallery uses as its nav strip, populated with

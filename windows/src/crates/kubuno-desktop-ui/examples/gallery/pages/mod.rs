@@ -23,6 +23,7 @@ pub mod composition;
 pub mod richtext;
 pub mod ribbon;
 pub mod docking;
+pub mod titlebars;
 
 pub mod interact;
 pub mod sheet;

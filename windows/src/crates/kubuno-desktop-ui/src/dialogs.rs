@@ -112,16 +112,10 @@ pub const HOST_MARGIN: f32 = space::SM;
 /// `translateX(-50%)` — plain centring, which needs no constant.
 const TOP_FRACTION: f32 = 0.33;
 
-/// The title band: `min-h-11` on `.kb-window-titlebar`, which the design system
-/// already publishes as [`kubuno_desktop_controls::window_chrome::TITLEBAR_HEIGHT`]. Its insets are `px-4` and
-/// its content gap `gap-2.5`.
-const TITLEBAR_PAD_X: f32 = space::LG;
-// The band itself (icon, title, caption buttons) is painted by
-// [`kubuno_desktop_controls::window_chrome`], which holds the rest of these numbers.
-
-/// The close button: `w-[30px] h-[30px] rounded-[5px]` holding an `X size={15}`.
-const CLOSE_BOX: f32 = 30.0;
-const CLOSE_RADIUS: f32 = 5.0;
+// The title band is the standard Kubuno window band (32 DIP, Windows 11's caption height — decision
+// of 2026-10-04, where the web's `.kb-window-titlebar` is 50): its height
+// ([`kubuno_desktop_controls::window_chrome::TITLEBAR_HEIGHT`]), its insets and its close button
+// are laid out and painted by [`kubuno_desktop_controls::window_chrome`], which holds the numbers.
 
 /// The footer: `px-4 py-3`, `gap-2` between the buttons, each `min-w-[96px]`.
 /// Its height is therefore two paddings around a `md` button.
@@ -960,10 +954,12 @@ impl FloatingWindow {
 
     /// **CANVAS space.** The ✕ button, at the right end of the band.
     pub fn close_rect(&self, bounds: Rect) -> Rect {
+        // Where the shared chrome lays it out (the standard 32 DIP band: a 24 DIP box, 8 from the edge).
+        use kubuno_desktop_controls::window_chrome as wc;
         let band = self.titlebar_rect(bounds);
-        let right = band.right - TITLEBAR_PAD_X;
-        let top = (band.top + band.bottom) / 2.0 - CLOSE_BOX / 2.0;
-        Rect::new(right - CLOSE_BOX, top, right, top + CLOSE_BOX)
+        let layout = wc::layout(&wc::ChromeStyle::default(), band, self.icon.is_some(), wc::SystemButtons::CLOSE_ONLY, wc::SlotWidths::default());
+        // The band always has its close button (`CLOSE_ONLY`); an empty rectangle cannot be hit.
+        layout.rect_of(wc::Part::Close).unwrap_or(Rect::new(band.right, band.top, band.right, band.top))
     }
 
     /// **CANVAS space.** One rectangle per action, in paint order (confirm
@@ -1036,7 +1032,7 @@ impl FloatingWindow {
             // in the band's ink, the only colour guaranteed to read there.
             // Inside the box, so it cannot touch the band's edge.
             let inset = FOCUS_RING / 2.0;
-            canvas.stroke_rounded_w(&close.inflate(-inset, -inset), CLOSE_RADIUS, &ink, FOCUS_RING);
+            canvas.stroke_rounded_w(&close.inflate(-inset, -inset), wc::TOOL_BUTTON_RADIUS, &ink, FOCUS_RING);
         }
     }
 
@@ -3052,8 +3048,10 @@ mod tests {
         let w = FloatingWindow::new("t");
         let bounds = Rect::new(0.0, 0.0, 400.0, 300.0);
         let c = w.close_rect(bounds);
-        assert_eq!(c.right, 400.0 - TITLEBAR_PAD_X);
-        assert_eq!(c.right - c.left, CLOSE_BOX);
+        use kubuno_desktop_controls::window_chrome as wc;
+        // The standard band's compact button: 24 DIP, 8 from the right edge.
+        assert_eq!(c.right, 400.0 - wc::TOOL_PAD_X);
+        assert_eq!(c.right - c.left, wc::TOOL_BUTTON);
         // Centred in the band, whatever the band's height.
         let band = w.titlebar_rect(bounds);
         assert_eq!((c.top + c.bottom) / 2.0, (band.top + band.bottom) / 2.0);

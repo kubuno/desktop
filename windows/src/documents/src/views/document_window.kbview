@@ -1,5 +1,7 @@
 <!--
-  Kubuno Documents' window, laid out like Word: the ribbon (its tab strip colours the title bar), the
+  Kubuno Documents' window, laid out like Word: the tall 64-DIP title bar (TitleBarStyle="Tall": the web
+  document editor's coloured top bar is topbarHeight={64} and carries the same waffle and account menus),
+  the ribbon under it (its tab strip colours the title bar), the
   rulers around the page, the paginated document and the status bar with the zoom slider.
   DocumentWindow (document_window.rs) opens the document into the page canvas, binds what the canvas
   reports to the rulers, the status bar and the Backstage, and applies what the rulers change.
@@ -8,7 +10,7 @@
   exists — never a fake one.
 -->
 <Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" DesignWidth="1280" DesignHeight="860" Title="{Binding WindowTitle}" Icon="{Res app_icon}" ShowIcon="false"
-       ShowWaffle="true" ShowAccount="true"
+       TitleBarStyle="Tall" ShowWaffle="true" ShowAccount="true"
        OnLoad="document_window_load" OnFormClosing="document_window_closing">
   <Command x:Name="cmd_save" Label="{Res cmd_save}" SmallIcon="Save" Shortcut="Ctrl+S" Enabled="{Binding CanSave}" OnExecute="save_execute"/>
   <Command x:Name="cmd_undo" Label="{Res cmd_undo}" SmallIcon="Undo2" Shortcut="Ctrl+Z" Enabled="{Binding CanUndo}" OnExecute="undo_execute"/>

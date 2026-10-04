@@ -11,7 +11,8 @@
 //!
 //! | web | here |
 //! |---|---|
-//! | `.kb-window-titlebar` `min-h-11 py-2.5` around the 30 px button | [`TITLEBAR_HEIGHT`] = 50 |
+//! | `.kb-window-titlebar` `min-h-11 py-2.5` around the 30 px button | [`WEB_FLOATING_TITLEBAR_HEIGHT`] = 50 (`TitleBarHeight="50"`) |
+//! | the module header `h-16` (office `topbarHeight={64}`) | [`TALL_TITLEBAR_HEIGHT`] = 64 ([`TitleBarStyle::Tall`]) |
 //! | `px-4`, `gap-2.5` | [`PAD_X`] = 16, [`GAP`] = 10 |
 //! | `background: var(--color-primary)`, `color: var(--kb-window-title-fg)` (white) | `theme.accent`, `theme.accent_foreground` |
 //! | title `font-medium`, `--kb-text-heading` | `formats().heading` |
@@ -21,6 +22,12 @@
 //! | `--kb-window-radius: 0px` (square corners, decision of 2026-08-30) | [`WINDOW_RADIUS`] |
 //! | `--kb-shadow-window: 0 6px 18px rgb(0 0 0 / 24%)` | `shape::SHADOW_WINDOW` |
 //! | `.kb-window-footer` `px-4 py-3`, `border-top` | [`FOOTER_PAD_X`], [`FOOTER_PAD_Y`] |
+//!
+//! **Two heights (decision of 2026-10-04).** A window's band is [`TitleBarStyle::Standard`] (32 DIP, Windows 11's
+//! caption height) unless it is a main window carrying the web header's menus (waffle, account, `HeaderActions`), which
+//! is [`TitleBarStyle::Tall`] (64 DIP, the web's module header). An explicit `TitleBarHeight` still wins over both. In
+//! every height the caption buttons, the icon, the title and the page's title-bar regions are centred vertically on the
+//! band (Windows-style caption buttons fill the band's height, their glyphs on its middle).
 //!
 //! What the web has no equivalent for is extrapolated from the same rules and said so where it is
 //! defined: minimise / maximise / help buttons (the close button's exact geometry, as the web
@@ -34,14 +41,22 @@ use windows::Win32::Graphics::Direct2D::ID2D1Bitmap1;
 
 use crate::host::form::CaptionButtonState;
 
-/// The band's height as the web renders it: `.kb-window-titlebar` is `min-h-11` (44) but also
-/// `py-2.5` around the 30 px close button, so it lays out at 10 + 30 + 10 = **50** (measured on the
-/// live web: `getBoundingClientRect().height == 50`).
-pub const TITLEBAR_HEIGHT: f32 = 2.0 * 10.0 + BUTTON;
-/// A tool window's slim band (`FixedToolWindow` / `SizableToolWindow`). The web has no tool
-/// window; 32 is the design system's small control height (`h-8`), so the band still holds a
-/// 24 DIP button with 4 DIP of air above and below.
-pub const TOOL_TITLEBAR_HEIGHT: f32 = height::BUTTON_SM;
+/// The standard band: Windows 11's caption height (32 DIP, also the design system's small control
+/// height `h-8`), holding 24 DIP Kubuno caption buttons with 4 DIP of air above and below.
+pub const STANDARD_TITLEBAR_HEIGHT: f32 = height::BUTTON_SM;
+/// The tall band of a main window showing the header's menus: the web module header's `h-16`.
+pub const TALL_TITLEBAR_HEIGHT: f32 = 64.0;
+/// The default band ([`TitleBarStyle::Standard`]).
+pub const TITLEBAR_HEIGHT: f32 = STANDARD_TITLEBAR_HEIGHT;
+/// The web `FloatingWindow`'s band: `.kb-window-titlebar` is `min-h-11` (44) but also `py-2.5`
+/// around the 30 px close button, so it lays out at 10 + 30 + 10 = **50**. No longer a default
+/// (decision of 2026-10-04): a window that wants it writes `TitleBarHeight="50"`.
+pub const WEB_FLOATING_TITLEBAR_HEIGHT: f32 = 2.0 * 10.0 + BUTTON;
+/// A tool window's band (`FixedToolWindow` / `SizableToolWindow`): the standard one.
+pub const TOOL_TITLEBAR_HEIGHT: f32 = STANDARD_TITLEBAR_HEIGHT;
+/// Below this band height the compact metrics apply ([`TOOL_BUTTON`], [`TOOL_PAD_X`]…): a 30 DIP
+/// button wants at least 5 DIP of air above and below.
+pub const COMPACT_BELOW: f32 = BUTTON + 10.0;
 /// `px-4`: the band's side insets.
 pub const PAD_X: f32 = space::LG;
 /// `gap-2.5`: between the icon, the title, the title actions and the close button.
@@ -55,15 +70,16 @@ pub const BUTTON_RADIUS: f32 = 5.0;
 pub const BUTTON_GLYPH: f32 = 15.0;
 /// `gap-1` between two title actions.
 pub const BUTTON_GAP: f32 = space::XS;
-/// The slim band's buttons and insets (extrapolated: 24 = 32 − 2 × 4, radius 4 = `--radius-sm`).
+/// The compact band's buttons and insets (extrapolated: 24 = 32 − 2 × 4, radius 4 = `--radius-sm`).
 pub const TOOL_BUTTON: f32 = 24.0;
 pub const TOOL_BUTTON_RADIUS: f32 = 4.0;
 pub const TOOL_BUTTON_GLYPH: f32 = 13.0;
 pub const TOOL_PAD_X: f32 = space::SM;
-/// Windows-style caption buttons (opt-in, [`ButtonStyle::Windows`]): 46 DIP wide, full height.
+/// Windows-style caption buttons (opt-in, [`ButtonStyle::Windows`]): 46 DIP wide, as tall as the
+/// band (32 in the standard one, 64 in the tall one), their glyph on the band's middle.
 pub const WINDOWS_BUTTON_W: f32 = 46.0;
-/// Their height: 32 DIP, at the top of a taller band (a band of 32 or less is filled).
-pub const WINDOWS_BUTTON_H: f32 = 32.0;
+/// A tool window's Windows-style buttons: square.
+pub const WINDOWS_TOOL_BUTTON_W: f32 = 32.0;
 /// `--kb-window-radius: 0px`.
 pub const WINDOW_RADIUS: f32 = 0.0;
 /// `opacity-80` on a caption button's glyph at rest, `hover:opacity-100`.
@@ -81,6 +97,42 @@ pub const FOOTER_GAP: f32 = space::SM;
 pub const FOOTER_HEIGHT: f32 = 2.0 * space::MD + height::BUTTON_MD;
 /// The resize grip of a resizable window (`.kb-window-grip`: 18 × 18, two oblique strokes).
 pub const GRIP: f32 = 18.0;
+
+/// The band's height class (`TitleBarStyle`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TitleBarStyle {
+    /// 32 DIP, as in Windows 11: dialogs, tool windows, secondary forms (the default).
+    #[default]
+    Standard,
+    /// 64 DIP, the web's module header: a main window showing the header's menus (waffle, account,
+    /// `HeaderActions`) left of the caption buttons.
+    Tall,
+}
+
+impl TitleBarStyle {
+    /// The band's height in this style.
+    pub fn height(self) -> f32 {
+        match self {
+            Self::Standard => STANDARD_TITLEBAR_HEIGHT,
+            Self::Tall => TALL_TITLEBAR_HEIGHT,
+        }
+    }
+
+    /// `"Standard"` / `"Tall"` as written in a view; `None` for anything else.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.trim() {
+            "Standard" => Some(Self::Standard),
+            "Tall" => Some(Self::Tall),
+            _ => None,
+        }
+    }
+}
+
+/// The side of a Kubuno-style caption button in a band `band_height` tall: [`BUTTON`] in a band of
+/// [`COMPACT_BELOW`] or more, [`TOOL_BUTTON`] in a compact one (never taller than the band).
+pub fn caption_button_size(band_height: f32) -> f32 {
+    if band_height < COMPACT_BELOW { TOOL_BUTTON.min(band_height) } else { BUTTON }
+}
 
 /// How the caption buttons look.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -134,12 +186,14 @@ impl CaptionCommand {
     }
 }
 
-/// Everything about the band a window may customise (`TitleBarHeight`, `TitleBarBackground`,
+/// Everything about the band a window may customise (`TitleBarStyle`, `TitleBarHeight`, `TitleBarBackground`,
 /// `Subtitle`, `TitleAlignment`, `CaptionButtonStyle`, `HelpButton`, `ExtendContentIntoTitleBar`…).
 /// The default is the web `FloatingWindow`'s band.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChromeStyle {
-    /// `None`: [`TITLEBAR_HEIGHT`], or [`TOOL_TITLEBAR_HEIGHT`] for a tool window.
+    /// The band's height class (`TitleBarStyle`); a tool window keeps the standard band.
+    pub size: TitleBarStyle,
+    /// An explicit height (`TitleBarHeight`), over [`ChromeStyle::size`]; `None`: the style's.
     pub height: Option<f32>,
     /// The band's side insets (`TitleBarPadding`), between the window's edges and what the band holds at
     /// its ends (the icon or the left region, Kubuno-style caption buttons). `None`: [`PAD_X`], or
@@ -173,6 +227,7 @@ pub struct ChromeStyle {
 impl Default for ChromeStyle {
     fn default() -> Self {
         Self {
+            size: TitleBarStyle::Standard,
             height: None,
             padding: None,
             background: None,
@@ -194,7 +249,13 @@ impl Default for ChromeStyle {
 impl ChromeStyle {
     /// The band's height.
     pub fn band_height(&self) -> f32 {
-        self.height.filter(|h| h.is_finite() && *h > 0.0).unwrap_or(if self.tool { TOOL_TITLEBAR_HEIGHT } else { TITLEBAR_HEIGHT })
+        self.height.filter(|h| h.is_finite() && *h > 0.0).unwrap_or(if self.tool { TOOL_TITLEBAR_HEIGHT } else { self.size.height() })
+    }
+
+    /// Whether the band uses the compact metrics (24 DIP buttons, 8 DIP insets, the body font): a
+    /// tool window's, and any band lower than [`COMPACT_BELOW`] (the standard one).
+    pub fn compact(&self) -> bool {
+        self.tool || self.band_height() < COMPACT_BELOW
     }
 
     /// The band's ground in `theme`.
@@ -208,23 +269,24 @@ impl ChromeStyle {
     }
 
     fn pad_x(&self) -> f32 {
-        self.padding.filter(|p| p.is_finite() && *p >= 0.0).unwrap_or(if self.tool { TOOL_PAD_X } else { PAD_X })
+        self.padding.filter(|p| p.is_finite() && *p >= 0.0).unwrap_or(if self.compact() { TOOL_PAD_X } else { PAD_X })
     }
 
     fn gap(&self) -> f32 {
-        if self.tool { space::SM } else { GAP }
+        if self.compact() { space::SM } else { GAP }
     }
 
-    fn button_box(&self) -> f32 {
-        if self.tool { TOOL_BUTTON } else { BUTTON }
+    /// The side of a Kubuno-style caption button in this band.
+    pub fn button_box(&self) -> f32 {
+        if self.tool { TOOL_BUTTON.min(self.band_height()) } else { caption_button_size(self.band_height()) }
     }
 
     fn button_radius(&self) -> f32 {
-        if self.tool { TOOL_BUTTON_RADIUS } else { BUTTON_RADIUS }
+        if self.compact() { TOOL_BUTTON_RADIUS } else { BUTTON_RADIUS }
     }
 
     fn button_glyph(&self) -> f32 {
-        if self.tool { TOOL_BUTTON_GLYPH } else { BUTTON_GLYPH }
+        if self.compact() { TOOL_BUTTON_GLYPH } else { BUTTON_GLYPH }
     }
 }
 
@@ -334,9 +396,9 @@ pub fn layout(style: &ChromeStyle, bounds: Rect, has_icon: bool, buttons: System
                 let b = style.button_box();
                 (b, cy - b / 2.0, cy + b / 2.0)
             }
-            // Windows' own caption buttons are 32 DIP tall at the top of a taller band (WinUI's default
-            // title bar), and fill a band that is not taller than that.
-            ButtonStyle::Windows => (if style.tool { 32.0 } else { WINDOWS_BUTTON_W }, band.top, band.top + (band.bottom - band.top).min(WINDOWS_BUTTON_H)),
+            // Windows' own caption buttons fill the band's height whatever it is, so their glyphs sit on
+            // its middle like everything else in it (the 64 DIP header as well as the 32 DIP band).
+            ButtonStyle::Windows => (if style.tool { WINDOWS_TOOL_BUTTON_W } else { WINDOWS_BUTTON_W }, band.top, band.bottom),
         };
         if i > 0 && style.buttons == ButtonStyle::Kubuno {
             right -= BUTTON_GAP;
@@ -469,7 +531,7 @@ pub fn paint_caption(canvas: &dyn Canvas, style: &ChromeStyle, layout: &ChromeLa
         }
     }
     if style.show_title && layout.title.right - layout.title.left > 4.0 {
-        let font = if style.tool { &f.body_strong } else { &f.heading };
+        let font = if style.compact() { &f.body_strong } else { &f.heading };
         let sub_font = &f.caption;
         let sub = style.subtitle.trim();
         match style.alignment {
@@ -623,9 +685,51 @@ mod tests {
 
     const W: Rect = Rect { left: 0.0, top: 0.0, right: 600.0, bottom: 400.0 };
 
+    /// The web `FloatingWindow`'s 50 DIP band (`TitleBarHeight="50"`), whose metrics these tests pin.
+    fn web() -> ChromeStyle {
+        ChromeStyle { height: Some(WEB_FLOATING_TITLEBAR_HEIGHT), ..ChromeStyle::default() }
+    }
+
+    /// The default band is the standard one: 32 DIP, compact buttons centred on it.
     #[test]
-    fn default_band_is_the_web_floating_window() {
+    fn default_band_is_the_standard_one() {
         let s = ChromeStyle::default();
+        assert_eq!(s.band_height(), STANDARD_TITLEBAR_HEIGHT);
+        assert_eq!(STANDARD_TITLEBAR_HEIGHT, 32.0);
+        let l = layout(&s, W, true, SystemButtons::CLOSE_ONLY, SlotWidths::default());
+        let close = l.rect_of(Part::Close).expect("close");
+        assert_eq!((close.left, close.top, close.right, close.bottom), (568.0, 4.0, 592.0, 28.0));
+        let icon = l.icon.expect("icon");
+        assert_eq!((icon.top + icon.bottom) / 2.0, 16.0);
+    }
+
+    /// The tall band (64 DIP) and an explicit height: every caption button centred, both styles.
+    #[test]
+    fn caption_buttons_are_centred_in_every_height() {
+        for buttons in [ButtonStyle::Kubuno, ButtonStyle::Windows] {
+            for (size, height) in [(TitleBarStyle::Standard, None), (TitleBarStyle::Tall, None), (TitleBarStyle::Standard, Some(50.0)), (TitleBarStyle::Tall, Some(40.0))] {
+                let s = ChromeStyle { size, height, buttons, ..ChromeStyle::default() };
+                let l = layout(&s, W, true, SystemButtons::default(), SlotWidths { left: 30.0, center: 0.0, right: 40.0 });
+                let mid = (l.band.top + l.band.bottom) / 2.0;
+                for (part, r, _) in &l.buttons {
+                    assert_eq!((r.top + r.bottom) / 2.0, mid, "{part:?} in {buttons:?} {size:?} {height:?}");
+                }
+                for r in [l.left, l.right] {
+                    assert_eq!((r.top + r.bottom) / 2.0, mid);
+                }
+            }
+        }
+        assert_eq!(ChromeStyle { size: TitleBarStyle::Tall, ..ChromeStyle::default() }.band_height(), 64.0);
+        let explicit = ChromeStyle { size: TitleBarStyle::Tall, height: Some(50.0), ..ChromeStyle::default() };
+        assert_eq!(explicit.band_height(), 50.0, "TitleBarHeight wins over the style");
+        assert!(!explicit.compact());
+        let tool = ChromeStyle { size: TitleBarStyle::Tall, tool: true, ..ChromeStyle::default() };
+        assert_eq!(tool.band_height(), TOOL_TITLEBAR_HEIGHT, "a tool window keeps the standard band");
+    }
+
+    #[test]
+    fn web_floating_window_band_on_request() {
+        let s = ChromeStyle { height: Some(WEB_FLOATING_TITLEBAR_HEIGHT), ..ChromeStyle::default() };
         let l = layout(&s, W, true, SystemButtons::CLOSE_ONLY, SlotWidths::default());
         assert_eq!(l.band.bottom - l.band.top, 50.0);
         let close = l.rect_of(Part::Close).expect("close");
@@ -640,7 +744,7 @@ mod tests {
 
     #[test]
     fn system_buttons_sit_four_apart_right_to_left() {
-        let s = ChromeStyle::default();
+        let s = web();
         let l = layout(&s, W, false, SystemButtons::default(), SlotWidths::default());
         let order: Vec<Part> = l.buttons.iter().map(|b| b.0).collect();
         assert_eq!(order, vec![Part::Close, Part::Maximize, Part::Minimize]);
@@ -653,7 +757,7 @@ mod tests {
 
     #[test]
     fn disabled_buttons_do_not_answer_and_hidden_take_no_room() {
-        let s = ChromeStyle::default();
+        let s = web();
         let b = SystemButtons { minimize: CaptionButtonState::Disabled, maximize: CaptionButtonState::Shown, close: true };
         let l = layout(&s, W, false, b, SlotWidths::default());
         let min = l.rect_of(Part::Minimize).expect("min");
@@ -665,7 +769,7 @@ mod tests {
 
     #[test]
     fn regions_commands_help_and_mirroring() {
-        let s = ChromeStyle { help_button: true, commands: vec![CaptionCommand::new("pin", "Pin")], ..ChromeStyle::default() };
+        let s = ChromeStyle { help_button: true, commands: vec![CaptionCommand::new("pin", "Pin")], ..web() };
         let l = layout(&s, W, true, SystemButtons::CLOSE_ONLY, SlotWidths { left: 60.0, center: 100.0, right: 80.0 });
         let order: Vec<Part> = l.buttons.iter().map(|b| b.0).collect();
         assert_eq!(order, vec![Part::Close, Part::Help, Part::Command(0)]);
@@ -675,7 +779,7 @@ mod tests {
         assert_eq!((l.center.left, l.center.right), (250.0, 350.0));
         assert_eq!(l.left.left, 42.0);
         assert!(l.title.left >= l.left.right + GAP && l.title.right <= l.center.left);
-        let rtl = layout(&ChromeStyle { right_to_left: true, ..ChromeStyle::default() }, W, false, SystemButtons::CLOSE_ONLY, SlotWidths::default());
+        let rtl = layout(&ChromeStyle { right_to_left: true, ..web() }, W, false, SystemButtons::CLOSE_ONLY, SlotWidths::default());
         let close = rtl.rect_of(Part::Close).expect("close");
         assert_eq!((close.left, close.right), (16.0, 46.0));
     }
@@ -687,31 +791,31 @@ mod tests {
         assert_eq!(l.band.bottom, TOOL_TITLEBAR_HEIGHT);
         let close = l.rect_of(Part::Close).expect("close");
         assert_eq!(close.right - close.left, TOOL_BUTTON);
-        let win = ChromeStyle { buttons: ButtonStyle::Windows, height: Some(32.0), ..ChromeStyle::default() };
+        let win = ChromeStyle { buttons: ButtonStyle::Windows, height: Some(32.0), ..web() };
         let l = layout(&win, W, false, SystemButtons::default(), SlotWidths::default());
         let close = l.rect_of(Part::Close).expect("close");
         assert_eq!((close.left, close.top, close.right, close.bottom), (554.0, 0.0, 600.0, 32.0));
         assert_eq!(l.rect_of(Part::Maximize).map(|r| r.right), Some(554.0));
-        // A taller band keeps Windows' 32-DIP caption buttons at its top.
-        let tall = ChromeStyle { buttons: ButtonStyle::Windows, height: Some(64.0), ..ChromeStyle::default() };
+        // In a taller band Windows' caption buttons fill its height: their glyphs sit on its middle.
+        let tall = ChromeStyle { buttons: ButtonStyle::Windows, height: Some(64.0), ..web() };
         let close = layout(&tall, W, false, SystemButtons::default(), SlotWidths::default()).rect_of(Part::Close).expect("close");
-        assert_eq!((close.top, close.bottom), (0.0, WINDOWS_BUTTON_H));
+        assert_eq!((close.top, close.bottom), (0.0, 64.0));
     }
 
     /// `TitleBarPadding`: the band's side insets move what the band holds at its ends.
     #[test]
     fn padding_sets_the_side_insets() {
-        let s = ChromeStyle { padding: Some(8.0), show_icon: false, ..ChromeStyle::default() };
+        let s = ChromeStyle { padding: Some(8.0), show_icon: false, ..web() };
         let l = layout(&s, W, false, SystemButtons::CLOSE_ONLY, SlotWidths { left: 40.0, center: 0.0, right: 0.0 });
         assert_eq!(l.left.left, 8.0);
         assert_eq!(l.rect_of(Part::Close).map(|r| r.right), Some(592.0));
-        let bad = ChromeStyle { padding: Some(f32::NAN), ..ChromeStyle::default() };
+        let bad = ChromeStyle { padding: Some(f32::NAN), ..web() };
         assert_eq!(layout(&bad, W, false, SystemButtons::NONE, SlotWidths::default()).title.left, PAD_X, "an invalid inset keeps the default");
     }
 
     #[test]
     fn centred_title_is_symmetric() {
-        let s = ChromeStyle { alignment: TitleAlignment::Center, ..ChromeStyle::default() };
+        let s = ChromeStyle { alignment: TitleAlignment::Center, ..web() };
         let l = layout(&s, W, false, SystemButtons::default(), SlotWidths::default());
         let mid = (l.title.left + l.title.right) / 2.0;
         assert!((mid - 300.0).abs() < 0.01);

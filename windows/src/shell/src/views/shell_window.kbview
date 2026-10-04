@@ -7,7 +7,7 @@
   ShellWindow (shell_window.rs) keeps the data and fills the pages through typed access.
 -->
 <Panel xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" xmlns:d="https://kubuno.com/views/design" DesignWidth="1180" DesignHeight="736" Title="{Res app_title}" Icon="{Res app_icon}" Backdrop="MicaAlt"
-       TitleBarHeight="64" TitleBarPadding="8" TitleBarBackground="Background" TitleBarForeground="TextPrimary"
+       TitleBarStyle="Tall" TitleBarPadding="8" TitleBarBackground="Background" TitleBarForeground="TextPrimary"
        CaptionButtonStyle="Windows" CornerPreference="Round" SizeGripStyle="Hide" ShowIcon="false" ShowTitle="false" BackColor="Background" MinimumSize="420, 320"
        OnLoad="shell_window_load" OnShown="shell_window_shown" OnResize="shell_window_resize"
        KeyPreview="true" OnKeyDown="shell_window_key_down"
