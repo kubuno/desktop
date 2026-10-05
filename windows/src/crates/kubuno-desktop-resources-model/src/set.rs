@@ -62,6 +62,8 @@ pub fn check_satellite(neutral: &ResourceFile, culture: &str, satellite: &Resour
     let mut out = Vec::new();
     for e in &satellite.entries {
         match neutral.get(&e.name) {
+            // A plural form the neutral language does not have (`items_few` in Russian) is used.
+            None if e.kind == Kind::String && neutral.knows_plural_form(&e.name) => {}
             None => out.push(SetDiagnostic {
                 culture: Some(culture.to_string()),
                 name: e.name.clone(),

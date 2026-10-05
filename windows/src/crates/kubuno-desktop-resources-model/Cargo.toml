@@ -9,3 +9,6 @@ repository.workspace = true
 [dependencies]
 # Embedded entries are base64 in the XML, like .resx (version already locked by this workspace).
 base64 = "0.22"
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -1963,6 +1963,7 @@ name = "kubuno-desktop-resources-model"
 version = "0.1.0-alpha"
 dependencies = [
  "base64",
+ "serde_json",
 ]
 
 [[package]]

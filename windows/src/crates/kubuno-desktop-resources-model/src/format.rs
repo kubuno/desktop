@@ -147,7 +147,9 @@ pub struct Diagnostic {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ResourceFile {
     pub entries: Vec<Entry>,
-    /// The `Culture` attribute of the root, when written (informative: the file name decides).
+    /// The `Culture` attribute of the root, when written. On a satellite it is informative (the file name
+    /// decides); on a neutral file it names the language of the neutral strings (`Culture="en"`): the web
+    /// compiles the neutral file as that language's bundle. Absent, the file is written without it.
     pub culture: Option<String>,
 }
 
@@ -177,6 +179,63 @@ impl ResourceFile {
     /// The entry named `name`.
     pub fn get(&self, name: &str) -> Option<&Entry> {
         self.entries.iter().find(|e| e.name == name)
+    }
+
+    /// The `String` entries, in file order: `(name, value, comment)`. With [`ResourceFile::from_strings`],
+    /// [`ResourceFile::read`] and [`ResourceFile::to_text`], what a converter between `.kbres` files and
+    /// i18next bundles needs (the web's WASM shim: `parse` → JSON, `write` from JSON).
+    pub fn strings(&self) -> impl Iterator<Item = (&str, &str, Option<&str>)> {
+        self.entries.iter().filter(|e| e.kind == Kind::String).map(|e| (e.name.as_str(), e.as_text().unwrap_or_default(), e.comment.as_deref()))
+    }
+
+    /// A file of `String` entries `(name, value, comment)`, in the given order, with an optional root
+    /// `Culture` (the language of a neutral file's strings). A name given twice keeps its first place and
+    /// its last value (a JSON object's semantics). Names are not checked: [`ResourceFile::read`] rejects
+    /// only an empty one.
+    pub fn from_strings<N, V, C>(culture: Option<String>, strings: impl IntoIterator<Item = (N, V, Option<C>)>) -> ResourceFile
+    where
+        N: Into<String>,
+        V: Into<String>,
+        C: Into<String>,
+    {
+        let mut file = ResourceFile { entries: Vec::new(), culture: culture.filter(|c| !c.is_empty()) };
+        for (name, value, comment) in strings {
+            let mut entry = Entry::text(Kind::String, name, value);
+            if let Some(c) = comment {
+                entry = entry.with_comment(c);
+            }
+            match file.entries.iter_mut().find(|e| e.name == entry.name) {
+                Some(existing) => *existing = entry,
+                None => file.entries.push(entry),
+            }
+        }
+        file
+    }
+
+    /// The plural forms of `base` (`items_one`, `items_other`… — `String` entries, see [`crate::plural`]),
+    /// in CLDR category order.
+    pub fn plural_forms(&self, base: &str) -> Vec<(crate::plural::PluralCategory, &Entry)> {
+        let mut forms: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|e| e.kind == Kind::String)
+            .filter_map(|e| crate::plural::split_plural(&e.name).filter(|(b, _)| *b == base).map(|(_, c)| (c, e)))
+            .collect();
+        forms.sort_by_key(|(c, _)| *c);
+        forms
+    }
+
+    /// Whether `name` is a key `{Res}` can name: an entry, or the base of plural forms (`items` when only
+    /// `items_one` / `items_other` exist).
+    pub fn has_key(&self, name: &str) -> bool {
+        self.get(name).is_some() || !self.plural_forms(name).is_empty()
+    }
+
+    /// Whether `name` is a plural form (`items_few`) of a key this file knows (an entry `items` or another
+    /// form `items_one`): a satellite may hold forms its neutral file's language does not have (Russian
+    /// `_few`, Arabic `_two`).
+    pub fn knows_plural_form(&self, name: &str) -> bool {
+        crate::plural::split_plural(name).is_some_and(|(base, _)| self.get(base).is_some_and(|e| e.kind == Kind::String) || !self.plural_forms(base).is_empty())
     }
 
     /// Reads `text`, leniently: the entries that could be read, and every problem found (an error
@@ -277,10 +336,15 @@ fn read_entry(e: &Element, diags: &mut Vec<Diagnostic>) -> Option<Entry> {
         return None;
     };
     let name = name_attr.value.clone();
-    if !crate::names::is_valid_name(&name) {
+    let valid = if kind == Kind::String { crate::names::is_valid_string_name(&name) } else { crate::names::is_valid_name(&name) };
+    if !valid {
         diags.push(Diagnostic {
             severity: Severity::Error,
-            message: format!("`{name}` is not a valid resource name (letters, digits, `_`, `.`, `-` and `+`, starting with a letter or `_`)"),
+            message: if kind == Kind::String {
+                "a String needs a non-empty `Name`".to_string()
+            } else {
+                format!("`{name}` is not a valid resource name (letters, digits, `_`, `.`, `-` and `+`, starting with a letter or `_`)")
+            },
             range: name_attr.value_range.clone(),
         });
         return None;
@@ -486,9 +550,57 @@ line 2</String>
         assert_eq!(ResourceFile::default().to_text(), "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Resources Version=\"1\"/>\n");
     }
 
+    /// Web strings (i18next keys and values) survive write → read byte for byte.
+    #[test]
+    fn web_strings_round_trip_losslessly() {
+        let strings: Vec<(&str, &str, Option<&str>)> = vec![
+            ("header.settings", "Settings", None),
+            ("drive-shared", "Shared with me", Some("Sidebar <entry> & \"note\"\n2nd line")),
+            ("2fa_title", "  leading and trailing  ", None),
+            ("files_one", "{{count}} file", None),
+            ("files_other", "{{count}} files", None),
+            ("a key: with spaces", "line 1\nline 2\r\nline 3\r", None),
+            ("tabs", "\ta\tb\t", None),
+            ("markup", "<1>Bold</1> & <2/> < > &amp; ]]> \"q\" 'a'", None),
+            ("emoji", "📁 Fichiers 👍🏽", None),
+            ("rtl", "مرحبا بك في كوبونو — שלום", None),
+            ("empty", "", None),
+            ("ws", " ", None),
+            ("nl", "\n", None),
+            ("crlf-only", "\r\n", None),
+            ("é.clé", "valeur", None),
+        ];
+        let file = ResourceFile::from_strings(Some("en".to_string()), strings.iter().map(|(n, v, c)| (*n, *v, *c)));
+        let text = file.to_text();
+        assert!(text.starts_with("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Resources Version=\"1\" Culture=\"en\">\n"), "{text}");
+        let (back, diags) = ResourceFile::read(&text);
+        assert!(diags.is_empty(), "{diags:?}");
+        assert_eq!(back.culture.as_deref(), Some("en"));
+        let read: Vec<(&str, &str, Option<&str>)> = back.strings().collect();
+        assert_eq!(read, strings);
+        assert_eq!(back.to_text(), text, "canonical");
+        // A name given twice keeps its first place and its last value.
+        let dup = ResourceFile::from_strings::<&str, &str, &str>(None, [("a", "1", None), ("b", "2", None), ("a", "3", None)]);
+        assert_eq!(dup.strings().map(|(n, v, _)| (n, v)).collect::<Vec<_>>(), vec![("a", "3"), ("b", "2")]);
+        // No `Culture`: the output is unchanged.
+        assert!(!dup.to_text().contains("Culture"));
+        // Only an empty String name is rejected.
+        assert!(ResourceFile::parse("<Resources><String Name=\"\">x</String></Resources>").is_err());
+    }
+
+    #[test]
+    fn lists_plural_forms() {
+        let file = ResourceFile::parse(r##"<Resources><String Name="files_other">{{count}} files</String><String Name="files_one">{{count}} file</String><String Name="title">T</String><Color Name="c_one" Value="#fff"/></Resources>"##).unwrap();
+        let forms: Vec<_> = file.plural_forms("files").into_iter().map(|(c, e)| (c.as_str(), e.name.as_str())).collect();
+        assert_eq!(forms, vec![("one", "files_one"), ("other", "files_other")]);
+        assert!(file.has_key("files") && file.has_key("title") && !file.has_key("nope"));
+        assert!(file.plural_forms("c").is_empty(), "a Color is not a plural form");
+        assert!(file.knows_plural_form("files_few") && file.knows_plural_form("title_one") && !file.knows_plural_form("nope_one"));
+    }
+
     #[test]
     fn reports_problems_with_ranges() {
-        let src = "<Resources><String Name=\"a\">x</String><String Name=\"a\">y</String><Blob Name=\"b\"/><Image Name=\"c\"/><Color Name=\"d\" Value=\"teal-ish\"/><String Name=\"9x\"/></Resources>";
+        let src = "<Resources><String Name=\"a\">x</String><String Name=\"a\">y</String><Blob Name=\"b\"/><Image Name=\"c\"/><Color Name=\"d\" Value=\"teal-ish\"/><Color Name=\"9x\" Value=\"#fff\"/></Resources>";
         let (file, diags) = ResourceFile::read(src);
         assert_eq!(file.entries.len(), 1);
         let msgs: Vec<_> = diags.iter().map(|d| d.message.as_str()).collect();

@@ -7,6 +7,7 @@
 //! | [`culture`] | satellite file names (`resources.fr.kbres`) and the culture fallback chain |
 //! | [`set`] | a neutral file and its satellites on disk, cross-file checks |
 //! | [`names`] | valid resource names and the generated Rust names |
+//! | [`plural`] | plural forms (`key_one`, `key_other`…), CLDR cardinal categories and `{{name}}` interpolation, i18next's semantics |
 //! | [`import`] | `.resx`/`.resw` → `.kbres` |
 //! | [`settings`] | `.kbsettings` files: an app's declared settings (`Settings.settings`), read by `settings!`, the language server and the Visual Studio settings editor (`docs/STORAGE-COMPONENTS.md`) |
 //! | [`xml`] | the small position-tracking XML reader behind them |
@@ -18,6 +19,7 @@ pub mod culture;
 pub mod format;
 pub mod import;
 pub mod names;
+pub mod plural;
 pub mod set;
 pub mod settings;
 pub mod xml;

@@ -6,6 +6,14 @@
 //! `resources!` is its `snake_case` form (`okButton.Text` → `ok_button_text`).
 
 /// Whether `name` is a valid resource name.
+/// Whether `name` is a valid name for a `String` entry: any non-empty text. Strings also carry the keys of the
+/// web's i18next bundles, which a `.kbres` file must hold losslessly (`header.settings`, `drive-shared`,
+/// `2fa_title`, `files_one`, `a key: with spaces`); the `resources!` accessor is still [`rust_name`] (two names
+/// that map to the same accessor are a compile error there). Other kinds keep [`is_valid_name`].
+pub fn is_valid_string_name(name: &str) -> bool {
+    !name.is_empty()
+}
+
 pub fn is_valid_name(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {
@@ -110,6 +118,17 @@ mod tests {
         for bad in ["", "1a", "a b", "a.", ".a", "a..b", "é", "a,b", "a}"] {
             assert!(!is_valid_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn string_names_accept_web_keys() {
+        for ok in ["header.settings", "drive-shared", "2fa_title", "files_one", "a key: with spaces", "é", "a..b."] {
+            assert!(is_valid_string_name(ok), "{ok}");
+        }
+        assert!(!is_valid_string_name(""));
+        assert_eq!(rust_name("2fa_title"), "_2fa_title");
+        assert_eq!(rust_name("drive-shared"), "drive_shared");
+        assert_eq!(rust_name("a key: with spaces"), "a_key_with_spaces");
     }
 
     #[test]
