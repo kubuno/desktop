@@ -148,8 +148,16 @@ impl Template {
                     continue;
                 }
                 if let Some(spec) = crate::binding::parse_binding(&v) {
-                    if !spec.path.is_empty() && !out.contains(&spec.path) {
-                        out.push(spec.path);
+                    // A `{Res}` reads its argument bindings' paths (WV-6).
+                    let args = spec.res_args.iter().filter_map(|a| match &a.value {
+                        crate::binding::ResArgSource::Binding(b) => Some(b.path.clone()),
+                        crate::binding::ResArgSource::Literal(_) => None,
+                    });
+                    let own = (crate::resources::reference(&spec).is_none()).then(|| spec.path.clone());
+                    for path in own.into_iter().chain(args) {
+                        if !path.is_empty() && !out.contains(&path) {
+                            out.push(path);
+                        }
                     }
                 }
             }

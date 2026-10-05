@@ -538,8 +538,28 @@ pub struct BindingSpec {
     pub fallback_value: Option<String>,
     /// `UpdateSourceTrigger=…`.
     pub update_trigger: UpdateSourceTrigger,
+    /// The arguments of a `{Res key, Count={Binding n}, Sep=', '}` reference ([`crate::resources`], WV-6);
+    /// empty for an ordinary binding.
+    pub res_args: Box<[ResArgSpec]>,
     /// What this binding remembers while the view runs (a `OneTime` value, the last value written).
     pub state: BindingState,
+}
+
+/// One argument of a `{Res}` reference: it fills the string's `{{name}}` placeholders, and `Count` selects
+/// the plural form ([`crate::resources`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResArgSpec {
+    /// The name as written (`Count`, `Name`).
+    pub name: String,
+    pub value: ResArgSource,
+}
+
+/// Where a `{Res}` argument's value comes from.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ResArgSource {
+    /// A one-way binding (its mode is always `OneWay`).
+    Binding(Box<BindingSpec>),
+    Literal(String),
 }
 
 impl BindingSpec {
@@ -988,6 +1008,21 @@ impl From<BindingSyntax> for BindingSpec {
             converter_parameter: b.converter_parameter,
             fallback_value: b.fallback_value,
             update_trigger: b.update_trigger,
+            res_args: b
+                .res_args
+                .into_iter()
+                .filter_map(|a| {
+                    let value = match a.value {
+                        kubuno_desktop_views_syntax::res::ResArgValue::Literal(text) => ResArgSource::Literal(text),
+                        kubuno_desktop_views_syntax::res::ResArgValue::Binding(text) => {
+                            let mut spec = parse_binding(&text)?;
+                            spec.mode = BindingMode::OneWay;
+                            ResArgSource::Binding(Box::new(spec))
+                        }
+                    };
+                    Some(ResArgSpec { name: a.name, value })
+                })
+                .collect(),
             state: BindingState::default(),
         }
     }

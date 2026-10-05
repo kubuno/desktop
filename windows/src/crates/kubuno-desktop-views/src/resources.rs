@@ -14,7 +14,7 @@
 //! painting. A culture switch ([`kubuno_desktop_resources::set_culture`]) repaints every window of the
 //! process ([`install`]), so the whole UI changes language live.
 
-use crate::binding::{BindingMode, BindingSpec, Value, ViewModel};
+use crate::binding::{BindingMode, BindingSpec, ResArgSource, Value, ViewModel};
 use crate::format::ValueKind;
 use kubuno_desktop_resources::{Kind, ResolvedValue};
 
@@ -24,9 +24,11 @@ pub use kubuno_desktop_views_syntax::res::{is_res_expr, RES_PREFIX};
 
 /// Parses the inside of `{Res key[, Source=set]}` (without the braces); `None` when it is not a
 /// `Res` expression. `Key=` may name the key explicitly; `Source=` is the set (the `.kbres` file stem).
+/// Other `Name=value` parts are arguments (WV-6).
 pub fn parse_res(inner: &str) -> Option<BindingSpec> {
-    let path = kubuno_desktop_views_syntax::res::parse_res_path(inner)?;
-    Some(BindingSpec { path, mode: BindingMode::OneWay, ..BindingSpec::default() })
+    let res = kubuno_desktop_views_syntax::res::parse_res(inner)?;
+    let syntax = crate::binding::BindingSyntax { path: res.path(), mode: BindingMode::OneWay, res_args: res.args, ..Default::default() };
+    Some(BindingSpec::from(syntax))
 }
 
 /// `(set, key)` of a resource reference's spec; `None` for an ordinary binding.
@@ -37,7 +39,7 @@ pub fn reference(spec: &BindingSpec) -> Option<(Option<&str>, &str)> {
 /// The value `spec` gives in `want` form: a resource when it is one, else what `vm` holds.
 pub fn get_bound(vm: &dyn ViewModel, spec: &BindingSpec, want: ValueKind) -> Option<Value> {
     match reference(spec) {
-        Some((set, key)) => crate::format::to_target(value_of(set, key)?, want, &spec.format),
+        Some((set, key)) => crate::format::to_target(value_with_args(vm, spec, set, key)?, want, &spec.format),
         None => vm.get_bound(spec, want),
     }
 }
@@ -45,9 +47,49 @@ pub fn get_bound(vm: &dyn ViewModel, spec: &BindingSpec, want: ValueKind) -> Opt
 /// The raw value of `spec`: a resource when it is one, else `vm.get(path)`.
 pub fn get(vm: &dyn ViewModel, spec: &BindingSpec) -> Option<Value> {
     match reference(spec) {
-        Some((set, key)) => value_of(set, key),
+        Some((set, key)) => value_with_args(vm, spec, set, key),
         None => vm.get(&spec.path),
     }
+}
+
+/// The value of a resource reference: [`value_of`], or with arguments (`{Res key, Count={Binding n},
+/// Name={Binding user.name}, Sep=', '}`, WV-6) the string with i18next's semantics
+/// ([`kubuno_desktop_resources::text_with`]): `Count` (case-insensitive) with a numeric value picks the
+/// plural form, every argument fills its `{{name}}` placeholders. Argument bindings are read through `vm`
+/// each time, so the text follows their values, and the culture.
+fn value_with_args(vm: &dyn ViewModel, spec: &BindingSpec, set: Option<&str>, key: &str) -> Option<Value> {
+    if spec.res_args.is_empty() {
+        return value_of(set, key);
+    }
+    let mut count = None;
+    let mut args: Vec<(String, String)> = Vec::with_capacity(spec.res_args.len());
+    for arg in &spec.res_args {
+        let text = match &arg.value {
+            ResArgSource::Literal(text) => {
+                if count.is_none() && kubuno_desktop_resources::model::plural::is_count_argument(&arg.name) {
+                    count = kubuno_desktop_resources::model::plural::parse_count(text);
+                }
+                text.clone()
+            }
+            ResArgSource::Binding(b) => {
+                if count.is_none() && kubuno_desktop_resources::model::plural::is_count_argument(&arg.name) {
+                    count = match b.read(vm, ValueKind::Number) {
+                        Some(Value::F32(n)) if n.is_finite() => Some(f64::from(n)),
+                        Some(Value::Str(s)) => kubuno_desktop_resources::model::plural::parse_count(&s),
+                        _ => None,
+                    };
+                }
+                match b.read(vm, ValueKind::Text).or_else(|| b.fallback(ValueKind::Text)) {
+                    Some(Value::Str(s)) => s,
+                    Some(Value::Bool(v)) => v.to_string(),
+                    Some(Value::F32(n)) => n.to_string(),
+                    _ => String::new(),
+                }
+            }
+        };
+        args.push((arg.name.clone(), text));
+    }
+    kubuno_desktop_resources::text_with(set, key, count, &args).map(Value::Str)
 }
 
 /// The value of resource `key` (of `set`) for a property: the text of a text entry, the URI of an
@@ -153,6 +195,11 @@ mod tests {
     static EMBEDDED: kubuno_desktop_resources::EmbeddedSet = kubuno_desktop_resources::EmbeddedSet { name: "viewres", neutral: NEUTRAL, satellites: &[("fr", FR)], files: &[] };
     static SET: kubuno_desktop_resources::StaticSet = kubuno_desktop_resources::StaticSet::new(&EMBEDDED);
 
+    static PLURAL_NEUTRAL: &str = r#"<Resources Culture="en"><String Name="files_zero">No files for {{name}}{{sep}}ok</String><String Name="files_one">{{count}} file for {{name}}{{sep}}ok</String><String Name="files_other">{{count}} files for {{name}}{{sep}}ok</String><String Name="greeting">Hello {{name}}</String></Resources>"#;
+    static PLURAL_FR: &str = r#"<Resources><String Name="files_one">{{count}} fichier pour {{name}}{{sep}}ok</String><String Name="files_other">{{count}} fichiers pour {{name}}{{sep}}ok</String><String Name="greeting">Bonjour {{name}}</String></Resources>"#;
+    static PLURAL_EMBEDDED: kubuno_desktop_resources::EmbeddedSet = kubuno_desktop_resources::EmbeddedSet { name: "pluralres", neutral: PLURAL_NEUTRAL, satellites: &[("fr", PLURAL_FR)], files: &[] };
+    static PLURAL_SET: kubuno_desktop_resources::StaticSet = kubuno_desktop_resources::StaticSet::new(&PLURAL_EMBEDDED);
+
     #[test]
     fn parses_res_expressions() {
         let spec = parse_binding("{Res title}").expect("res");
@@ -181,6 +228,39 @@ mod tests {
         let meta = crate::registry::PropertyMeta::new("Text", crate::registry::PropKind::String, "", "");
         let prop = crate::design::CustomProp::read(&element, &meta).expect("set");
         assert_eq!(prop.resolve(&MapViewModel::default()), Some(Value::Str("12.5".into())));
+    }
+
+    /// `{Res}` arguments (WV-6): the plural form follows the bound count and the culture, every argument fills
+    /// its `{{name}}` placeholder, a literal may hold commas.
+    #[test]
+    fn res_arguments_select_plurals_and_fill_placeholders() {
+        let _g = TEST_CULTURE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        kubuno_desktop_resources::register_static(&PLURAL_SET);
+        let spec = parse_binding("{Res files, Source=pluralres, Count={Binding n}, Name={Binding user.name}, Sep=', '}").expect("res with arguments");
+        assert_eq!(spec.res_args.len(), 3);
+        let text: PropSource<String> = PropSource::Bound { spec, fallback: String::new() };
+        let mut vm = MapViewModel::default().with("n", Value::F32(1.0)).with("user.name", Value::Str("Ana".into()));
+        kubuno_desktop_resources::set_culture("en-US");
+        assert_eq!(text.resolve(&vm), "1 file for Ana, ok");
+        vm.set("n", Value::F32(0.0));
+        assert_eq!(text.resolve(&vm), "No files for Ana, ok", "files_zero for 0");
+        vm.set("n", Value::F32(5.0));
+        assert_eq!(text.resolve(&vm), "5 files for Ana, ok", "re-resolved when the bound count changes");
+        kubuno_desktop_resources::set_culture("fr-FR");
+        assert_eq!(text.resolve(&vm), "5 fichiers pour Ana, ok");
+        vm.set("n", Value::F32(0.0));
+        assert_eq!(text.resolve(&vm), "0 fichier pour Ana, ok", "French: 0 is `one`, the French form wins over the neutral files_zero");
+        // A literal count, a string count, an unknown placeholder.
+        let lit: PropSource<String> = PropSource::Bound { spec: parse_binding("{Res files, Source=pluralres, count=2, Sep=' !'}").expect("res"), fallback: String::new() };
+        assert_eq!(lit.resolve(&vm), "2 fichiers pour {{name}} !ok");
+        vm.set("s", Value::Str("1".into()));
+        let s: PropSource<String> = PropSource::Bound { spec: parse_binding("{Res files, Source=pluralres, Count={Binding s}}").expect("res"), fallback: String::new() };
+        assert_eq!(s.resolve(&vm), "1 fichier pour {{name}}{{sep}}ok");
+        let plain: PropSource<String> = PropSource::Bound { spec: parse_binding("{Res greeting, Source=pluralres, Name={Binding user.name}}").expect("res"), fallback: String::new() };
+        assert_eq!(plain.resolve(&vm), "Bonjour Ana");
+        kubuno_desktop_resources::set_culture("en-US");
+        assert_eq!(plain.resolve(&vm), "Hello Ana");
+        assert_eq!(get(&vm, &parse_binding("{Res greeting, Source=pluralres, Name='x, y'}").expect("res")), Some(Value::Str("Hello x, y".into())));
     }
 
     /// A `{Res}` property follows a culture switch on the next frame, without rebuilding the view.
