@@ -118,6 +118,7 @@ pub const THEME_TOKENS: &[ThemeToken] = &[
     token!("ListSelected", list_selected, "Highlight", "The background of a selected item of a list (the same colour as Selection).", "Fond d'un élément sélectionné d'une liste (même couleur que Selection)."),
     token!("ControlFillHover", control_fill_hover, "Window", "The background of a subtle control (an icon button, a menu row) under the mouse.", "Fond d'un contrôle discret (bouton icône, ligne de menu) sous la souris."),
     token!("TitleBarBackground", titlebar_background, "ActiveCaption", "The background of the window's title bar.", "Fond de la barre de titre de la fenêtre."),
+    token!("PanelBackground", panel_background, "Window", "The ground of the header's panels (the apps launcher, the account panel).", "Fond des panneaux de l'en-tête (lanceur d'applications, panneau du compte)."),
     token!("TooltipBackground", tooltip_background, "Info", "The background of tooltips.", "Fond des info-bulles."),
     token!("TooltipForeground", tooltip_foreground, "InfoText", "The text of tooltips.", "Texte des info-bulles."),
 ];
@@ -597,6 +598,8 @@ mod tests {
         assert_eq!(primary.dark().hex(), "#8AB4F8");
         assert_eq!(theme_token("Divider").unwrap().dark().hex(), "#5F63688C");
         assert_eq!(theme_token("TooltipBackground").unwrap().light().hex(), "#3C4043F2");
+        let panel = theme_token("PanelBackground").unwrap();
+        assert_eq!((panel.light().hex().as_str(), panel.dark().hex().as_str()), ("#E9EEF6", "#303134"));
         for t in THEME_TOKENS {
             assert!(kubuno_desktop_controls::styled::SYSTEM_COLORS.iter().any(|(n, _)| *n == t.high_contrast), "{}", t.name);
             assert!(parse_color(t.name) == Ok(Some(ColorValue::Token(t.name))));

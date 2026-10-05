@@ -176,7 +176,7 @@ impl AccountButton {
         let Some(spot) = header_popup::spot(owner, anchor, self.bounds(), (account_menu::WIDTH, content), self.popup_offset, self.popup_margin, self.popup_bottom_gap) else { return };
 
         let menu = Custom::<AccountMenu>::new().dock(DockStyle::Fill).name("menu");
-        let popup = Popup::new(&menu, account_menu::WIDTH, content.min(spot.room)).back_color(header_popup::tint()).title(ShellControlsResources::account_tip());
+        let popup = Popup::new(&menu, account_menu::WIDTH, content.min(spot.room)).back_color(&header_popup::tint()).title(ShellControlsResources::account_tip());
         let form: Form = popup.form().clone();
         {
             let (menu, service) = (menu.clone(), service.clone());

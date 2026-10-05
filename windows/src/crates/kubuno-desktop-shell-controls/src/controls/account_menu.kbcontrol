@@ -6,7 +6,7 @@
   « Administration » (ShowAdmin) and « Se déconnecter ». 320 wide; the host sizes it to ContentHeight and puts it
   in a popup (AccountButton). Every click raises an event; the host acts on it and closes the popup.
 -->
-<UserControl x:Class="AccountMenu" DesignWidth="320" DesignHeight="553" d:BackColor="#E9EEF6" OnLoad="account_menu_load">
+<UserControl x:Class="AccountMenu" DesignWidth="320" DesignHeight="553" d:BackColor="PanelBackground" OnLoad="account_menu_load">
   <Panel x:Name="head" Dock="Top" Height="44.6">
     <Label x:Name="email_label" Text="{Binding Email}" d:Text="camille.martin@exemple.fr" ForeColor="TextSecondary" TextAlign="MiddleCenter" X="40.6" Y="16.6" Width="238.8" Height="20"/>
     <IconButton x:Name="close_button" Icon="X" Diameter="32" Glyph="16" ToolTip="{Res account_close_tip, Source=shell_controls}" X="275.4" Y="12" Width="32" Height="32" OnClick="close_button_click"/>

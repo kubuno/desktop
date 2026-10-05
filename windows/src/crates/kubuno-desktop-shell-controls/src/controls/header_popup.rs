@@ -68,14 +68,17 @@ pub fn spot(owner: isize, anchor: PopupAnchor, bounds: Rect, size: (f32, f32), o
     }
 }
 
-/// The panels' tint over their blur: the web's `#E9EEF6` at 80 %, and a dark ground in the dark
-/// theme (the web keeps its light panel there, under light text: unreadable).
-pub fn tint() -> &'static str {
-    if kubuno_desktop::Application::theme().mode == kubuno_desktop::ui::ThemeMode::Dark {
-        "#28282CCC"
-    } else {
-        "#E9EEF6CC"
-    }
+/// The panels' tint over their blur: the theme's `PanelBackground` (the web's `--color-panel-bg`: light
+/// `#E9EEF6`, dark `#303134`) at 80 %.
+pub fn tint() -> String {
+    tint_of(&kubuno_desktop::Application::theme())
+}
+
+/// [`tint`] in `theme`: `#RRGGBBCC`.
+pub fn tint_of(theme: &kubuno_desktop::ui::Theme) -> String {
+    let c = theme.panel_background;
+    let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
+    format!("#{:02X}{:02X}{:02X}CC", byte(c.r), byte(c.g), byte(c.b))
 }
 
 /// The open panel of a button, and when its last one closed (see [`REOPEN_GUARD_MS`]).
@@ -115,5 +118,11 @@ mod tests {
         assert!(s.may_open());
         s.closed_at.set(Some(Instant::now()));
         assert!(!s.may_open(), "the click that closed it does not reopen it");
+    }
+
+    #[test]
+    fn the_tint_is_the_panel_token_at_80_percent_in_both_modes() {
+        assert_eq!(tint_of(&kubuno_desktop::ui::Theme::light()), "#E9EEF6CC");
+        assert_eq!(tint_of(&kubuno_desktop::ui::Theme::dark()), "#303134CC");
     }
 }

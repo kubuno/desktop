@@ -128,7 +128,7 @@ impl WaffleButton {
         let fit = move |content: f32, editing: bool| content.min(if editing { spot.room } else { MAX_HEIGHT.min(spot.room) });
 
         let menu = Custom::<WaffleMenu>::new().dock(DockStyle::Fill).name("menu");
-        let popup = Popup::new(&menu, waffle_menu::WIDTH, fit(content, false)).back_color(header_popup::tint()).title(ShellControlsResources::launcher_apps());
+        let popup = Popup::new(&menu, waffle_menu::WIDTH, fit(content, false)).back_color(&header_popup::tint()).title(ShellControlsResources::launcher_apps());
         let form: Form = popup.form().clone();
         // The menu's data, once its window is open.
         {

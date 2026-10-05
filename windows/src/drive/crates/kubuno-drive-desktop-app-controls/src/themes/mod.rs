@@ -99,6 +99,10 @@ pub struct Theme {
     /// darkens whatever is behind it, and a pale one over a dark page would
     /// stop separating the dialog from its host.
     pub dialog_scrim: D2D1_COLOR_F,
+    /// The ground of the header's panels (the apps launcher, the account panel): the web's
+    /// `--color-panel-bg`, which defaults to the search field's ground `--color-search-bg` (light `#e9eef6`,
+    /// dark `#303134`). The panels paint it at 80 % over their blur.
+    pub panel_background: D2D1_COLOR_F,
     /// Drive selection tints (`modules/drive.css`): a selected FILE card, a
     /// selected FOLDER card, and the hover of either.
     pub selected_card: D2D1_COLOR_F,
@@ -232,6 +236,8 @@ impl Theme {
             tooltip_foreground: rgba(255, 255, 255, 1.0),
             // `bg-black/30` — identical in both themes (see the field).
             dialog_scrim: rgba(0, 0, 0, 0.30),
+            // --color-panel-bg (= --color-search-bg #e9eef6).
+            panel_background: rgba(233, 238, 246, 1.0),
             selected_card: rgba(221, 234, 252, 1.0),
             selected_folder: rgba(201, 222, 250, 1.0),
             row_hover: rgba(228, 236, 247, 1.0),
@@ -327,6 +333,8 @@ impl Theme {
             tooltip_foreground: rgba(255, 255, 255, 1.0),
             // `bg-black/30` — identical in both themes (see the field).
             dialog_scrim: rgba(0, 0, 0, 0.30),
+            // --color-panel-bg (= --color-search-bg #303134).
+            panel_background: rgba(48, 49, 52, 1.0),
             selected_card: rgba(40, 65, 95, 1.0),
             selected_folder: rgba(40, 65, 95, 1.0),
             row_hover: rgba(43, 44, 48, 1.0),

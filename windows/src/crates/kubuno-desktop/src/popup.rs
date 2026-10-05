@@ -132,7 +132,8 @@ impl Popup {
         self
     }
 
-    /// Its ground under the content, over the blur (`#E9EEF6CC`: the tint of the header's panels).
+    /// Its ground under the content, over the blur (the header's panels pass the theme's `PanelBackground` at
+    /// 80 %: `#E9EEF6CC` in the light theme, `#303134CC` in the dark one).
     pub fn back_color(self, color: &str) -> Self {
         self.form.root().set_property("BackColor", color);
         self
