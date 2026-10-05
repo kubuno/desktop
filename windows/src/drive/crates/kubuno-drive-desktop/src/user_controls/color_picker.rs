@@ -118,14 +118,20 @@ impl ColorPickerPanel {
 
     /// Copies back what a gesture may have changed on the widget.
     fn adopt(&mut self, w: &ColorPicker) {
-        let before = self.hsv;
         self.hsv = w.hsv;
         self.mode = w.mode;
         self.shape = w.shape;
         self.scheme = w.scheme;
-        if self.hsv != before {
-            self.touch();
-        }
+    }
+
+    /// Whether acting on `zone` chooses a colour (as opposed to a view choice
+    /// such as the model tab, the area shape or the harmony scheme).
+    fn picks_colour(zone: PickerZone) -> bool {
+        matches!(
+            zone,
+            PickerZone::Drag(PickerPart::Area | PickerPart::Ring | PickerPart::Channel(_))
+                | PickerZone::Click(PickerPart::Swatch(_) | PickerPart::Recent(_) | PickerPart::Harmony(_))
+        )
     }
 
     /// Drive paints the colour as a translucent tint over the window, and its
@@ -133,6 +139,10 @@ impl ColorPickerPanel {
     /// control, so without this the first pick would stay invisible: when the
     /// carried opacity is zero, choosing a colour makes it opaque. Any other
     /// opacity is kept as it is.
+    ///
+    /// Triggered by the pick itself, not by the colour changing: the default's
+    /// RGB is black, so picking the black chip (or any colour equal to the
+    /// current one) leaves the HSV untouched and must still make it visible.
     fn touch(&mut self) {
         if self.opacity <= 0.0 {
             self.opacity = 100.0;
@@ -225,6 +235,9 @@ impl ColorPickerPanel {
             PickerZone::Drag(_) | PickerZone::Close | PickerZone::Panel => return,
         }
         self.adopt(&widget);
+        if Self::picks_colour(zone) {
+            self.touch();
+        }
     }
 }
 
@@ -332,7 +345,9 @@ mod tests {
     }
 
     /// The default tint is fully transparent: picking a colour must make it
-    /// visible, while an opacity the user already has is kept.
+    /// visible, while an opacity the user already has is kept. Chip 0 is black,
+    /// the default's own RGB, so the pick leaves the HSV unchanged — the case
+    /// that used to stay invisible.
     #[test]
     fn pick_makes_transparent_default_visible() {
         let mut clear = ColorPickerPanel::from_color(d2d(0.0, 0.0, 0.0, 0.0));
@@ -341,6 +356,16 @@ mod tests {
         let mut half = ColorPickerPanel::from_color(d2d(0.0, 0.0, 0.0, 0.5));
         half.apply(PickerZone::Click(PickerPart::Swatch(0)), 0.0, 0.0, 0.0, 0.0);
         assert!((half.opacity - 50.0).abs() < 1e-6);
+    }
+
+    /// Choosing a view (here the model tab) is not picking a colour: the
+    /// transparent default stays transparent.
+    #[test]
+    fn view_choice_keeps_transparent_default() {
+        let mut clear = ColorPickerPanel::from_color(d2d(0.0, 0.0, 0.0, 0.0));
+        clear.apply(PickerZone::Click(PickerPart::Mode(ColorMode::ALL[1])), 0.0, 0.0, 0.0, 0.0);
+        assert!(clear.opacity.abs() < 1e-9);
+        assert_eq!(clear.hex(), "#00000000");
     }
 
     /// Outside the panel there is no zone at all — what tells the flyout to

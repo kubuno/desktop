@@ -469,6 +469,11 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Fixed
 
+- **Drive: picking black as the background colour makes it visible.** The window tint starts fully transparent, and
+  picking a colour is meant to make it opaque; that only happened when the pick changed the colour, so choosing the
+  black chip (the transparent default's own colour) left the tint invisible. Any colour pick now makes a transparent
+  tint opaque, while switching the colour model tab, the area shape or the harmony scheme still leaves it untouched.
+
 - **Control libraries named `kubuno-…` work in views.** The `#[kubuno::view]` macro skipped every path dependency whose
   name starts with `kubuno` when it looked for an application's custom controls and user controls, so a library such
   as `kubuno-shell-controls` or a third party's `kubuno-acme-widgets` gave "unknown control" errors. Only the
