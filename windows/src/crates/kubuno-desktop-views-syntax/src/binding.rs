@@ -238,6 +238,8 @@ pub struct BindingSyntax {
     pub fallback_value: Option<String>,
     /// `UpdateSourceTrigger=…`.
     pub update_trigger: UpdateSourceTrigger,
+    /// The arguments of a `{Res key, Count={Binding n}, Sep=', '}` reference (empty for a `{Binding}`).
+    pub res_args: Vec<crate::res::ResArg>,
 }
 
 /// Parses a `{Binding Path}` / `{Binding Path, Mode=TwoWay}` / `{Res key}` attribute value. `None`
@@ -247,8 +249,8 @@ pub fn parse_binding_syntax(raw: &str) -> Option<BindingSyntax> {
     let inner = raw.strip_prefix('{')?.strip_suffix('}')?.trim();
     // `{Res key[, Source=set]}` (vskubuno docs/RESOURCES.md): a resource reference, carried as a
     // one-way binding whose path cannot be a view-model path (`crate::res`).
-    if let Some(path) = crate::res::parse_res_path(inner) {
-        return Some(BindingSyntax { path, mode: BindingMode::OneWay, ..BindingSyntax::default() });
+    if let Some(res) = crate::res::parse_res(inner) {
+        return Some(BindingSyntax { path: res.path(), mode: BindingMode::OneWay, res_args: res.args, ..BindingSyntax::default() });
     }
     // `Binding` must be a whole word (`BindingX` is not one): `binding_parts` checks it.
     let parts = binding_parts(raw.trim())?;
@@ -353,6 +355,10 @@ mod tests {
         let b = parse_binding_syntax("{Res title, Source=strings}").expect("a resource");
         assert_eq!(b.path, format!("{}strings/title", crate::res::RES_PREFIX));
         assert_eq!(b.mode, BindingMode::OneWay);
+        assert!(b.res_args.is_empty());
+        let b = parse_binding_syntax("{Res files, Count={Binding n, Mode=OneWay}, Sep=', '}").expect("a resource with arguments");
+        assert_eq!(b.path, format!("{}files", crate::res::RES_PREFIX));
+        assert_eq!(b.res_args.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), vec!["Count", "Sep"]);
     }
 
     #[test]
