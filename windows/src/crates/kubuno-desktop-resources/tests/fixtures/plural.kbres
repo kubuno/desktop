@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Version="1" Culture="en">
+  <String Name="files_zero">No files</String>
+  <String Name="files_one">{{count}} file</String>
+  <String Name="files_other">{{count}} files</String>
+  <String Name="shared_by">Shared by {{name}}{{sep}}{{ count }} items</String>
+</Resources>

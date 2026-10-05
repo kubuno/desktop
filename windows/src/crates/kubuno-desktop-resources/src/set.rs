@@ -25,6 +25,13 @@ pub trait Source: Send + Sync {
     fn entries(&self) -> Vec<(String, Kind)>;
     /// The satellite cultures.
     fn cultures(&self) -> Vec<String>;
+    /// The first of `names` that resolves in `culture`, with its index: every name is tried in a culture
+    /// before the next culture of the fallback chain (i18next's order for plural forms: a translated
+    /// `files_many` wins over the neutral file's `files_zero`). The default tries each name through
+    /// [`Source::resolve`] in turn.
+    fn resolve_first(&self, names: &[&str], culture: &str) -> Option<(usize, ResolvedValue)> {
+        names.iter().enumerate().find_map(|(i, n)| self.resolve(n, culture).map(|v| (i, v)))
+    }
 }
 
 /// The embedded files of a set — what `resources!` generates.
@@ -112,12 +119,32 @@ impl StaticSet {
     }
 
     fn find(&self, name: &str, culture_name: &str) -> Option<(Kind, StaticValue)> {
+        self.find_first(&[name], culture_name).map(|(_, k, v)| (k, v))
+    }
+
+    /// The first of `names` found, trying every name in a culture before the next culture of the fallback
+    /// chain (i18next's order for plural forms): `(index in names, kind, value)`.
+    fn find_first(&self, names: &[&str], culture_name: &str) -> Option<(usize, Kind, StaticValue)> {
         let neutral = self.table(NEUTRAL)?;
-        let (kind, _) = neutral.get(name)?;
+        let kinds: Vec<Option<Kind>> = names
+            .iter()
+            .map(|name| match neutral.get(name) {
+                Some((kind, _)) => Some(*kind),
+                // A plural form the neutral language does not have (`items_few` in Russian).
+                None if knows_plural_form(name, |n| neutral.get(n).is_some_and(|(k, _)| *k == Kind::String), neutral.keys().copied()) => Some(Kind::String),
+                None => None,
+            })
+            .collect();
+        if kinds.iter().all(Option::is_none) {
+            return None;
+        }
         for c in self.chain(culture_name) {
-            if let Some((k, v)) = self.table(c).and_then(|t| t.get(name)) {
-                if k == kind {
-                    return Some((*k, *v));
+            let Some(table) = self.table(c) else { continue };
+            for (i, name) in names.iter().enumerate() {
+                if let (Some(kind), Some((k, v))) = (kinds[i], table.get(name)) {
+                    if *k == kind {
+                        return Some((i, *k, *v));
+                    }
                 }
             }
         }
@@ -143,6 +170,25 @@ impl StaticSet {
         }
     }
 
+    /// The plural text of `key` for `count` in the current culture (what the accessor `resources!` generates
+    /// for a key that only exists as plural forms, `files_one` / `files_other` → `files(count)`): the form
+    /// i18next would pick ([`kubuno_desktop_resources_model::plural`]), `{{count}}` filled with `count`; `""`
+    /// when no form exists.
+    pub fn plural(&self, key: &str, count: f64) -> String {
+        self.plural_in(key, count, &crate::culture())
+    }
+
+    /// [`StaticSet::plural`] in a given culture.
+    pub fn plural_in(&self, key: &str, count: f64, culture: &str) -> String {
+        let names = kubuno_desktop_resources_model::plural::candidates(key, culture, count);
+        let names: Vec<&str> = names.iter().map(String::as_str).collect();
+        let text = match self.find_first(&names, culture) {
+            Some((_, Kind::String, StaticValue::Text(t))) => t,
+            _ => "",
+        };
+        kubuno_desktop_resources_model::plural::interpolate_args(text, &[("count".to_string(), count.to_string())])
+    }
+
     /// The text of `name` in `culture` (what a translation table helper or a test reads).
     pub fn text_in(&self, name: &str, culture: &str) -> &'static str {
         match self.find(name, culture) {
@@ -158,11 +204,18 @@ impl Source for StaticSet {
     }
 
     fn resolve(&self, name: &str, culture: &str) -> Option<ResolvedValue> {
-        let (kind, value) = self.find(name, culture)?;
-        Some(match value {
-            StaticValue::Text(t) => ResolvedValue::Text { kind, text: t.to_string() },
-            StaticValue::Bytes { format, bytes } => ResolvedValue::Bytes { kind, format: format.to_string(), bytes: Bytes::Static(bytes) },
-        })
+        self.resolve_first(&[name], culture).map(|(_, v)| v)
+    }
+
+    fn resolve_first(&self, names: &[&str], culture: &str) -> Option<(usize, ResolvedValue)> {
+        let (i, kind, value) = self.find_first(names, culture)?;
+        Some((
+            i,
+            match value {
+                StaticValue::Text(t) => ResolvedValue::Text { kind, text: t.to_string() },
+                StaticValue::Bytes { format, bytes } => ResolvedValue::Bytes { kind, format: format.to_string(), bytes: Bytes::Static(bytes) },
+            },
+        ))
     }
 
     fn entries(&self) -> Vec<(String, Kind)> {
@@ -221,17 +274,32 @@ impl LoadedSet {
         Ok(Self::from_texts(files.name, base, &neutral, &satellites))
     }
 
-    fn entry(&self, name: &str, culture_name: &str) -> Option<&Entry> {
-        let kind = self.neutral.get(name)?.kind;
+    /// The first of `names` found, every name tried in a culture before the next one (see
+    /// [`Source::resolve_first`]).
+    fn entry_first(&self, names: &[&str], culture_name: &str) -> Option<(usize, &Entry)> {
+        let kinds: Vec<Option<Kind>> = names
+            .iter()
+            .map(|name| match self.neutral.get(name) {
+                Some(e) => Some(e.kind),
+                None if self.neutral.knows_plural_form(name) => Some(Kind::String),
+                None => None,
+            })
+            .collect();
+        if kinds.iter().all(Option::is_none) {
+            return None;
+        }
         let available: Vec<&str> = self.satellites.iter().map(|(c, _)| c.as_str()).collect();
         for c in culture::fallback_chain(culture_name, &available) {
-            if let Some(e) = self.satellites.iter().find(|(sc, _)| sc == c).and_then(|(_, f)| f.get(name)) {
-                if e.kind == kind {
-                    return Some(e);
+            let Some((_, file)) = self.satellites.iter().find(|(sc, _)| sc == c) else { continue };
+            for (i, name) in names.iter().enumerate() {
+                if let (Some(kind), Some(e)) = (kinds[i], file.get(name)) {
+                    if e.kind == kind {
+                        return Some((i, e));
+                    }
                 }
             }
         }
-        self.neutral.get(name)
+        names.iter().enumerate().find_map(|(i, n)| self.neutral.get(n).map(|e| (i, e)))
     }
 
     fn file(&self, rel: &str) -> Option<Arc<[u8]>> {
@@ -256,8 +324,12 @@ impl Source for LoadedSet {
     }
 
     fn resolve(&self, name: &str, culture: &str) -> Option<ResolvedValue> {
-        let e = self.entry(name, culture)?;
-        Some(match &e.value {
+        self.resolve_first(&[name], culture).map(|(_, v)| v)
+    }
+
+    fn resolve_first(&self, names: &[&str], culture: &str) -> Option<(usize, ResolvedValue)> {
+        let (i, e) = self.entry_first(names, culture)?;
+        let value = match &e.value {
             Value::Text(t) => ResolvedValue::Text { kind: e.kind, text: t.clone() },
             Value::Linked { path } => ResolvedValue::Bytes { kind: e.kind, format: e.format().unwrap_or_default(), bytes: Bytes::Shared(self.file(path)?) },
             Value::Embedded { format, bytes } => {
@@ -267,7 +339,8 @@ impl Source for LoadedSet {
                 let shared = self.files.lock().ok()?.entry(key).or_insert_with(|| Some(Arc::from(bytes.clone().into_boxed_slice()))).clone()?;
                 ResolvedValue::Bytes { kind: e.kind, format: format.clone(), bytes: Bytes::Shared(shared) }
             }
-        })
+        };
+        Some((i, value))
     }
 
     fn entries(&self) -> Vec<(String, Kind)> {
@@ -277,4 +350,15 @@ impl Source for LoadedSet {
     fn cultures(&self) -> Vec<String> {
         self.satellites.iter().map(|(c, _)| c.clone()).collect()
     }
+}
+
+/// Whether `name` is a plural form (`items_few`) of a key the neutral table knows: the key itself (a
+/// `String`, `is_string`) or another of its forms among `names`.
+fn knows_plural_form<'a>(name: &str, is_string: impl Fn(&str) -> bool, names: impl Iterator<Item = &'a str>) -> bool {
+    let Some((base, _)) = kubuno_desktop_resources_model::plural::split_plural(name) else { return false };
+    if is_string(base) {
+        return true;
+    }
+    let mut names = names;
+    names.any(|n| kubuno_desktop_resources_model::plural::split_plural(n).is_some_and(|(b, _)| b == base) && is_string(n))
 }

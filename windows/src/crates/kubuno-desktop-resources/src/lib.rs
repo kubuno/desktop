@@ -104,6 +104,9 @@ impl Source for StaticRef {
     fn resolve(&self, name: &str, culture: &str) -> Option<ResolvedValue> {
         self.0.resolve(name, culture)
     }
+    fn resolve_first(&self, names: &[&str], culture: &str) -> Option<(usize, ResolvedValue)> {
+        self.0.resolve_first(names, culture)
+    }
     fn entries(&self) -> Vec<(String, Kind)> {
         self.0.entries()
     }
@@ -154,11 +157,49 @@ pub fn lookup_in(scope: Option<&str>, set: Option<&str>, name: &str, culture: &s
     sets.iter().filter(|s| Some(s.name()) != scope).find_map(|s| s.resolve(name, culture))
 }
 
+/// The first of `names` found (see [`Source::resolve_first`]: every name tried in a culture before the next
+/// one), in `set` when given, else in the set named `scope` first, then in every registered set in turn.
+pub fn lookup_first_in(scope: Option<&str>, set: Option<&str>, names: &[&str], culture: &str) -> Option<(usize, ResolvedValue)> {
+    let sets = ordered();
+    if let Some(set) = set {
+        return sets.iter().find(|s| s.name() == set)?.resolve_first(names, culture);
+    }
+    if let Some(scope) = scope {
+        if let Some(v) = sets.iter().find(|s| s.name() == scope).and_then(|s| s.resolve_first(names, culture)) {
+            return Some(v);
+        }
+    }
+    sets.iter().filter(|s| Some(s.name()) != scope).find_map(|s| s.resolve_first(names, culture))
+}
+
 /// The text of string resource `name` in the current culture, searched in every set (`""` when
 /// there is none) — the dynamic counterpart of the generated accessors, e.g. for keys computed at
 /// run time (Drive's `tr("Home")`).
 pub fn string(name: &str) -> String {
     lookup(None, None, name).and_then(|v| v.text()).unwrap_or_default()
+}
+
+/// The text of string resource `key` (of `set`, else of any registered set) in the current culture, with
+/// arguments — what `{Res key, Count={Binding n}, Name=…}` shows (`vskubuno/docs/WEB-VIEWS.md` §2.4, WV-6),
+/// with i18next's semantics ([`model::plural`]): with a `count`, the plural form (`key_zero` for 0, then
+/// `key_<CLDR category>`, then `key`, all tried in a culture before the next one of the fallback chain); then every `{{name}}`
+/// placeholder is filled from `args` (`(name, text)`; `Count` fills `{{count}}`). `None` when no candidate
+/// exists.
+pub fn text_with(set: Option<&str>, key: &str, count: Option<f64>, args: &[(String, String)]) -> Option<String> {
+    text_with_in(set, key, count, args, &culture())
+}
+
+/// [`text_with`] in a given culture.
+pub fn text_with_in(set: Option<&str>, key: &str, count: Option<f64>, args: &[(String, String)], culture: &str) -> Option<String> {
+    let text = match count {
+        Some(n) => {
+            let names = model::plural::candidates(key, culture, n);
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            lookup_first_in(None, set, &names, culture)?.1.text()?
+        }
+        None => lookup_in(None, set, key, culture)?.text()?,
+    };
+    Some(if args.is_empty() { text } else { model::plural::interpolate_args(&text, args) })
 }
 
 /// The URI scheme of resource images.

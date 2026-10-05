@@ -6,7 +6,8 @@
 //!   `key_many`, `key_other` ([`split_plural`], [`crate::ResourceFile::plural_forms`]).
 //! - **Selection** ([`candidates`]): with a count, `key_zero` when the count is 0 (and that entry exists),
 //!   else `key_<category>` where the category is the culture's CLDR cardinal category ([`category`]), else
-//!   the plain `key`. Each candidate is looked up through the normal culture fallback chain.
+//!   the plain `key`. Like i18next, the cultures of the fallback chain are tried in turn and, in each, the
+//!   candidates in that order (a translated `key_many` wins over the neutral file's `key_zero`).
 //! - **Interpolation** ([`interpolate`]): `{{name}}` (spaces inside the braces tolerated, `{{name, format}}`
 //!   gives the value, the format is ignored) is replaced by the argument named `name`, or whose name with
 //!   its first letter lower-cased is `name` (`Count` fills `{{count}}`); an unknown placeholder stays as
@@ -234,8 +235,8 @@ pub fn categories(culture: &str) -> &'static [PluralCategory] {
 }
 
 /// The names to try, in order, for `key` with `count` in `culture`: `key_zero` (count 0 only), then
-/// `key_<category>`, then `key`. The caller keeps the first that exists (each looked up through the culture
-/// fallback chain).
+/// `key_<category>`, then `key`. The caller keeps the first that exists, trying all of them in a culture
+/// before the next culture of the fallback chain (i18next's order).
 pub fn candidates(key: &str, culture: &str, count: f64) -> Vec<String> {
     let mut out = Vec::with_capacity(3);
     if count == 0.0 {
@@ -249,7 +250,7 @@ pub fn candidates(key: &str, culture: &str, count: f64) -> Vec<String> {
     out
 }
 
-/// [`candidates`], keeping the first name `exists` accepts.
+/// [`candidates`], keeping the first name `exists` accepts (one culture's lookup).
 pub fn select(key: &str, culture: &str, count: f64, exists: impl Fn(&str) -> bool) -> Option<String> {
     candidates(key, culture, count).into_iter().find(|c| exists(c))
 }
