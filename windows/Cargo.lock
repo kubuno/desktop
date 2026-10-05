@@ -2260,7 +2260,7 @@ dependencies = [
 
 [[package]]
 name = "kubuno-web-views-compiler-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "kubuno-desktop-views-model",
  "kubuno-desktop-views-syntax",
