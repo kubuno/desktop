@@ -96,10 +96,33 @@ pub enum Role {
     Page,
     /// `--kb-text-page` inside the administration console (`.kb-admin`, 27.5).
     PageAdmin,
+    /// `--kb-text-badge` (10) — initials and counters inside small avatar and
+    /// count pills (the web's `text-[10px]`).
+    Badge,
+    /// `--kb-text-caption` (11) — small pills and chips (the web's `text-[11px]`).
+    Caption,
+    /// `--kb-text-subtitle` (16) — a group title a step above `Heading` (the
+    /// web's `text-base`).
+    Subtitle,
+    /// `--kb-text-display` (24) — a large greeting or display line (the web's
+    /// `text-2xl`).
+    Display,
 }
 
 /// Every role, in scale order — for the gallery and for the tests.
-pub const ROLES: [Role; 7] = [Role::Micro, Role::Meta, Role::Body, Role::Heading, Role::Title, Role::Page, Role::PageAdmin];
+pub const ROLES: [Role; 11] = [
+    Role::Badge,
+    Role::Micro,
+    Role::Caption,
+    Role::Meta,
+    Role::Body,
+    Role::Heading,
+    Role::Subtitle,
+    Role::Title,
+    Role::Page,
+    Role::Display,
+    Role::PageAdmin,
+];
 
 impl Role {
     /// The em size, straight from [`crate::metrics::text`].
@@ -112,6 +135,10 @@ impl Role {
             Self::Title => type_size::TITLE,
             Self::Page => type_size::PAGE,
             Self::PageAdmin => type_size::PAGE_ADMIN,
+            Self::Badge => type_size::BADGE,
+            Self::Caption => type_size::CAPTION,
+            Self::Subtitle => type_size::SUBTITLE,
+            Self::Display => type_size::DISPLAY,
         }
     }
 
@@ -141,13 +168,22 @@ impl Role {
     /// * `Page` → **32** and `PageAdmin` → **38**: the same design line spacing
     ///   (`ceil(22.5 × 1.33008) = 30`, `ceil(27.5 × 1.33008) = 37`), with room to spare.
     ///
-    /// Every box holds its face's own line (`ceil(size × 1.33008)`: 14, 16, 18,
-    /// 21, 29, 30, 37), so no role clips its glyphs.
+    /// * `Badge` → **16** and `Caption` → **16**: the Meta line box, so a pill
+    ///   lines up with the metadata around it (`ceil(10 × 1.33008) = 14`,
+    ///   `ceil(11 × 1.33008) = 15`).
+    /// * `Subtitle` → **24**: Tailwind's `text-base` pair, `1rem / 1.5rem`
+    ///   (`ceil(16 × 1.33008) = 22`).
+    /// * `Display` → **32**: Tailwind's `text-2xl` pair, `1.5rem / 2rem`
+    ///   (`ceil(24 × 1.33008) = 32`).
+    ///
+    /// Every box holds its face's own line (`ceil(size × 1.33008)`: 14, 14, 15,
+    /// 16, 18, 21, 22, 29, 30, 32, 37), so no role clips its glyphs.
     pub const fn line_height(self) -> f32 {
         match self {
-            Self::Micro | Self::Meta => 16.0,
+            Self::Badge | Self::Micro | Self::Caption | Self::Meta => 16.0,
             Self::Body => 20.0,
-            Self::Heading => 24.0,
+            Self::Heading | Self::Subtitle => 24.0,
+            Self::Display => 32.0,
             Self::Title => 30.0,
             Self::Page => 32.0,
             Self::PageAdmin => 38.0,
@@ -167,6 +203,10 @@ impl Role {
             Self::Title => &f.title,
             Self::Page => &f.page,
             Self::PageAdmin => &f.page_admin,
+            Self::Badge => &f.role_badge,
+            Self::Caption => &f.role_caption,
+            Self::Subtitle => &f.role_subtitle,
+            Self::Display => &f.role_display,
         }
     }
 }
@@ -2016,6 +2056,30 @@ mod tests {
                 role.size(),
                 role.line_height()
             );
+        }
+    }
+
+    #[test]
+    fn the_four_added_roles_have_the_specified_size_and_line_box() {
+        for (role, size, line) in [
+            (Role::Badge, 10.0, 16.0),
+            (Role::Caption, 11.0, 16.0),
+            (Role::Subtitle, 16.0, 24.0),
+            (Role::Display, 24.0, 32.0),
+        ] {
+            assert_eq!(role.size(), size, "{role:?}");
+            assert_eq!(role.line_height(), line, "{role:?}");
+        }
+    }
+
+    #[test]
+    fn roles_are_in_scale_order_and_every_line_box_holds_its_face() {
+        for w in ROLES.windows(2) {
+            assert!(w[0].size() < w[1].size(), "{:?} then {:?}", w[0], w[1]);
+        }
+        for role in ROLES {
+            let natural = (role.size() * 1.33008).ceil();
+            assert!(role.line_height() >= natural, "{role:?}: {} < {natural}", role.line_height());
         }
     }
 

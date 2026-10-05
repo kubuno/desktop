@@ -61,8 +61,13 @@ pub mod height {
 /// targets at any scale (at 175 %, 13.5 px = 13.5 DIP = 23.6 device pixels).
 /// Only the face differs: Segoe UI Variable here, Plus Jakarta Sans on the web.
 pub mod text {
+    /// `--kb-text-badge` (10 px; the web's `text-[10px]`): initials and counters
+    /// inside small avatar and count pills.
+    pub const BADGE: f32 = 10.0;
     /// `--kb-text-micro` (10.5 px): badges, counters.
     pub const MICRO: f32 = 10.5;
+    /// `--kb-text-caption` (11 px; the web's `text-[11px]`): small pills and chips.
+    pub const CAPTION: f32 = 11.0;
     /// `--kb-text-meta` (11.5 px; also the host's `text-xs`): metadata,
     /// captions, section labels.
     pub const META: f32 = 11.5;
@@ -72,11 +77,17 @@ pub mod text {
     pub const BODY: f32 = 13.5;
     /// `--kb-text-heading` (15.5 px): section headers, card and window titles.
     pub const HEADING: f32 = 15.5;
+    /// `--kb-text-subtitle` (16 px; the web's `text-base`): a group title a step
+    /// above a heading.
+    pub const SUBTITLE: f32 = 16.0;
     /// `--kb-text-title` (21.5 px): the object name heading a panel.
     pub const TITLE: f32 = 21.5;
     /// `--kb-text-page` (22.5 px): a page title (`h1`), the page header's own step
     /// as on the web (`Role::Page` in `kubuno_desktop_ui`, `Role="Page"` on a view's `Label`).
     pub const PAGE: f32 = 22.5;
+    /// `--kb-text-display` (24 px; the web's `text-2xl`): a large greeting or
+    /// display line.
+    pub const DISPLAY: f32 = 24.0;
     /// `--kb-text-page` inside the administration console (`.kb-admin`).
     pub const PAGE_ADMIN: f32 = 27.5;
     /// `--font-weight-medium`. Note that buttons are NEVER bold in this system.

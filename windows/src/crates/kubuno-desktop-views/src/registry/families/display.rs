@@ -82,6 +82,10 @@ fn parse_role(s: &str) -> Role {
         "Title" => Role::Title,
         "Page" => Role::Page,
         "PageAdmin" => Role::PageAdmin,
+        "Badge" => Role::Badge,
+        "Caption" => Role::Caption,
+        "Subtitle" => Role::Subtitle,
+        "Display" => Role::Display,
         _ => Role::Body,
     }
 }
@@ -806,9 +810,9 @@ component! {
     props: [
         PropertyMeta::new("Text", PropKind::String, "", "Text displayed."),
         PropertyMeta::new("Role",
-            PropKind::Enum(&["Micro", "Meta", "Body", "Heading", "Title", "Page", "PageAdmin"]),
+            PropKind::Enum(&["Micro", "Meta", "Body", "Heading", "Title", "Page", "PageAdmin", "Badge", "Caption", "Subtitle", "Display"]),
             "Body",
-            "Text style: small, caption, body, heading, title, page title or administration page title.",
+            "Text style: small, caption, body, heading, title, page title, administration page title, badge, caption, subtitle or display.",
         ),
         PropertyMeta::new("TextAlign",
             PropKind::Enum(&[
@@ -855,9 +859,9 @@ component! {
     props: [
         PropertyMeta::new("Text", PropKind::String, "", "Text of the link."),
         PropertyMeta::new("Role",
-            PropKind::Enum(&["Micro", "Meta", "Body", "Heading", "Title", "Page", "PageAdmin"]),
+            PropKind::Enum(&["Micro", "Meta", "Body", "Heading", "Title", "Page", "PageAdmin", "Badge", "Caption", "Subtitle", "Display"]),
             "Body",
-            "Text style: small, caption, body, heading, title, page title or administration page title.",
+            "Text style: small, caption, body, heading, title, page title, administration page title, badge, caption, subtitle or display.",
         ),
         // Note: Marks the link visited (the replica's `LinkVisited`).
         PropertyMeta::new("Visited", PropKind::Bool, "false", "Shows the link as already visited."),

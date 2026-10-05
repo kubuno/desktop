@@ -50,6 +50,14 @@ pub struct TextFormats {
     pub page: IDWriteTextFormat,
     /// `--kb-text-page` inside the administration console (`.kb-admin`).
     pub page_admin: IDWriteTextFormat,
+    /// `--kb-text-badge` (10): initials and counters in small avatar / count pills.
+    pub role_badge: IDWriteTextFormat,
+    /// `--kb-text-caption` (11): small pills and chips.
+    pub role_caption: IDWriteTextFormat,
+    /// `--kb-text-subtitle` (16): a group title a step above a heading.
+    pub role_subtitle: IDWriteTextFormat,
+    /// `--kb-text-display` (24): a large greeting or display line.
+    pub role_display: IDWriteTextFormat,
     pub icon_tiny: IDWriteTextFormat,
     /// Caption buttons (min/max/close): 10px like WinUI's `CaptionButton`.
     pub icon_caption: IDWriteTextFormat,
@@ -486,6 +494,10 @@ pub fn create_text_formats_styled(dwrite: &IDWriteFactory, font_override: Option
         title: make("Segoe UI Variable Display", DWRITE_FONT_WEIGHT_NORMAL, ts::TITLE)?,
         page: make("Segoe UI Variable Display", DWRITE_FONT_WEIGHT_NORMAL, ts::PAGE)?,
         page_admin: make("Segoe UI Variable Display", DWRITE_FONT_WEIGHT_NORMAL, ts::PAGE_ADMIN)?,
+        role_badge: make("Segoe UI Variable Small", DWRITE_FONT_WEIGHT_NORMAL, ts::BADGE)?,
+        role_caption: make("Segoe UI Variable Small", DWRITE_FONT_WEIGHT_NORMAL, ts::CAPTION)?,
+        role_subtitle: make("Segoe UI Variable Text", DWRITE_FONT_WEIGHT_NORMAL, ts::SUBTITLE)?,
+        role_display: make("Segoe UI Variable Display", DWRITE_FONT_WEIGHT_NORMAL, ts::DISPLAY)?,
         // The chevrons of a ScrollBar's `RepeatButton`: 8 px.
         icon_tiny: make("Segoe Fluent Icons", DWRITE_FONT_WEIGHT_NORMAL, 8.0)?,
         icon_caption: make("Segoe Fluent Icons", DWRITE_FONT_WEIGHT_NORMAL, 10.0)?,

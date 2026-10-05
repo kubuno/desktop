@@ -11,6 +11,11 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Added
 
+- **Four more type roles** (Badge 10 px, Caption 11 px, Subtitle 16 px, Display 24 px) join the shared web/desktop type scale, so
+  small pills, group titles and large greetings use a named step instead of a free font size. They are available on
+  `Label` and `LinkLabel` through `Role` in views (`Role="Badge"`, `"Caption"`, `"Subtitle"`, `"Display"`), after the
+  existing values so nothing already written moves.
+
 - **`{Res}` arguments and plurals** (vskubuno `docs/WEB-VIEWS.md` lot WV-6, the same rules as the web, which uses
   i18next). `{Res files, Count={Binding n}, Name={Binding user.name}, Sep=', '}`: every argument fills the string's
   `{{name}}` placeholders (`Count` fills `{{count}}`), and `Count` picks the plural form — `files_zero` for 0, else
