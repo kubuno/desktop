@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use kubuno_desktop_resources_model::plural::{split_plural, PluralCategory};
+
 const SKIPPED: &[&str] = &["node_modules", ".kubuno", ".git", "dist", "obj", "bin", "target", "coverage", ".vs"];
 
 /// One string of the project.
@@ -42,6 +44,37 @@ impl WebResIndex {
             // Without `Source=`: the default namespace first, then any set that has the key (a `.kbres`).
             None => self.items.iter().filter(|i| i.key == key).min_by_key(|i| self.default_set.as_deref() != Some(i.set.as_str())),
         }
+    }
+
+    /// The plural forms of `key` (`key_one`, `key_other`…, i18next's suffixes), in CLDR order: of `set` when
+    /// given, else of the default namespace first, then of the first set that has some (WV-6).
+    pub fn plural_forms(&self, key: &str, set: Option<&str>) -> Vec<&WebResource> {
+        let forms_of = |s: &str| {
+            let mut forms: Vec<(PluralCategory, &WebResource)> =
+                self.items.iter().filter(|i| i.set.eq_ignore_ascii_case(s)).filter_map(|i| split_plural(&i.key).filter(|(b, _)| *b == key).map(|(_, c)| (c, i))).collect();
+            forms.sort_by_key(|(c, _)| *c);
+            forms.into_iter().map(|(_, i)| i).collect::<Vec<_>>()
+        };
+        match set {
+            Some(s) => forms_of(s),
+            None => {
+                let mut sets: Vec<&str> = Vec::new();
+                if let Some(d) = self.default_set.as_deref() {
+                    sets.push(d);
+                }
+                for i in &self.items {
+                    if !sets.contains(&i.set.as_str()) && split_plural(&i.key).is_some_and(|(b, _)| b == key) {
+                        sets.push(&i.set);
+                    }
+                }
+                sets.into_iter().map(forms_of).find(|f| !f.is_empty()).unwrap_or_default()
+            }
+        }
+    }
+
+    /// Whether `{Res key}` names something: a string, or the base of plural forms.
+    pub fn knows(&self, key: &str, set: Option<&str>) -> bool {
+        self.find(key, set).is_some() || !self.plural_forms(key, set).is_empty()
     }
 }
 
@@ -282,6 +315,23 @@ mod tests {
         assert_eq!(leaves.iter().map(|(k, v, _)| (k.as_str(), v.as_str())).collect::<Vec<_>>(), vec![("shell.change_photo", "Changer la photo"), ("esc", "a \"q\"")]);
         let (_, _, at) = &leaves[0];
         assert!(text[*at..].starts_with("\"change_photo\""));
+    }
+
+    #[test]
+    fn plural_keys_are_known_by_their_base() {
+        let root = std::env::temp_dir().join(format!("kubuno-webls-plural-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("src/locales/en")).expect("dirs");
+        std::fs::create_dir_all(root.join("src/locales/ru")).expect("dirs");
+        std::fs::write(root.join("src/locales/en/core.json"), r#"{"drive":{"files_one":"{{count}} file","files_other":"{{count}} files"},"title":"T"}"#).expect("en");
+        std::fs::write(root.join("src/locales/ru/core.json"), r#"{"drive":{"files_one":"{{count}} файл","files_few":"{{count}} файла"}}"#).expect("ru");
+        let index = build(&root, &[]);
+        assert!(index.find("drive.files", None).is_none());
+        assert!(index.knows("drive.files", None) && index.knows("drive.files", Some("core")) && !index.knows("drive.nope", None));
+        let forms: Vec<&str> = index.plural_forms("drive.files", None).iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(forms, vec!["drive.files_one", "drive.files_other"]);
+        assert_eq!(index.plural_forms("drive.files", None)[0].translations.len(), 2);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

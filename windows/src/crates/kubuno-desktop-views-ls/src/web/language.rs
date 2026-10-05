@@ -28,6 +28,7 @@ use kubuno_desktop_views::syntax::{SyntaxKind, SyntaxToken};
 use kubuno_desktop_views_model::schema::ChildrenModelJson;
 use kubuno_desktop_views_model::{PropKindEntry, PropertyEntry};
 use kubuno_desktop_views_syntax::binding::{binding_parts, is_binding_expr, parse_binding_syntax, BINDING_KEYS};
+use kubuno_desktop_resources_model::plural::split_plural;
 use kubuno_desktop_views_syntax::res::{parse_res_path, res_reference};
 use kubuno_web_views_compiler_core::compile::RESERVED_MEMBERS;
 use kubuno_web_views_compiler_core::registry::{is_project_module, Element as WebElement, Origin, WebRegistry, HOST_MODULES};
@@ -324,7 +325,7 @@ fn resource_diagnostics(doc: &Document, project: &WebProject) -> Vec<Diagnostic>
         return Vec::new();
     }
     refs.into_iter()
-        .filter(|(_, key, set, _)| index.find(key, set.as_deref()).is_none())
+        .filter(|(_, key, set, _)| !index.knows(key, set.as_deref()))
         .map(|(_, key, set, range)| {
             let where_ = set.map(|s| format!("`{s}`")).unwrap_or_else(|| "the project's locale bundles and .kbres files".into());
             diag(text_range(doc, range), DiagnosticSeverity::WARNING, "unknown-resource", format!("no resource `{key}` in {where_}"))
@@ -614,9 +615,33 @@ fn icon_items() -> Vec<CompletionItem> {
 
 fn res_items(project: &WebProject, right_after_prefix: bool) -> Vec<CompletionItem> {
     let index = res::index(&project.root, &project.config.sources);
+    // A key that only exists as plural forms (`files_one` / `files_other`) is offered once, as its base.
+    let base_of = |item: &res::WebResource| split_plural(&item.key).map(|(b, _)| b.to_string()).filter(|b| index.find(b, Some(&item.set)).is_none());
+    let mut bases: Vec<(String, String)> = Vec::new();
+    let mut plural_items: Vec<CompletionItem> = Vec::new();
+    for item in &index.items {
+        let Some(base) = base_of(item) else { continue };
+        if bases.iter().any(|(b, s)| *b == base && *s == item.set) {
+            continue;
+        }
+        bases.push((base.clone(), item.set.clone()));
+        let default = index.default_set.as_deref() == Some(item.set.as_str()) || item.file.extension().is_some_and(|e| e.eq_ignore_ascii_case("kbres"));
+        let insert = if default { base.clone() } else { format!("{base}, Source={}", item.set) };
+        let forms = index.plural_forms(&base, Some(&item.set));
+        plural_items.push(CompletionItem {
+            label: base.clone(),
+            kind: Some(CompletionItemKind::TEXT),
+            detail: Some(format!("plural · {}", forms.iter().map(|f| f.key.rsplit('_').next().unwrap_or_default()).collect::<Vec<_>>().join(", "))),
+            documentation: Some(markdown(plural_markdown(&base, &forms))),
+            insert_text: Some(if right_after_prefix { format!(" {insert}") } else { insert }),
+            filter_text: Some(base.clone()),
+            ..Default::default()
+        });
+    }
     let mut items: Vec<CompletionItem> = index
         .items
         .iter()
+        .filter(|item| base_of(item).is_none_or(|b| !bases.iter().any(|(base, s)| *base == b && *s == item.set)))
         .map(|item| {
             let default = index.default_set.as_deref() == Some(item.set.as_str()) || item.file.extension().is_some_and(|e| e.eq_ignore_ascii_case("kbres"));
             let insert = if default { item.key.clone() } else { format!("{}, Source={}", item.key, item.set) };
@@ -631,8 +656,22 @@ fn res_items(project: &WebProject, right_after_prefix: bool) -> Vec<CompletionIt
             }
         })
         .collect();
+    items.extend(plural_items);
     items.sort_by(|a, b| a.label.cmp(&b.label));
     items
+}
+
+/// The documentation of a plural key: each form with its translations.
+fn plural_markdown(base: &str, forms: &[&res::WebResource]) -> String {
+    let mut md = format!("**{base}** — plural, `{}`\n\n", forms.first().map(|f| f.set.as_str()).unwrap_or_default());
+    for f in forms {
+        md.push_str(&format!("- `{}`: {}\n", f.key, f.value.replace('\n', " ")));
+        for (lang, v) in &f.translations {
+            md.push_str(&format!("  - `{lang}`: {}\n", v.replace('\n', " ")));
+        }
+    }
+    md.push_str("\n*The form follows `Count={Binding …}`; `{{count}}` and the other `{{name}}` placeholders are filled from the arguments.*\n");
+    md
 }
 
 fn res_markdown(item: &res::WebResource) -> String {
@@ -708,7 +747,17 @@ pub fn hover(doc: &Document, view: &WebView, pos: Position) -> Option<Hover> {
                 }
                 if let Some((key, set)) = res_at(attr) {
                     let index = res::index(&project.root, &project.config.sources);
-                    return Some(index.find(&key, set.as_deref()).map(res_markdown).unwrap_or_else(|| format!("no resource `{key}`")));
+                    return Some(match index.find(&key, set.as_deref()) {
+                        Some(item) => res_markdown(item),
+                        None => {
+                            let forms = index.plural_forms(&key, set.as_deref());
+                            if forms.is_empty() {
+                                format!("no resource `{key}`")
+                            } else {
+                                plural_markdown(&key, &forms)
+                            }
+                        }
+                    });
                 }
                 None
             }
@@ -744,7 +793,7 @@ pub fn definition(doc: &Document, view: &WebView, pos: Position) -> Option<Locat
                 }
                 if let Some((key, set)) = res_at(attr) {
                     let index = res::index(&project.root, &project.config.sources);
-                    let item = index.find(&key, set.as_deref())?;
+                    let item = index.find(&key, set.as_deref()).or_else(|| index.plural_forms(&key, set.as_deref()).into_iter().next())?;
                     let text = std::fs::read_to_string(&item.file).ok()?;
                     return super::location(&item.file, &text, item.offset, item.offset);
                 }

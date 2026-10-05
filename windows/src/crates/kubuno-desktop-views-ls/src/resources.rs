@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use kubuno_desktop_resources_model::plural::{split_plural, PluralCategory};
 use kubuno_desktop_resources_model::{culture, set, Entry, Kind, ResourceFile, Value};
 use kubuno_desktop_views::ast::{AstNode, Attribute};
 use kubuno_desktop_views::syntax::SyntaxKind;
@@ -51,6 +52,18 @@ impl Index {
     /// The items a reference names (`set` narrows them).
     pub fn find(&self, key: &str, set: Option<&str>) -> Vec<&Item> {
         self.items.iter().filter(|i| i.entry.name == key && set.is_none_or(|s| s.eq_ignore_ascii_case(&i.set))).collect()
+    }
+
+    /// The plural forms (`key_one`, `key_other`… `String` entries) of `key` (`set` narrows them), in CLDR order.
+    pub fn plural_forms(&self, key: &str, set: Option<&str>) -> Vec<&Item> {
+        let mut forms: Vec<(PluralCategory, &Item)> = self
+            .items
+            .iter()
+            .filter(|i| i.entry.kind == Kind::String && set.is_none_or(|s| s.eq_ignore_ascii_case(&i.set)))
+            .filter_map(|i| split_plural(&i.entry.name).filter(|(b, _)| *b == key).map(|(_, c)| (c, i)))
+            .collect();
+        forms.sort_by_key(|(c, _)| *c);
+        forms.into_iter().map(|(_, i)| i).collect()
     }
 }
 
@@ -204,9 +217,33 @@ pub fn completion(doc: &Document, uri: &Uri, pos: Position) -> Option<Vec<Comple
     let attribute = token.parent().and_then(Attribute::cast)?;
     let wants_image = attribute.name().is_some_and(|n| is_image_attribute(&n));
     let index = index_for_uri(uri)?;
+    // A key that only exists as plural forms is offered once, as its base (`files` for `files_one` /
+    // `files_other`), documented with its forms.
+    let mut bases: Vec<(String, String)> = Vec::new();
+    let mut plural_items: Vec<CompletionItem> = Vec::new();
+    for item in &index.items {
+        let Some((base, _)) = split_plural(&item.entry.name).filter(|_| item.entry.kind == Kind::String) else { continue };
+        if !index.find(base, Some(&item.set)).is_empty() || bases.iter().any(|(b, s)| b == base && *s == item.set) {
+            continue;
+        }
+        bases.push((base.to_string(), item.set.clone()));
+        let duplicate = index.items.iter().any(|i| i.set != item.set && (i.entry.name == base || split_plural(&i.entry.name).is_some_and(|(b, _)| b == base)));
+        let insert = if duplicate { format!("{base}, Source={}", item.set) } else { base.to_string() };
+        plural_items.push(CompletionItem {
+            label: base.to_string(),
+            kind: Some(CompletionItemKind::TEXT),
+            detail: Some(format!("plural String · {}.kbres", item.set)),
+            documentation: Some(Documentation::MarkupContent(MarkupContent { kind: MarkupKind::Markdown, value: plural_markdown(base, &index.plural_forms(base, Some(&item.set))) })),
+            insert_text: Some(if after.is_empty() { format!(" {insert}") } else { insert }),
+            filter_text: Some(base.to_string()),
+            sort_text: Some(format!("{}{base}", if wants_image { "1" } else { "0" })),
+            ..Default::default()
+        });
+    }
     let mut items: Vec<CompletionItem> = index
         .items
         .iter()
+        .filter(|item| !(item.entry.kind == Kind::String && split_plural(&item.entry.name).is_some_and(|(b, _)| bases.iter().any(|(base, s)| base == b && *s == item.set))))
         .map(|item| {
             let duplicate = index.items.iter().filter(|i| i.entry.name == item.entry.name).count() > 1;
             let insert = if duplicate { format!("{}, Source={}", item.entry.name, item.set) } else { item.entry.name.clone() };
@@ -229,8 +266,22 @@ pub fn completion(doc: &Document, uri: &Uri, pos: Position) -> Option<Vec<Comple
             }
         })
         .collect();
+    items.extend(plural_items);
     items.sort_by(|a, b| a.sort_text.cmp(&b.sort_text));
     Some(items)
+}
+
+/// The documentation of a plural key: its forms, their values and translations.
+fn plural_markdown(base: &str, forms: &[&Item]) -> String {
+    let mut md = format!("**Plural** `{base}` — *{}.kbres*\n\n", forms.first().map(|i| i.set.as_str()).unwrap_or_default());
+    for item in forms {
+        md.push_str(&format!("- `{}`: {}\n", item.entry.name, value_text(&item.entry).replace('\n', " ")));
+        for (c, t) in &item.translations {
+            md.push_str(&format!("  - `{c}`: {}\n", value_text(t).replace('\n', " ")));
+        }
+    }
+    md.push_str("\n*The form follows `Count={Binding …}`; `{{count}}` and the other `{{name}}` placeholders are filled from the arguments.*\n");
+    md
 }
 
 fn range_of(doc: &Document, r: TextRange) -> Range {
@@ -250,13 +301,42 @@ fn references(doc: &Document) -> Vec<(String, String, Option<String>, TextRange)
         .collect()
 }
 
+/// Malformed `{Res}` arguments (`kubuno_desktop_views_syntax::res::ResIssue`, WV-6), as errors on the argument;
+/// a repeated argument is a warning. Reported even when the project has no resource file.
+fn res_argument_diagnostics(doc: &Document) -> Vec<Diagnostic> {
+    let mut out = Vec::new();
+    for a in doc.parse.syntax().descendants().filter_map(Attribute::cast) {
+        let (Some(raw), Some(range)) = (a.raw_value(), a.value_range()) else { continue };
+        let Some(inner) = raw.get(1..raw.len().saturating_sub(1)) else { continue };
+        let (Some(open), Some(close)) = (inner.find('{'), inner.rfind('}')) else { continue };
+        if close <= open || !inner[..open].trim().is_empty() {
+            continue;
+        }
+        let Some(res) = kubuno_desktop_views_syntax::res::parse_res(&inner[open + 1..close]) else { continue };
+        let base = u32::from(range.start()) as usize + open + 1;
+        for issue in res.issues {
+            let r = TextRange::new(((base + issue.range.start) as u32).into(), ((base + issue.range.end) as u32).into());
+            let severity = if issue.message.contains("given twice") { DiagnosticSeverity::WARNING } else { DiagnosticSeverity::ERROR };
+            out.push(Diagnostic {
+                range: range_of(doc, r),
+                severity: Some(severity),
+                code: Some(NumberOrString::String("res-argument".into())),
+                source: Some(SOURCE.to_string()),
+                message: issue.message,
+                ..Default::default()
+            });
+        }
+    }
+    out
+}
+
 /// Diagnostics of the document's `{Res …}` references (see the module doc).
 pub fn diagnostics(doc: &Document, uri: &Uri) -> Vec<Diagnostic> {
     let refs = references(doc);
     if refs.is_empty() {
         return Vec::new();
     }
-    let Some(index) = index_for_uri(uri) else { return Vec::new() };
+    let Some(index) = index_for_uri(uri) else { return res_argument_diagnostics(doc) };
     let diag = |range: TextRange, severity: DiagnosticSeverity, code: &str, message: String| Diagnostic {
         range: range_of(doc, range),
         severity: Some(severity),
@@ -265,9 +345,13 @@ pub fn diagnostics(doc: &Document, uri: &Uri) -> Vec<Diagnostic> {
         message,
         ..Default::default()
     };
-    let mut out = Vec::new();
+    let mut out = res_argument_diagnostics(doc);
     for (attr, key, set, range) in refs {
         let found = index.find(&key, set.as_deref());
+        if found.is_empty() && !index.plural_forms(&key, set.as_deref()).is_empty() {
+            // A key that only exists as plural forms (`files_one` / `files_other`).
+            continue;
+        }
         let Some(item) = found.first() else {
             let where_ = set.map(|s| format!("`{s}.kbres`")).unwrap_or_else(|| "the project's .kbres files".to_string());
             out.push(diag(range, DiagnosticSeverity::ERROR, "unknown-resource", format!("no resource `{key}` in {where_}")));
@@ -306,15 +390,24 @@ fn reference_at(doc: &Document, pos: Position) -> Option<(String, Option<String>
 pub fn hover(doc: &Document, uri: &Uri, pos: Position) -> Option<Hover> {
     let (key, set, range) = reference_at(doc, pos)?;
     let index = index_for_uri(uri)?;
-    let item = index.find(&key, set.as_deref()).into_iter().next()?;
-    Some(Hover { contents: HoverContents::Markup(MarkupContent { kind: MarkupKind::Markdown, value: markdown(item) }), range: Some(range_of(doc, range)) })
+    let value = match index.find(&key, set.as_deref()).into_iter().next() {
+        Some(item) => markdown(item),
+        None => {
+            let forms = index.plural_forms(&key, set.as_deref());
+            if forms.is_empty() {
+                return None;
+            }
+            plural_markdown(&key, &forms)
+        }
+    };
+    Some(Hover { contents: HoverContents::Markup(MarkupContent { kind: MarkupKind::Markdown, value }), range: Some(range_of(doc, range)) })
 }
 
 /// Go to definition on a `{Res …}` value: the entry in its `.kbres` file.
 pub fn definition(doc: &Document, uri: &Uri, pos: Position) -> Option<Location> {
     let (key, set, _) = reference_at(doc, pos)?;
     let index = index_for_uri(uri)?;
-    let item = index.find(&key, set.as_deref()).into_iter().next()?;
+    let item = index.find(&key, set.as_deref()).into_iter().next().or_else(|| index.plural_forms(&key, set.as_deref()).into_iter().next())?;
     Some(Location { uri: fs_uri::from_path(&item.file)?, range: Range { start: item.position, end: item.position } })
 }
 
@@ -341,6 +434,54 @@ mod tests {
         let mut store = crate::documents::DocumentStore::new();
         store.open(uri.clone(), text.to_string(), 1);
         store
+    }
+
+    /// WV-6: a key that only exists as plural forms is known, completed once and hovered with its forms;
+    /// malformed arguments are diagnosed on the argument; `{Binding` inside an argument completes like a binding.
+    #[test]
+    fn plural_keys_and_res_arguments() {
+        let root = package("plural");
+        std::fs::write(
+            root.join("src/resources.kbres"),
+            "<Resources>\n  <String Name=\"files_one\">{{count}} file</String>\n  <String Name=\"files_other\">{{count}} files</String>\n  <String Name=\"title\">T</String>\n</Resources>\n",
+        )
+        .expect("neutral");
+        std::fs::write(root.join("src/resources.fr.kbres"), "<Resources><String Name=\"files_one\">{{count}} fichier</String><String Name=\"title\">T</String></Resources>").expect("fr");
+        let view = root.join("src/main_view.kbview");
+        let uri = fs_uri::from_path(&view).expect("uri");
+        let text = "<Window>\n  <Label Text=\"{Res files, Count={Binding n}, Sep=', '}\"/>\n  <Label Text=\"{Res title, 1x=2, Count={Res a}}\"/>\n  <Label Text=\"{Res \"/>\n</Window>";
+        let docs = store(text, &uri);
+        let doc = docs.get(&uri).expect("doc");
+
+        let d = diagnostics(doc, &uri);
+        let msgs: Vec<&str> = d.iter().map(|x| x.message.as_str()).collect();
+        assert!(!msgs.iter().any(|m| m.contains("no resource `files`")), "{msgs:?}");
+        let bad = d.iter().find(|x| x.message.contains("`1x` is not an argument name")).expect("argument diagnostic");
+        assert_eq!(bad.severity, Some(DiagnosticSeverity::ERROR));
+        let start = doc.position_index.position_to_offset(&doc.text, bad.range.start);
+        assert!(text[usize::from(start)..].starts_with("1x=2"));
+        assert!(msgs.iter().any(|m| m.contains("value of `Count` must be a `{Binding path}`")), "{msgs:?}");
+
+        let at = text.find("{Res \"").expect("site") + 5;
+        let pos = doc.position_index.offset_to_position(&doc.text, (at as u32).into());
+        let labels: Vec<String> = completion(doc, &uri, pos).expect("completion").into_iter().map(|i| i.label).collect();
+        assert_eq!(labels, vec!["files", "title"], "the forms are offered once, as their base");
+
+        let at = text.find("{Res files").expect("ref") + 6;
+        let pos = doc.position_index.offset_to_position(&doc.text, (at as u32).into());
+        let HoverContents::Markup(m) = hover(doc, &uri, pos).expect("hover").contents else { panic!("markup") };
+        assert!(m.value.contains("**Plural** `files`") && m.value.contains("`files_other`: {{count}} files") && m.value.contains("`fr`: {{count}} fichier"), "{}", m.value);
+        assert!(definition(doc, &uri, pos).is_some());
+
+        // `{Binding ` inside an argument gets the binding completion (its keys after a comma).
+        let edited = text.replacen("{Binding n}", "{Binding n, }", 1);
+        let at = edited.find("{Binding n, ").expect("arg") + "{Binding n,".len();
+        let docs = store(&edited, &uri);
+        let doc = docs.get(&uri).expect("doc");
+        let pos = doc.position_index.offset_to_position(&doc.text, ((at + 1) as u32).into());
+        let keys: Vec<String> = crate::binding_lsp::completion(doc, &uri, pos).expect("binding completion").into_iter().map(|i| i.label).collect();
+        assert!(keys.iter().any(|k| k == "Mode"), "{keys:?}");
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
