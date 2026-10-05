@@ -1,0 +1,306 @@
+=== diagnostics
+7:26-7:30 error [binding] `1x` is not an argument name (letters, digits and `_`, not starting with a digit)
+7:47-7:52 error [binding-path] `a + b` is not a member path (`a.b.c`; expressions are not supported, use a getter)
+7:60-7:71 error [binding] the value of `Name` must be a `{Binding path}` or a literal, found `{Res other}`
+7:73-7:102 warning [binding] the argument `Mode` only reads: `Mode=TwoWay` is ignored
+=== plan
+{
+  "abi": 1,
+  "file": "src/res_args.kbview",
+  "kind": "view",
+  "root": {
+    "id": "",
+    "el": "Stack",
+    "at": [
+      2,
+      2
+    ],
+    "m": "@kubuno/views",
+    "x": "Stack",
+    "dom": "ref",
+    "children": [
+      {
+        "id": "0",
+        "el": "Badge",
+        "at": [
+          3,
+          4
+        ],
+        "m": "@ui",
+        "x": "Badge",
+        "dom": "wrapper",
+        "props": [
+          {
+            "n": "Text",
+            "to": {
+              "prop": "children"
+            },
+            "res": {
+              "key": "files_count",
+              "set": "drive",
+              "args": [
+                {
+                  "n": "Count",
+                  "b": {
+                    "path": "files.length",
+                    "mode": "OneWay",
+                    "at": [
+                      3,
+                      49
+                    ]
+                  }
+                },
+                {
+                  "n": "Name",
+                  "b": {
+                    "path": "user.name",
+                    "mode": "OneWay",
+                    "at": [
+                      3,
+                      91
+                    ]
+                  }
+                },
+                {
+                  "n": "Sep",
+                  "v": ", "
+                }
+              ]
+            },
+            "kind": "String",
+            "at": [
+              3,
+              10
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "el": "Repeater",
+        "at": [
+          4,
+          4
+        ],
+        "m": "@kubuno/views",
+        "x": "Repeater",
+        "dom": "ref",
+        "props": [
+          {
+            "n": "ItemsSource",
+            "to": {
+              "prop": "items"
+            },
+            "b": {
+              "path": "notes",
+              "mode": "OneWay",
+              "at": [
+                4,
+                35
+              ]
+            },
+            "kind": "String",
+            "at": [
+              4,
+              13
+            ]
+          },
+          {
+            "n": "ItemKey",
+            "to": {
+              "prop": "itemKey"
+            },
+            "v": "id",
+            "kind": "String",
+            "at": [
+              4,
+              43
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "1.0",
+            "el": "Badge",
+            "at": [
+              5,
+              6
+            ],
+            "m": "@ui",
+            "x": "Badge",
+            "dom": "wrapper",
+            "props": [
+              {
+                "n": "Text",
+                "to": {
+                  "prop": "children"
+                },
+                "res": {
+                  "key": "note_tags",
+                  "args": [
+                    {
+                      "n": "Count",
+                      "b": {
+                        "path": "tags.length",
+                        "mode": "OneWay",
+                        "depth": 1,
+                        "at": [
+                          5,
+                          49
+                        ]
+                      }
+                    },
+                    {
+                      "n": "Title",
+                      "b": {
+                        "path": "title",
+                        "mode": "OneWay",
+                        "format": "[{0}]",
+                        "depth": 1,
+                        "at": [
+                          5,
+                          78
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "kind": "String",
+                "at": [
+                  5,
+                  12
+                ]
+              }
+            ]
+          }
+        ],
+        "template": true
+      },
+      {
+        "id": "2",
+        "el": "Badge",
+        "at": [
+          7,
+          4
+        ],
+        "m": "@ui",
+        "x": "Badge",
+        "dom": "wrapper",
+        "props": [
+          {
+            "n": "Text",
+            "to": {
+              "prop": "children"
+            },
+            "res": {
+              "key": "bad",
+              "args": [
+                {
+                  "n": "Mode",
+                  "b": {
+                    "path": "n",
+                    "mode": "OneWay",
+                    "at": [
+                      7,
+                      87
+                    ]
+                  }
+                }
+              ]
+            },
+            "kind": "String",
+            "at": [
+              7,
+              10
+            ]
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "el": "Badge",
+        "at": [
+          8,
+          4
+        ],
+        "m": "@ui",
+        "x": "Badge",
+        "dom": "wrapper",
+        "props": [
+          {
+            "n": "Text",
+            "to": {
+              "prop": "children"
+            },
+            "res": {
+              "key": "plain"
+            },
+            "kind": "String",
+            "at": [
+              8,
+              10
+            ]
+          }
+        ]
+      }
+    ],
+    "content": "children"
+  },
+  "names": {},
+  "handlers": []
+}
+=== d.ts
+// Generated by @kubuno/views-compiler from src/res_args.kbview — do not edit (rebuilt on every change; never committed).
+import type { View as __View, ViewPlan as __ViewPlan } from '@kubuno/views'
+
+/** The render plan of `src/res_args.kbview`. */
+export declare const plan: __ViewPlan
+
+/** The generated base of the code-behind of `src/res_args.kbview`: one handle per `x:Name`, one abstract method per handler. */
+export declare class ViewBase extends __View<{}> {
+}
+=== check.ts
+// Generated by @kubuno/views-compiler from src/res_args.kbview — do not edit. Type-checks the view's bindings against its code-behind;
+// kbview-tsc maps every error back to the .kbview (see the .check.json next to this file).
+/* eslint-disable */
+import type { res_args as __V } from './res_args'
+type __IsAny<T> = 0 extends 1 & T ? true : false
+type __DC<T> = T extends { dataContext: infer D } ? (__IsAny<D> extends true ? any : unknown extends D ? {} : D) : {}
+declare const vm: __V & __DC<__V>
+declare const __w: never
+declare function __bool(v: boolean | null | undefined): void
+declare function __num(v: number | null | undefined): void
+declare function __str(v: string | number | bigint | boolean | null | undefined): void
+declare function __arr(v: readonly unknown[] | null | undefined): void
+declare function __any(v: unknown): void
+declare function __fn(v: (...args: never[]) => unknown): void
+declare function __elem<T>(v: readonly T[] | null | undefined): T
+declare function __r<R, V>(row: R, outer: V): R & V
+const __row1 = __elem(vm.notes)
+__any(vm.files.length)
+__any(vm.user.name)
+__any(__r(__row1, vm).tags.length)
+__any(__r(__row1, vm).title)
+__any(vm.n)
+void [vm, __w, __bool, __num, __str, __arr, __any, __fn, __elem, __r, __row1]
+export {}
+=== check map
+4:1-51 -> 2:2-2:7 (class)
+17:1-26 -> 4:13-4:42 (binding)
+17:26-31 -> 4:35-4:40 exact (binding)
+17:31-33 -> 4:13-4:42 (binding)
+18:1-10 -> 3:34-3:75 (binding)
+18:10-22 -> 3:49-3:61 exact (binding)
+18:22-24 -> 3:34-3:75 (binding)
+19:1-10 -> 3:77-3:101 (binding)
+19:10-19 -> 3:91-3:100 exact (binding)
+19:19-21 -> 3:77-3:101 (binding)
+20:1-23 -> 5:34-5:61 (binding)
+20:23-34 -> 5:49-5:60 exact (binding)
+20:34-36 -> 5:34-5:61 (binding)
+21:1-23 -> 5:63-5:106 (binding)
+21:23-28 -> 5:78-5:83 exact (binding)
+21:28-30 -> 5:63-5:106 (binding)
+22:1-10 -> 7:73-7:102 (binding)
+22:10-11 -> 7:87-7:88 exact (binding)
+22:11-13 -> 7:73-7:102 (binding)

@@ -153,12 +153,29 @@ fn is_zero(v: &u32) -> bool {
     *v == 0
 }
 
-/// A `{Res key[, Source=set]}`.
+/// A `{Res key[, Source=set][, Name=value]…}` (`WEB-VIEWS.md` §2.4, WV-6). Without arguments the JSON is the
+/// same as before WV-6 (`args` is omitted): the change is additive, `VIEWS_ABI` stays 1.
 #[derive(Debug, Clone, Serialize)]
 pub struct Res {
     pub key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub set: Option<String>,
+    /// The arguments, in source order: they fill the string's `{{name}}` placeholders, and `Count`
+    /// (case-insensitive, numeric) selects the plural form (i18next's `count`).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<ResArgPlan>,
+}
+
+/// One argument of a `{Res}`: a one-way binding (`b`, same rules as a property binding: path, depth inside
+/// templates, `at`) or a literal (`v`).
+#[derive(Debug, Clone, Serialize)]
+pub struct ResArgPlan {
+    /// The name as written (`Count`, `Name`).
+    pub n: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub b: Option<Binding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v: Option<String>,
 }
 
 /// One event attribute: the handler and where the event comes from.

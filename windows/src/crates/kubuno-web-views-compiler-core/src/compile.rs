@@ -6,13 +6,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use kubuno_desktop_views_model::{PropKindEntry, PropertyEntry};
 use kubuno_desktop_views_syntax::ast::{AstNode, Attribute, Document, Element as AstElement};
 use kubuno_desktop_views_syntax::binding::{binding_issues, binding_parts, is_binding_expr, parse_binding_syntax, UpdateSourceTrigger};
-use kubuno_desktop_views_syntax::res::{parse_res_path, res_reference};
+use kubuno_desktop_views_syntax::res::{parse_res, ResArgValue, ResSyntax};
 use kubuno_desktop_views_syntax::validate::{closest, with_suggestion};
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::lines::{Lines, Pos};
-use crate::plan::{Binding, Event, Items, Node, Plan, Prop, Res, VIEWS_ABI};
+use crate::plan::{Binding, Event, Items, Node, Plan, Prop, Res, ResArgPlan, VIEWS_ABI};
 use crate::registry::{Element, EventSource, PropTarget, WebRegistry};
 
 /// What to compile.
@@ -646,10 +646,9 @@ impl<'a> Compiler<'a> {
         let trimmed = value.trim();
         if is_binding_expr(trimmed) {
             if let Some(inner) = trimmed.strip_prefix('{').and_then(|r| r.strip_suffix('}')) {
-                if let Some(path) = parse_res_path(inner) {
-                    if let Some((set, key)) = res_reference(&path) {
-                        out.res = Some(Res { key: key.to_string(), set: set.map(str::to_string) });
-                    }
+                if let Some(res) = parse_res(inner) {
+                    let args = self.res_args(attr, &res, check);
+                    out.res = Some(Res { key: res.key, set: res.set, args });
                     return Some(out);
                 }
             }
@@ -762,6 +761,102 @@ impl<'a> Compiler<'a> {
             return None;
         }
         Some((self.pos(start + part.value_range.start), self.pos(start + part.value_range.end)))
+    }
+
+    /// The arguments of a `{Res}` (WV-6): each `{Binding …}` compiled like a one-way property binding (path
+    /// validation, depth inside templates, `at`, a `__any(…)` check), each literal kept as text; problems are
+    /// reported on the argument.
+    fn res_args(&mut self, attr: &Attribute, res: &ResSyntax, check: bool) -> Vec<ResArgPlan> {
+        let whole = Self::attr_range(attr);
+        // Source positions: the same expression parsed from the raw text (entities undecoded), when its
+        // arguments line up with the decoded ones.
+        let raw = Self::raw_inner(attr).and_then(|(raw, start)| {
+            let open = raw.find('{')?;
+            let close = raw.rfind('}')?;
+            let parsed = parse_res(raw.get(open + 1..close)?)?;
+            let same = parsed.args.len() == res.args.len() && parsed.args.iter().zip(&res.args).all(|(a, b)| a.name == b.name) && parsed.issues.len() == res.issues.len();
+            same.then_some((parsed, start + open + 1))
+        });
+        let span = |r: &std::ops::Range<usize>, i: usize, args: bool| -> (usize, usize) {
+            match &raw {
+                Some((p, base)) => {
+                    let r = if args { p.args.get(i).map(|a| a.range.clone()) } else { p.issues.get(i).map(|x| x.range.clone()) }.unwrap_or_else(|| r.clone());
+                    (base + r.start, base + r.end)
+                }
+                None => whole,
+            }
+        };
+        for (i, issue) in res.issues.iter().enumerate() {
+            let at = span(&issue.range, i, false);
+            if issue.message.contains("given twice") {
+                self.warning("binding", at, issue.message.clone());
+            } else {
+                self.error("binding", at, issue.message.clone());
+            }
+        }
+        let mut out = Vec::new();
+        for (i, arg) in res.args.iter().enumerate() {
+            let arange = span(&arg.range, i, true);
+            match &arg.value {
+                ResArgValue::Literal(v) => out.push(ResArgPlan { n: arg.name.clone(), b: None, v: Some(v.clone()) }),
+                ResArgValue::Binding(text) => {
+                    // Where the nested binding's text starts in the source.
+                    let value_start = raw.as_ref().and_then(|(p, base)| p.args.get(i).map(|a| base + a.value_range.start));
+                    let Some(spec) = parse_binding_syntax(text) else {
+                        self.error("binding", arange, format!("`{text}` is not a valid binding: expected `{{Binding Path[, …]}}`"));
+                        continue;
+                    };
+                    if let Some(vs) = value_start {
+                        for issue in binding_issues(text) {
+                            self.warning("binding", (vs + issue.range.start, vs + issue.range.end), issue.message);
+                        }
+                    }
+                    let path_range = value_start.and_then(|vs| {
+                        let parts = binding_parts(text)?;
+                        let part = parts.iter().enumerate().find(|(j, p)| (p.key.is_none() && *j == 0) || p.key.as_deref() == Some("Path")).map(|(_, p)| p)?;
+                        (part.value == spec.path).then(|| (vs + part.value_range.start, vs + part.value_range.end))
+                    });
+                    if !spec.path.split('.').all(is_identifier) {
+                        self.error("binding-path", path_range.unwrap_or(arange), format!("`{}` is not a member path (`a.b.c`; expressions are not supported, use a getter)", spec.path));
+                        continue;
+                    }
+                    if spec.mode.writes_back() {
+                        self.warning("binding", arange, format!("the argument `{}` only reads: `Mode={}` is ignored", arg.name, spec.mode.name()));
+                    }
+                    if let Some(conv) = &spec.converter {
+                        if !is_identifier(conv) {
+                            self.error("binding", arange, format!("`{conv}` is not a converter name"));
+                        }
+                    }
+                    let b = Binding {
+                        path: spec.path.clone(),
+                        mode: kubuno_desktop_views_syntax::binding::BindingMode::OneWay.name(),
+                        trigger: None,
+                        conv: spec.converter.clone(),
+                        param: spec.converter_parameter.clone(),
+                        fallback: spec.fallback_value.clone(),
+                        format: spec.format.format_string.clone(),
+                        null: spec.format.null_value.clone(),
+                        culture: spec.format.culture.clone(),
+                        depth: self.rows.len() as u32,
+                        at: self.at(path_range.map(|r| r.0).unwrap_or(arange.0)),
+                    };
+                    if check {
+                        self.facts.checks.push(BindingCheck {
+                            path: b.path.clone(),
+                            path_at: path_range.map(|(s, e)| (self.pos(s), self.pos(e))),
+                            attr_at: (self.pos(arange.0), self.pos(arange.1)),
+                            check: "any",
+                            reads: true,
+                            writes: false,
+                            rows: self.rows.clone(),
+                        });
+                    }
+                    out.push(ResArgPlan { n: arg.name.clone(), b: Some(b), v: None });
+                }
+            }
+        }
+        out
     }
 
     fn binding_check(&self, attr: &Attribute, b: &Binding, check: &'static str, reads: bool, writes: bool) -> BindingCheck {
