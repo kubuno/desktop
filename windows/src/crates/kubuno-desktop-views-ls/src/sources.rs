@@ -49,6 +49,11 @@ pub fn with_overlays<R>(open_files: &HashMap<String, String>, f: impl FnOnce() -
     f()
 }
 
+/// The client's open buffer of `path`, when the current request sent it (never the file).
+pub fn read_overlay(path: &Path) -> Option<String> {
+    OVERLAYS.with(|o| o.borrow().get(&key(path)).cloned())
+}
+
 /// The text of `path`: the client's open buffer when the current request sent it, else the file.
 pub fn read(path: &Path) -> Option<String> {
     if let Some(text) = OVERLAYS.with(|o| o.borrow().get(&key(path)).cloned()) {

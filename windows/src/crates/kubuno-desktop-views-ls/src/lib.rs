@@ -33,6 +33,7 @@
 //! | [`sources`] | The client's open buffers, read instead of the files (`openFiles`) |
 //! | [`project`] | The project's own controls, scanned from its sources (EVT-7b) |
 //! | [`view_kind`] | `.kbview` (forms, windows, dialogs) vs `.kbcontrol` (user controls): the extension warning and its rename quick fix |
+//! | [`web`] | The web profile: profile detection, the JSON registry and web compiler, the TypeScript code-behind (oxc), the same LSP methods for web views |
 //! | [`server`] | The `lsp-server` `Connection` main loop tying all of the above together |
 //!
 //! ## Formatting — deliberately not implemented
@@ -82,3 +83,5 @@ pub mod storage;
 pub mod symbols;
 pub mod tree;
 pub mod view_kind;
+// The web profile (WEB-VIEWS.md §5, WV-7): views of a web project, TypeScript code-behind, JSON registry.
+pub mod web;

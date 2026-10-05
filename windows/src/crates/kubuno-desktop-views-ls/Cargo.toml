@@ -78,8 +78,18 @@ kubuno-desktop-views-meta = { workspace = true }
 # schema types come from them directly, so a future web profile does not need the desktop runtime.
 kubuno-desktop-views-syntax = { workspace = true }
 kubuno-desktop-views-model  = { workspace = true }
+# The web profile (vskubuno docs/WEB-VIEWS.md section 5, lot WV-7): `.kbview` / `.kbcontrol` files of a web project
+# are validated by the web compiler itself (the same diagnostics, module isolation rule and generated `.d.ts` as
+# `@kubuno/views-compiler`), against the JSON element registry of `@kubuno/ui` and the project's own registries.
+kubuno-web-views-compiler-core = { workspace = true }
+# The web code-behind is TypeScript: its class, methods, `@bind accessor` fields and imports are read with oxc's
+# parser (spans only: every edit of a `.ts` file is an insertion or a name replacement, never a reprint).
+oxc_allocator = "0.153"
+oxc_ast       = "0.153"
+oxc_parser    = "0.153"
+oxc_span      = "0.153"
 
-tracing            = { workspace = true }
+tracing           = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [dev-dependencies]

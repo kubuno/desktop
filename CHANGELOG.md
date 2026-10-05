@@ -9,6 +9,19 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ## [Unreleased]
 
+### Added
+
+- **The views language server speaks web views too** (`kubuno-views-ls`, vskubuno `docs/WEB-VIEWS.md` lot WV-7). A
+  `.kbview` / `.kbcontrol` of a web project (found from `kubuno.views.json`, a `package.json` using
+  `@kubuno/views-compiler`, or a `.esproj`) is checked by the web compiler itself, against `@kubuno/ui`'s element
+  registry and the project's own controls (re-read when they change), with the same messages as the web build,
+  including the module isolation rule (an element or a code-behind import from another module is an error). Its
+  TypeScript code-behind is read with oxc: completion of elements, attributes and values, `{Res}` keys from the
+  project's locale bundles and `.kbres` files, hover, go to definition into the `.ts`, and the designer's handler
+  requests (`kubuno/compatibleHandlers`, `createHandler`, `renameHandler`, `removeHandler`, F2), which insert
+  methods and type imports without reformatting the file. The generated `.d.ts` under `.kubuno/views/` is rewritten
+  as you type. Desktop views behave exactly as before.
+
 ### Changed
 
 - **Two title bar heights, buttons always centred.** Windows drawn by Kubuno now have a 32-pixel title bar, as in
