@@ -251,9 +251,11 @@ impl WebProject {
     }
 
     /// The generated files of a view: `(d.ts, check.ts, check.json)`.
+    /// Always under `<root>/.kubuno/views`: a view outside the root (or reached through `..`) goes to
+    /// `.kubuno/views/_external/<segments of its absolute path>` (see [`generated_base`]), the same rule as
+    /// `generatedPaths` of `@kubuno/views-compiler` (core `packages/views-compiler/src/project.ts`).
     pub fn generated_paths(&self, view: &Path) -> (PathBuf, PathBuf, PathBuf) {
-        let rel = project_path(&self.root, view);
-        let base = self.root.join(GENERATED_DIR).join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+        let base = generated_base(&self.root, view);
         let with = |suffix: &str| PathBuf::from(format!("{}{suffix}", base.display()));
         (with(".d.ts"), with(".check.ts"), with(".check.json"))
     }
@@ -274,6 +276,37 @@ impl WebProject {
             .unwrap_or_default();
         [(dts, out.dts.as_str()), (check, out.check.as_str()), (map, map_text.as_str())].into_iter().filter(|(p, t)| write_if_changed(p, t)).count()
     }
+}
+
+/// The generated files' path of `view` without their suffix, never outside `<root>/.kubuno/views`:
+/// - a view inside `root` (no `..` in its relative path): `.kubuno/views/<relative path>`;
+/// - otherwise `.kubuno/views/_external/<segments>`, the segments being the view's path (a leading `\\?\`
+///   removed) split on `/` and `\`, empty ones dropped, `:` removed from each (`C:` → `C`; a segment left
+///   empty is dropped), `..` → `_up`, `.` dropped (`D:\shared\A.kbview` → `_external\D\shared\A.kbview`).
+pub fn generated_base(root: &Path, view: &Path) -> PathBuf {
+    let generated = root.join(GENERATED_DIR);
+    if let Ok(rel) = view.strip_prefix(root) {
+        if rel.components().all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir)) {
+            let rel = project_path(root, view);
+            return generated.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+        }
+    }
+    let full = view.to_string_lossy();
+    let full = full.strip_prefix(r"\\?\").unwrap_or(&full);
+    let mut out = generated.join("_external");
+    for segment in full.split(['/', '\\']).filter(|s| !s.is_empty()) {
+        match segment {
+            "." => {}
+            ".." => out.push("_up"),
+            s => {
+                let s = s.replace(':', "");
+                if !s.is_empty() {
+                    out.push(s);
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Writes `text` unless the file already holds it (keeps tsc's incremental state and watchers quiet).
@@ -331,6 +364,35 @@ mod tests {
         assert!(out.contains(r#""module":"/src/menus/AppTileGrid""#), "{out}");
         assert!(out.contains(r#""module":"/src/x/B""#), "{out}");
         assert!(out.contains(r#""module":"@ui""#), "{out}");
+    }
+
+    /// The generated files never leave `<root>/.kubuno/views`, whatever the view's path.
+    #[test]
+    fn generated_paths_stay_under_the_generated_folder() {
+        let root = std::env::temp_dir().join("p");
+        let generated = root.join(GENERATED_DIR);
+        let inside = root.join("src").join("A.kbview");
+        assert_eq!(generated_base(&root, &inside), generated.join("src").join("A.kbview"), "unchanged inside the root");
+        let parent = root.parent().expect("parent");
+        let outside = parent.join("q").join("B.kbview");
+        let dotted = root.join("src").join("..").join("..").join("r").join("C.kbview");
+        for view in [&outside, &dotted] {
+            let base = generated_base(&root, view);
+            assert!(base.starts_with(generated.join("_external")), "{}", base.display());
+            assert!(base.components().all(|c| !matches!(c, std::path::Component::ParentDir)), "{}", base.display());
+            let full = format!("{}.d.ts", base.display());
+            assert!(Path::new(&full).starts_with(&generated), "{full}");
+        }
+        assert!(generated_base(&root, &dotted).ends_with(Path::new("src").join("_up").join("_up").join("r").join("C.kbview")));
+        #[cfg(windows)]
+        {
+            let root = Path::new(r"C:\p");
+            assert_eq!(generated_base(root, Path::new(r"D:\shared\A.kbview")), Path::new(r"C:\p\.kubuno\views\_external\D\shared\A.kbview"));
+            assert_eq!(generated_base(root, Path::new(r"\\?\D:\shared\A.kbview")), Path::new(r"C:\p\.kubuno\views\_external\D\shared\A.kbview"));
+            assert_eq!(generated_base(root, Path::new(r"C:\p\src\..\..\x\.\A.kbview")), Path::new(r"C:\p\.kubuno\views\_external\C\p\src\_up\_up\x\A.kbview"));
+        }
+        #[cfg(not(windows))]
+        assert_eq!(generated_base(Path::new("/p"), Path::new("/q/A.kbview")), Path::new("/p/.kubuno/views/_external/q/A.kbview"));
     }
 
     #[test]
