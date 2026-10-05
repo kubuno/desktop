@@ -11,6 +11,18 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Added
 
+- **`{Res}` arguments and plurals** (vskubuno `docs/WEB-VIEWS.md` lot WV-6, the same rules as the web, which uses
+  i18next). `{Res files, Count={Binding n}, Name={Binding user.name}, Sep=', '}`: every argument fills the string's
+  `{{name}}` placeholders (`Count` fills `{{count}}`), and `Count` picks the plural form — `files_zero` for 0, else
+  the culture's form (`files_one`, `files_few`, `files_many`, `files_other`… by the CLDR rules of the 13 product
+  languages, checked against the browsers' `Intl.PluralRules`), else `files`. The text follows the bound values and
+  the language live. A translation may hold forms its neutral file lacks (Russian `_few`, Arabic `_two`).
+  `resources!` also generates `files(count)` for a key that only exists as plural forms. In `.kbres` files, a
+  `String` may now be named like any web translation key (`header.settings`, `drive-shared`, `2fa_title`, spaces,
+  colons) and every value comes back byte for byte; `Culture="en"` on a neutral file names the language of its
+  strings. The views language server knows plural keys (completed once, hover lists the forms) and flags malformed
+  arguments, and the web views compiler puts the arguments in the plan (`res.args`) and type-checks their bindings.
+
 - **The views language server speaks web views too** (`kubuno-views-ls`, vskubuno `docs/WEB-VIEWS.md` lot WV-7). A
   `.kbview` / `.kbcontrol` of a web project (found from `kubuno.views.json`, a `package.json` using
   `@kubuno/views-compiler`, or a `.esproj`) is checked by the web compiler itself, against `@kubuno/ui`'s element
@@ -23,6 +35,11 @@ number at release time, and CI publishes that section as the GitHub Release note
   as you type. Desktop views behave exactly as before.
 
 ### Changed
+
+- **The header's panels follow the theme's `PanelBackground`.** The apps launcher and the account panel are tinted
+  with a new theme colour, `PanelBackground` (`#E9EEF6` light, `#303134` dark, the web's `--color-panel-bg`), at
+  80 % over their blur — in the dark theme the panel is now the web's dark ground instead of a near-black one. The
+  colour is offered with the other theme colours in the views' colour editor.
 
 - **Two title bar heights, buttons always centred.** Windows drawn by Kubuno now have a 32-pixel title bar, as in
   Windows 11 (dialogs, tool windows, secondary windows, documents opened inside a window, in-app dialogs such as
@@ -481,6 +498,10 @@ number at release time, and CI publishes that section as the GitHub Release note
   their `kubuno_ui` and `std` DLLs, the command-line tools in `tools\`, debug symbols in `symbols\` and a `README.txt`.
 
 ### Fixed
+
+- **Web views: generated files stay in `.kubuno/views`.** The views language server wrote the `.d.ts` and check files
+  of a view outside the web project (or reached through `..`) outside `.kubuno/views`; they now go to
+  `.kubuno/views/_external/…`, like the web build.
 
 - **Drive: picking black as the background colour makes it visible.** The window tint starts fully transparent, and
   picking a colour is meant to make it opaque; that only happened when the pick changed the colour, so choosing the
