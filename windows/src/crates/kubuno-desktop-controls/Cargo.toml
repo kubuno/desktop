@@ -10,7 +10,7 @@ repository.workspace = true
 # The shared drawing surface, theme and text formats the Kubuno desktop apps
 # already paint through. The control library adds a control MODEL on top; it
 # never opens its own device or window.
-kubuno-drive-desktop-app-controls = { path = "../../drive/crates/kubuno-drive-desktop-app-controls" }
+kubuno-drive-desktop-app-controls = { path = "../kubuno-drive-desktop-app-controls" }
 # Matrix/vector types the Direct2D bindings take by value.
 windows-numerics = "0.3"
 # The diagnostics sink of a GUI application (`host::diagnostics`): a `tracing` subscriber and a

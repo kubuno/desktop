@@ -27,18 +27,16 @@ members  = [
     "src/crates/kubuno-desktop-shell-controls",
     # The header's data for the apps other than the shell, through the shell's token broker.
     "src/crates/kubuno-desktop-header-data",
+    # The painting surface every control draws through (Canvas, Renderer, Theme, icons) and its helpers.
+    # Ported from Files (MIT) as Drive's controls, they stay here, in the framework, now that the Drive app
+    # lives in the drive repository (2026-10). The `kubuno-canvas` extraction (vskubuno DESKTOP-MIGRATION.md,
+    # F5) will give them a framework name.
+    "src/crates/kubuno-drive-desktop-app-controls",
+    "src/crates/kubuno-drive-desktop-shared",
     "src/shell",
-    "src/chat",
     "src/documents",
-    # Drive — the file manager and its crates. It used to be a workspace of its
-    # own; it joined this one to build with the same framework crates as every
-    # other app.
-    "src/drive/crates/kubuno-drive-desktop-shared",
-    "src/drive/crates/kubuno-drive-desktop-core-storage",
-    "src/drive/crates/kubuno-drive-desktop-app-storage",
-    "src/drive/crates/kubuno-drive-desktop-app-controls",
-    "src/drive/crates/kubuno-drive-desktop",
-    "src/drive/crates/kubuno-drive-desktop-localization",
+    # The module apps live in their module's repository (chat/desktop/windows, drive/desktop/windows, ...)
+    # and depend on these crates by git tag (README.md, "Versions and tags").
 ]
 
 [workspace.package]
@@ -47,15 +45,12 @@ edition    = "2021"
 license    = "AGPL-3.0-or-later"
 repository = "https://github.com/kubuno/desktop"
 
-# Shared dependency versions, used by the Drive crates as `foo.workspace = true`
-# (carried over from Drive's former workspace). The Drive crates keep their own
-# version and licence in their manifests rather than inherit this workspace's.
+# Shared dependency versions, used as `foo.workspace = true` (carried over from Drive's former
+# workspace). The two crates ported from Files keep their own version and licence (MIT) in their
+# manifests rather than inherit this workspace's.
 [workspace.dependencies]
-kubuno-drive-desktop-shared       = { path = "src/drive/crates/kubuno-drive-desktop-shared" }
-kubuno-drive-desktop-core-storage = { path = "src/drive/crates/kubuno-drive-desktop-core-storage" }
-kubuno-drive-desktop-app-storage  = { path = "src/drive/crates/kubuno-drive-desktop-app-storage" }
-kubuno-drive-desktop-app-controls = { path = "src/drive/crates/kubuno-drive-desktop-app-controls" }
-kubuno-drive-desktop-localization = { path = "src/drive/crates/kubuno-drive-desktop-localization" }
+kubuno-drive-desktop-shared       = { path = "src/crates/kubuno-drive-desktop-shared" }
+kubuno-drive-desktop-app-controls = { path = "src/crates/kubuno-drive-desktop-app-controls" }
 kubuno-desktop-ui          = { path = "src/crates/kubuno-desktop-ui" }
 kubuno-desktop-controls    = { path = "src/crates/kubuno-desktop-controls" }
 kubuno-desktop-views       = { path = "src/crates/kubuno-desktop-views" }
@@ -85,18 +80,13 @@ sha1             = "0.10"
 sha2             = "0.10"
 hex              = "0.4"
 chrono           = { version = "0.4", features = ["unstable-locales"] }
-async-trait      = "0.1"
-bitflags         = "2"
 futures          = "0.3"
 windows-numerics = "0.3"
 serde            = { version = "1", features = ["derive"] }
 serde_json       = "1"
 tokio            = { version = "1", features = ["rt-multi-thread", "sync", "fs", "macros", "time", "io-util"] }
-suppaftp         = { version = "10.0.2", default-features = false, features = ["tokio"] }
 tracing          = "0.1"
 tracing-subscriber = "0.3"
-# LibGit2 bindings (Drive's git integration). `vendored` builds libgit2 with the crate.
-git2 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
 
 # Drive's former workspace built release with `lto = "thin"` and one codegen
 # unit. Not carried over (yet): it was impossible while `kubuno-desktop-ui` was a shared

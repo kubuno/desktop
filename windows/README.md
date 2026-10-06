@@ -18,12 +18,11 @@ windows/
 ├── Cargo.toml            the Windows workspace
 ├── src/
 │   ├── shell/            kubuno-desktop.exe — the desktop shell
-│   ├── drive/            drive.exe — the Kubuno Drive file manager (nested workspace)
-│   ├── chat/             kubuno-chat — two-pane messaging
 │   ├── documents/        kubuno-documents — word processor for the Office module
 │   └── crates/
 │       ├── kubuno-desktop-controls/   the control library, drawn natively on Direct2D
-│       └── kubuno-desktop-ui/         the design system built on those controls
+│       ├── kubuno-desktop-ui/         the design system built on those controls
+│       └── kubuno-drive-desktop-app-controls/  the painting surface (ported from Files, MIT)
 ├── packaging/            Microsoft Store (MSIX): manifest, Store logos, packaging script
 └── tools/                UI reference and parity tooling (PowerShell)
 ```
@@ -45,14 +44,15 @@ by `kubuno-sync`. It integrates with Windows itself:
 
 ### Kubuno Drive — `drive.exe`
 
-A native file manager for Kubuno Drive, with its own nested workspace in
-`src/drive` (see [its README](src/drive/README.md)): window, tabs, views and actions
+A native file manager for Kubuno Drive. It now lives in the drive module's repository
+([`kubuno/drive`](https://github.com/kubuno/drive), `desktop/windows/`): window, tabs, views and actions
 in `kubuno-drive-desktop`, custom Direct2D controls, the shell/storage layer, localisation for
 49 cultures. Those crates are MIT-licensed.
 
 ### Chat and Documents
 
-- **`kubuno-chat`** — two-pane messaging for the Chat module.
+- **`kubuno-chat`** — two-pane messaging for the Chat module, now in the chat module's repository
+  ([`kubuno/chat`](https://github.com/kubuno/chat), `desktop/windows/`).
 - **`kubuno-documents`** — a native word processor for the Office module's documents.
 
 ## Requirements
@@ -113,5 +113,5 @@ by `release.yml`.
 
 ## License
 
-[AGPL-3.0-or-later](../LICENSE) © Kubuno contributors. The Drive crates under
-`src/drive` are MIT-licensed.
+[AGPL-3.0-or-later](../LICENSE) © Kubuno contributors. The crates ported from Files
+(`src/crates/kubuno-drive-desktop-app-controls`, `src/crates/kubuno-drive-desktop-shared`) are MIT-licensed.

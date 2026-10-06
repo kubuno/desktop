@@ -28,7 +28,7 @@ kubuno-desktop-shell-controls = { path = "../crates/kubuno-desktop-shell-control
 kubuno-desktop-header-data    = { path = "../crates/kubuno-desktop-header-data" }
 # The canvas contract and the Direct2D `Renderer` the page painter draws through (the design
 # system's base, also re-exported by kubuno-desktop-ui).
-kubuno-drive-desktop-app-controls = { path = "../drive/crates/kubuno-drive-desktop-app-controls" }
+kubuno-drive-desktop-app-controls = { path = "../crates/kubuno-drive-desktop-app-controls" }
 # The matrices the painter and the page transform hand to Direct2D.
 windows-numerics = "0.3"
 # The platform-neutral core: the stored document, the layout and pagination engine ported from

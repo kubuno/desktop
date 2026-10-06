@@ -41,6 +41,20 @@ number at release time, and CI publishes that section as the GitHub Release note
 
 ### Changed
 
+- **Chat and Drive moved to their module's repository** (per-module reorganisation): the Chat desktop app
+  (`kubuno-chat.exe`, crate `kubuno-chat-desktop`) now lives in `kubuno/chat` and the Drive file manager
+  (`drive.exe`, crates `kubuno-drive-desktop`, `-app-storage`, `-core-storage`, `-localization`) in `kubuno/drive`,
+  both under `desktop/windows/`, with their history. This repository keeps the foundation: Kubuno Desktop (the
+  shell), the framework, the shared controls and the common crates; it no longer builds or lists those two apps
+  (workspace, `Kubuno.Desktop.slnx`). Programs, settings and identifiers are unchanged for users.
+- **The painting surface stays in the framework**: `kubuno-drive-desktop-app-controls` (Canvas, Renderer, Theme,
+  icons) and `kubuno-drive-desktop-shared`, which every control draws through, moved from `windows/src/drive/crates/`
+  to `windows/src/crates/`, keeping their names and their MIT licence (now with a `LICENSE-MIT` notice crediting
+  Files). In the solution they sit under Framework (the Drive engine folder is gone).
+- **Framework tags for the module apps**: every framework and common crate (version `0.1.0-alpha`) is pinned by one
+  annotated tag, `desktop-v0.1.0-alpha`; apps depend on `https://github.com/kubuno/desktop` at that tag and link the
+  framework statically (README, "Versions and tags").
+
 - **The header's panels follow the theme's `PanelBackground`.** The apps launcher and the account panel are tinted
   with a new theme colour, `PanelBackground` (`#E9EEF6` light, `#303134` dark, the web's `--color-panel-bg`), at
   80 % over their blur — in the dark theme the panel is now the web's dark ground instead of a near-black one. The

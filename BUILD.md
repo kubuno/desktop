@@ -30,12 +30,11 @@ Depuis `windows/` :
 cargo build --release -p kubuno-desktop-shell     # → target/release/kubuno-desktop.exe (la coque)
 cargo test  -p kubuno-desktop-shell               # géométrie d'interaction, champs de saisie
 cargo run   -p kubuno-desktop-ui --example gallery  # galerie des composants (référence UI)
-cargo build --release -p kubuno-drive-desktop          # → target/release/drive.exe (explorateur Drive)
 ```
 
 ### Static linking: every exe is self-contained
 
-Every program of the workspace (shell, chat, documents, drive, the gallery, the
+Every program of the workspace (shell, documents, the gallery, the
 tools) links the design system (`kubuno-desktop-ui`, with the host `kubuno-desktop-controls` and
 the painting surface `kubuno-drive-desktop-app-controls`) and Rust's `std` **statically**: an
 exe runs from a folder that holds only itself — no `kubuno_desktop_ui` DLL, no
@@ -63,13 +62,15 @@ pwsh ./tools/build-all.ps1 -Profile release   # every app and example in one car
 ```
 
 Les exécutables, au-dessus du socle partagé (`windows/src/crates` +
-`windows/src/drive/crates/kubuno-drive-desktop-app-controls`, linked statically into each exe) :
+`windows/src/crates/kubuno-drive-desktop-app-controls`, linked statically into each exe) :
 
 | Exécutable | Crate | Rôle |
 |---|---|---|
 | `kubuno-desktop.exe` | `src/shell/` | coque : lanceur, comptes, activité, réglages, synchro, Explorateur |
-| `drive.exe` | `src/drive/crates/kubuno-drive-desktop` | explorateur de fichiers Kubuno Drive |
-| `kubuno-chat.exe`, `kubuno-documents.exe` | `src/chat/`, `src/documents/` | chat, traitement de texte |
+| `kubuno-documents.exe` | `src/documents/` | traitement de texte |
+
+The module apps build in their own repositories (`kubuno/chat` → `kubuno-chat.exe`, `kubuno/drive` → `drive.exe`,
+under `desktop/windows/`), against a `desktop-v*` tag of this repository (README, "Versions and tags").
 
 > **target-dir** : le dépôt vit souvent sur un partage réseau (Z:), où le lien
 > MSVC échoue à écrire un PDB (LNK1201). Ne PAS committer un chemin de build

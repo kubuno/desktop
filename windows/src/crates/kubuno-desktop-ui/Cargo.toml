@@ -19,7 +19,7 @@ description = "Kubuno's desktop design system, built on the WinForms control rep
 # The replica layer: property surface, defaults, state machines, layout engines.
 kubuno-desktop-controls    = { path = "../kubuno-desktop-controls" }
 # The painting surface every Kubuno app already draws through.
-kubuno-drive-desktop-app-controls = { path = "../../drive/crates/kubuno-drive-desktop-app-controls" }
+kubuno-drive-desktop-app-controls = { path = "../kubuno-drive-desktop-app-controls" }
 windows-numerics   = "0.3"
 # Warnings of the drawing layer (an image that cannot be decoded).
 tracing            = { workspace = true }
