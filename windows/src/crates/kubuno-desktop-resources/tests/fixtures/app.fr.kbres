@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Resources Version="1">
-  <String Name="welcome_text">Bienvenue</String>
-  <Image Name="flag" File="img/flag.fr.png"/>
-</Resources>

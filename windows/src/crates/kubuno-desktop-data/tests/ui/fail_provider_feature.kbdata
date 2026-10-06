@@ -1,7 +1,0 @@
-name = "Shop"
-connection = "Shop"
-provider = "mysql"
-
-[[tables]]
-name = "customers"
-columns = [{ name = "id", db_type = "int", rust_type = "i32" }]

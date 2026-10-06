@@ -1,8 +1,0 @@
-name = "Shop"
-connection = "Shop"
-provider = "sqlite"
-
-[[queries]]
-name = "names"
-sql = "SELECT nme FROM customers"
-columns = [{ name = "nme", db_type = "TEXT", rust_type = "String" }]

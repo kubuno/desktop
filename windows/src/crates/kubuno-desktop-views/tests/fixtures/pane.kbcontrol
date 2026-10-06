@@ -1,8 +1,0 @@
-<!-- A user control holding a custom control and a context menu of its own (tests/custom_controls.rs). -->
-<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="Pane" DesignWidth="300" DesignHeight="100">
-  <Probe x:Name="probe" OnMouseDown="probe_down" X="0" Y="0" Width="200" Height="60"/>
-  <Label x:Name="caption" Text="Pane" ContextMenu="menu" X="0" Y="64" Width="200" Height="30"/>
-  <ContextMenu x:Name="menu" OnOpening="menu_opening">
-    <MenuItem Text="Copier" OnClick="copy_click"/>
-  </ContextMenu>
-</UserControl>

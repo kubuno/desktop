@@ -1,8 +1,0 @@
-<!--
-  The header's avatar: the active account's photo (or initials on the accent), a 36 round button that opens
-  the account panel (AccountMenu) in a floating panel of its own — not clipped by the window that holds it.
-  Its data come from the app's AccountService, which also hears what the user picks.
--->
-<UserControl x:Class="AccountButton" DesignWidth="36" DesignHeight="36" OnLoad="account_button_load">
-  <Avatar x:Name="avatar" DisplayName="{Binding UserName}" Initials="{Binding Initials}" Image="{Binding AvatarPath}" Tint="{Binding AvatarTint}" AvatarSize="{Binding AvatarSize}" ToolTip="{Res account_tip, Source=shell_controls}" AccessibleRole="PushButton" Dock="Fill" OnClick="avatar_click"/>
-</UserControl>

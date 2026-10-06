@@ -1,7 +1,0 @@
-[
-  { "Name": "Camille Martin", "Unit": "Direction", "Role": "Admin", "Quota": "0 o / 10.00 Go", "LastLogin": "il y a 1 jour", "Status": "Actif" },
-  { "Name": "Alex Martin", "Unit": "Ressources humaines", "Role": "Utilisateur", "Quota": "3.61 Go / 10.00 Go", "LastLogin": "il y a 4 jours", "Status": "Actif" },
-  { "Name": "Sacha Martin", "Unit": "Informatique", "Role": "Utilisateur", "Quota": "7.23 Go / 10.00 Go", "LastLogin": "il y a 7 jours", "Status": "Actif" },
-  { "Name": "Charlie Martin", "Unit": "Direction", "Role": "Invité", "Quota": "8.59 Go / 10.00 Go", "LastLogin": "il y a 16 jours", "Status": "Actif" },
-  { "Name": "Robin Martin", "Unit": "Informatique", "Role": "Utilisateur", "Quota": "6.35 Go / 10.00 Go", "LastLogin": "Jamais", "Status": "Inactif" }
-]

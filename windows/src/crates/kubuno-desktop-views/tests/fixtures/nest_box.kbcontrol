@@ -1,4 +1,0 @@
-<!-- A user control holding an `OverflowBox` larger than its own instances (tests/clipping.rs). -->
-<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="NestBox" DesignWidth="170" DesignHeight="90">
-  <OverflowBox x:Name="inner" X="0" Y="0" Width="200" Height="100"/>
-</UserControl>

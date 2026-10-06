@@ -1,5 +1,0 @@
-<Card Title="Réglages">
-  <Stack Direction="TopDown">
-    <Switch Label="Notifications" On="{Binding Notifications
-    <TextField Text="unterminated tag
-</Stack>

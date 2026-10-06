@@ -1,7 +1,0 @@
-<!-- A user control whose own view is larger than the instances of tests/clipping.rs: its `spill` button lies partly
-     outside any instance smaller than 290 x 140, and must be clipped to the instance (WinForms clips a control's
-     children to it). -->
-<UserControl xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x" x:Class="OverflowBox" DesignWidth="300" DesignHeight="160">
-  <Button x:Name="inside" Text="Inside" OnClick="inside_click" X="10" Y="10" Width="80" Height="30"/>
-  <Button x:Name="spill" Text="Spill" OnClick="spill_click" X="150" Y="60" Width="140" Height="80"/>
-</UserControl>

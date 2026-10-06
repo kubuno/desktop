@@ -1,5 +1,0 @@
-error: `fail_provider_feature.kbdata`: provider `mysql` needs the `mysql` feature of kubuno-desktop-data (e.g. `kubuno-desktop-data = { features = ["mysql"] }`)
- --> tests/ui/fail_provider_feature.rs:2:35
-  |
-2 | kubuno_desktop_data::data_source!("fail_provider_feature.kbdata");
-  |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

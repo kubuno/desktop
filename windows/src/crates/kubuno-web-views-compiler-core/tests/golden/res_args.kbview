@@ -1,9 +1,0 @@
-<!-- WV-6: {Res} arguments and plurals (bindings at the page and inside a template, literals, malformed ones). -->
-<Stack xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x">
-  <Badge Text="{Res files_count, Count={Binding files.length, Mode=OneWay}, Name={Binding user.name}, Sep=', ', Source=drive}"/>
-  <Repeater ItemsSource="{Binding notes}" ItemKey="id">
-    <Badge Text="{Res note_tags, Count={Binding tags.length}, Title={Binding title, StringFormat='[{0}]'}}"/>
-  </Repeater>
-  <Badge Text="{Res bad, 1x=2, Count={Binding a + b}, Name={Res other}, Mode={Binding n, Mode=TwoWay}}"/>
-  <Badge Text="{Res plain}"/>
-</Stack>

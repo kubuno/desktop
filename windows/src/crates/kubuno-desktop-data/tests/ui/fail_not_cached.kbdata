@@ -1,7 +1,0 @@
-name = "Shop"
-connection = "Shop"
-provider = "sqlite"
-
-[[tables]]
-name = "customers"
-columns = [{ name = "nickname", db_type = "TEXT", rust_type = "String" }]

@@ -1,6 +1,0 @@
-[
-  { "Key": "g1", "Kind": "header", "GroupName": "Administrateurs", "Description": "Accès complet à la console", "IsDefault": false, "IsSystem": true, "CountText": "3 membres", "Expanded": true, "Permissions": [], "CreatedText": "" },
-  { "Key": "g1-details", "Kind": "details", "GroupName": "Administrateurs", "Description": "", "IsDefault": false, "IsSystem": true, "CountText": "", "Expanded": true, "Permissions": [ { "Label": "admin.console" }, { "Label": "users.manage" } ], "CreatedText": "Créé le 2026-02-12" },
-  { "Key": "g2", "Kind": "header", "GroupName": "Utilisateurs", "Description": "Tous les comptes créés", "IsDefault": true, "IsSystem": false, "CountText": "240 membres", "Expanded": false, "Permissions": [], "CreatedText": "" },
-  { "Key": "g3", "Kind": "header", "GroupName": "Invités", "Description": "Comptes externes, accès limité", "IsDefault": false, "IsSystem": false, "CountText": "5 membres", "Expanded": false, "Permissions": [], "CreatedText": "" }
-]

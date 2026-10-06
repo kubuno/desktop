@@ -1,4 +1,0 @@
-<Stack xmlns="https://kubuno.com/views" xmlns:x="https://kubuno.com/views/x">
-  <TextField x:Name="email" Variant="Outlined" Text="{Binding email, Mode=TwoWay}" Label="E-mail" Required="true" OnTextChanged="email_changed"/>
-  <TextField Text="plain" Hint="Default variant"/>
-</Stack>

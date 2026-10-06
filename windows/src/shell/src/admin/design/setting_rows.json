@@ -1,4 +1,0 @@
-[
-  { "Label": "Langue par défaut", "Value": "fr", "Description": "Pour les nouveaux comptes", "Ruled": true },
-  { "Label": "Nom de l'instance", "Value": "Kubuno Exemple", "Description": "Affiché dans l'en-tête et les courriels", "Ruled": false }
-]
